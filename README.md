@@ -83,7 +83,8 @@ flowchart LR
 ```
 
 Deeper design notes: [docs/architecture.md](docs/architecture.md).  
-Agent delegation graph: [docs/img/agent_delegation.png](docs/img/agent_delegation.png).
+Agent delegation graph: [docs/img/agent_delegation.png](docs/img/agent_delegation.png).  
+"Doesn't Lakebridge already do this?": [docs/lakebridge.md](docs/lakebridge.md).
 
 ## Quickstart (~45 minutes)
 
