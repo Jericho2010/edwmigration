@@ -45,35 +45,43 @@ What this does:
 ## 3. Bootstrap Unity Catalog + Federation
 
 ```bash
-databricks sql execute --file databricks/uc/01_federation_setup.sql
-databricks sql execute --file databricks/uc/03_ops_and_views.sql
+./agents/tools/render_federation_sql.sh > /tmp/01_federation_setup.rendered.sql
+./agents/tools/run_sql.sh --file /tmp/01_federation_setup.rendered.sql
+./agents/tools/run_sql.sh --file databricks/uc/03_ops_and_views.sql
+./agents/tools/run_sql.sh --file databricks/uc/02_federation_smoke.sql
 ```
 
 This creates:
 - The `edw_migration` catalog with `source_fed`, `bronze`, `silver`, `gold`,
   `ops` schemas.
 - The federation connection `azure_sql_edw` and foreign catalog `wwi_dw_fed`.
+- Minimal `GRANT`s for `account users`.
 - The `ops.*` tables including `ops.agent_events` (the observability sink).
 - The `source_fed.*` convenience views.
 
-Replace `<AZ_SQL_SERVER>` and `<AZ_SQL_ADMIN>` in
-`databricks/uc/01_federation_setup.sql` with your values first.
+`run_sql.sh` uses the Databricks Statement Execution API (`databricks api post
+/api/2.0/sql/statements`). There is no `databricks sql execute` CLI command.
 
-## 4. Deploy + run the medallion
+## 4. Validate, deploy, and run the medallion
 
 ```bash
-databricks bundle deploy
-databricks bundle run edw_migration_medallion
+# Required: warehouse ID as a bundle variable (env convention from DABs)
+export BUNDLE_VAR_warehouse_id="$DATABRICKS_WAREHOUSE_ID"
+
+databricks bundle validate -t dev
+databricks bundle deploy -t dev
+databricks bundle run edw_migration_medallion -t dev
 ```
 
-The job runs sequentially: federation smoke → bronze dims/facts → silver
-dims/SCD2/fact → gold marts → reconcile. Watch the run in the Databricks UI.
+The job DAG fans out where safe (under Free Edition's max 5 concurrent tasks):
+federation smoke → bronze dims/facts → silver → gold marts → reconcile.
+The AI/BI dashboard is deployed by the same `bundle deploy` (no manual import).
 
 ## 5. Open the observability dashboard
 
-Import `databricks/dashboards/agent_events.lvdash.json` into your Databricks
-workspace (AI/BI Dashboards → Import). Open it. It queries
-`edw_migration.ops.agent_events` and refreshes every 10 seconds.
+After deploy, open the dashboard named
+`[dev] EDW Migration Agent Events` in Databricks AI/BI Dashboards.
+It queries `edw_migration.ops.agent_events`.
 
 Initially the table is empty — the hooks only write events when the agent
 workflow runs (next step).

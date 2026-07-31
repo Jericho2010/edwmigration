@@ -47,18 +47,20 @@ export PATH="$HOME/sqlcmd:$PATH"
 
 ## 4. Databricks CLI (`databricks`)
 
-Used to deploy the bundle, run the job, manage secrets, and flush events.
+Used to deploy the bundle, run the job, manage secrets, and call the
+Statement Execution API (via `agents/tools/run_sql.sh`).
 
 - Install: https://docs.databricks.com/cli/install.html
 - Login: `databricks auth login --host <your-workspace-url>`
 - Verify: `databricks auth profiles`
-- Pinned version: **0.230.0 or newer** (for `bundle` and `sql execute`).
+- Pinned version: **0.230.0 or newer** (for `bundle`; **0.281.0+** for
+  dashboard `dataset_catalog` / `dataset_schema`).
+
+There is **no** `databricks sql execute` command. Use:
 
 ```bash
-# Python install
-pip install databricks-cli==0.230.0
-# OR via homebrew
-brew install databricks
+./agents/tools/run_sql.sh --sql "SELECT 1"
+./agents/tools/run_sql.sh --file path/to/file.sql
 ```
 
 ## 5. jq

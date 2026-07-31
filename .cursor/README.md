@@ -40,7 +40,7 @@ flowchart LR
   CursorEvent[Cursor lifecycle event] --> LogEvent[log_event.sh]
   LogEvent --> Buffer[agents/out/run_id/events.buf.jsonl]
   Buffer -->|every 10 events or on subagentStop| Flush[_flush_events.sh]
-  Flush -->|databricks sql execute| UC[edw_migration.ops.agent_events]
+  Flush -->|agents/tools/run_sql.sh| UC[edw_migration.ops.agent_events]
   UC --> Dashboard[AI/BI dashboard]
 ```
 

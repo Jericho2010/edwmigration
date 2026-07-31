@@ -1,0 +1,15 @@
+# AI/BI dashboard resource — deploys with the bundle (no manual import).
+# Requires Databricks CLI >= 0.281.0 for dataset_catalog / dataset_schema.
+# Path is relative to this YAML file (databricks/jobs/).
+
+resources:
+  dashboards:
+    agent_events:
+      display_name: "[${bundle.target}] EDW Migration Agent Events"
+      file_path: ../dashboards/agent_events.lvdash.json
+      warehouse_id: ${var.warehouse_id}
+      dataset_catalog: ${var.catalog}
+      dataset_schema: ops
+      permissions:
+        - level: CAN_RUN
+          group_name: users

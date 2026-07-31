@@ -11,7 +11,8 @@ EDW live.
 
 ## What you get
 
-- A vendored WideWorldImportersDW `.bacpac` (Microsoft sample EDW, 21 MB).
+- A downloadable WideWorldImportersDW `.bacpac` (Microsoft sample EDW, ~21 MB;
+  fetched by `legacy/wideworldimportersdw/import_azure_sql.sh` on first run).
 - One-click Azure SQL provisioning on the **free offer** (zero bill beyond
   allowance, `AutoPause` on limit).
 - Lakehouse Federation from Databricks Free Edition to Azure SQL — assess
@@ -74,8 +75,13 @@ flowchart LR
 
 4. **Deploy the Databricks medallion:**
    ```bash
-   databricks bundle deploy
-   databricks bundle run edw_migration_medallion
+   export BUNDLE_VAR_warehouse_id="$DATABRICKS_WAREHOUSE_ID"
+   ./agents/tools/render_federation_sql.sh > /tmp/01_fed.sql
+   ./agents/tools/run_sql.sh --file /tmp/01_fed.sql
+   ./agents/tools/run_sql.sh --file databricks/uc/03_ops_and_views.sql
+   databricks bundle validate -t dev
+   databricks bundle deploy -t dev
+   databricks bundle run edw_migration_medallion -t dev
    ```
 
 5. **Run the agent workflow in Cursor:**

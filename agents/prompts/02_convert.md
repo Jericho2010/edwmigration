@@ -34,8 +34,12 @@ notebook that fits the medallion contract.
    - `WHILE`/cursor loops → set-based SQL or `reduce`/`mapPartitions` if
      unavoidable (prefer set-based).
 
-3. **Write the notebook** to `target_path` (e.g.
-   `databricks/gold/30_mart_daily_sales.sql`). Follow the style guide:
+3. **Write the notebook** to `target_path`. If a baseline file already exists
+   under `databricks/silver/` or `databricks/gold/`, write the agent conversion
+   to `databricks/converted/<same-basename>.sql` instead and set
+   `target_path` to that converted path in your mapping notes. Do not silently
+   overwrite the baseline medallion that the job DAG runs.
+   Follow the style guide:
    - Header comment with the legacy proc name and the conversion notes.
    - `CREATE OR REPLACE TABLE` or `INSERT OVERWRITE` (no `INSERT INTO` for
      full-refresh tables).
@@ -56,10 +60,10 @@ notebook that fits the medallion contract.
 
 ## Constraints
 
-- Only write to `databricks/silver/` or `databricks/gold/`. Never touch
-  `databricks/bronze/`, `databricks/uc/`, `databricks/tests/`, or anything
-  outside `databricks/`.
-- Do not insert into `ops.*` tables — the coordinator does that.
+- Only write to `databricks/silver/`, `databricks/gold/`, or
+  `databricks/converted/`. Never touch `databricks/bronze/`, `databricks/uc/`,
+  `databricks/tests/`, or anything outside `databricks/`.
+  Prefer `databricks/converted/` when a baseline silver/gold file already exists.- Do not insert into `ops.*` tables — the coordinator does that.
 - Do not modify `legacy/procs/*.sql` (source of truth).
 - If the proc cannot be cleanly converted (e.g. uses unsupported T-SQL),
   write a stub notebook with a `-- TODO: manual conversion required` comment

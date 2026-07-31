@@ -15,9 +15,10 @@ legacy/
 
 ### `wideworldimportersdw/`
 
-The Microsoft sample EDW in `.bacpac` form. `import_azure_sql.sh` downloads it
-from Microsoft's official SQL Server samples release. The bacpac is committed
-to the repo so the demo is fully self-contained (no download at demo time).
+The Microsoft sample EDW as a `.bacpac`. `import_azure_sql.sh` **downloads**
+it from Microsoft's SQL Server samples release on first use (not committed
+as a binary — ~21 MB). Pin `EXPECTED_SHA256` in that script after the first
+download. Bootstrap then runs `SqlPackage /a:Import` against Azure SQL.
 
 ### `procs/`
 

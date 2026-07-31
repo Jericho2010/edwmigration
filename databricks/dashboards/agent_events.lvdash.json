@@ -1,110 +1,230 @@
 {
   "datasets": [
     {
-      "name": "agent_events",
-      "displayName": "Agent Events",
-      "warehouseId": "${DATABRICKS_WAREHOUSE_ID}",
-      "statement": "SELECT run_id, agent, event, tool, detail, ts FROM edw_migration.ops.agent_events ORDER BY ts DESC",
-      "refreshIntervalSeconds": 10,
-      "columns": [
-        { "name": "run_id", "displayName": "Run ID", "type": "string" },
-        { "name": "agent", "displayName": "Agent", "type": "string" },
-        { "name": "event", "displayName": "Event", "type": "string" },
-        { "name": "tool", "displayName": "Tool", "type": "string" },
-        { "name": "detail", "displayName": "Detail", "type": "string" },
-        { "name": "ts", "displayName": "Timestamp", "type": "timestamp" }
-      ]
-    },
-    {
-      "name": "events_over_time",
-      "displayName": "Events Over Time",
-      "warehouseId": "${DATABRICKS_WAREHOUSE_ID}",
-      "statement": "SELECT date_trunc('minute', ts) AS minute, agent, COUNT(*) AS events FROM edw_migration.ops.agent_events WHERE ts >= current_timestamp() - INTERVAL 1 HOUR GROUP BY 1, 2 ORDER BY 1",
-      "refreshIntervalSeconds": 10,
-      "columns": [
-        { "name": "minute", "displayName": "Minute", "type": "timestamp" },
-        { "name": "agent", "displayName": "Agent", "type": "string" },
-        { "name": "events", "displayName": "Events", "type": "int" }
+      "name": "event_summary",
+      "displayName": "Event Summary",
+      "queryLines": [
+        "SELECT COUNT(*) AS total_events, ",
+        "COUNT(DISTINCT run_id) AS runs, ",
+        "COUNT(DISTINCT agent) AS agents ",
+        "FROM edw_migration.ops.agent_events "
       ]
     },
     {
       "name": "events_by_agent",
       "displayName": "Events By Agent",
-      "warehouseId": "${DATABRICKS_WAREHOUSE_ID}",
-      "statement": "SELECT agent, COUNT(*) AS events FROM edw_migration.ops.agent_events GROUP BY 1 ORDER BY 2 DESC",
-      "refreshIntervalSeconds": 10,
-      "columns": [
-        { "name": "agent", "displayName": "Agent", "type": "string" },
-        { "name": "events", "displayName": "Events", "type": "int" }
+      "queryLines": [
+        "SELECT agent, COUNT(*) AS events ",
+        "FROM edw_migration.ops.agent_events ",
+        "GROUP BY agent ",
+        "ORDER BY events DESC "
       ]
     },
     {
-      "name": "latest_run_summary",
-      "displayName": "Latest Run Summary",
-      "warehouseId": "${DATABRICKS_WAREHOUSE_ID}",
-      "statement": "SELECT run_id, agent, COUNT(*) AS events, MIN(ts) AS started_at, MAX(ts) AS ended_at FROM edw_migration.ops.agent_events WHERE run_id = (SELECT MAX(run_id) FROM edw_migration.ops.agent_events) GROUP BY 1, 2 ORDER BY 1, 2",
-      "refreshIntervalSeconds": 10,
-      "columns": [
-        { "name": "run_id", "displayName": "Run ID", "type": "string" },
-        { "name": "agent", "displayName": "Agent", "type": "string" },
-        { "name": "events", "displayName": "Events", "type": "int" },
-        { "name": "started_at", "displayName": "Started At", "type": "timestamp" },
-        { "name": "ended_at", "displayName": "Ended At", "type": "timestamp" }
+      "name": "events_over_time",
+      "displayName": "Events Over Time",
+      "queryLines": [
+        "SELECT date_trunc('MINUTE', ts) AS minute, agent, COUNT(*) AS events ",
+        "FROM edw_migration.ops.agent_events ",
+        "WHERE ts >= current_timestamp() - INTERVAL 24 HOURS ",
+        "GROUP BY 1, 2 ",
+        "ORDER BY 1 "
+      ]
+    },
+    {
+      "name": "latest_events",
+      "displayName": "Latest Events",
+      "queryLines": [
+        "SELECT run_id, agent, event, tool, detail, ts ",
+        "FROM edw_migration.ops.agent_events ",
+        "ORDER BY ts DESC ",
+        "LIMIT 100 "
       ]
     }
   ],
   "pages": [
     {
-      "name": "Overview",
-      "displayName": "Agent Activity Overview",
+      "name": "overview",
+      "displayName": "Agent Activity",
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1",
       "layout": [
         {
-          "widget": "counter",
-          "title": "Total Events",
-          "dataset": "agent_events",
-          "aggregation": "count"
+          "widget": {
+            "name": "title",
+            "multilineTextboxSpec": {
+              "lines": ["## EDW Migration — Agent Events"]
+            }
+          },
+          "position": { "x": 0, "y": 0, "width": 12, "height": 1 }
         },
         {
-          "widget": "line",
-          "title": "Events Over Time (last hour)",
-          "dataset": "events_over_time",
-          "x": "minute",
-          "y": "events",
-          "groupBy": "agent"
+          "widget": {
+            "name": "total-events",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "event_summary",
+                  "fields": [{ "name": "total_events", "expression": "`total_events`" }],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": { "fieldName": "total_events", "displayName": "Total Events" }
+              },
+              "frame": { "title": "Total Events", "showTitle": true }
+            }
+          },
+          "position": { "x": 0, "y": 1, "width": 4, "height": 3 }
         },
         {
-          "widget": "bar",
-          "title": "Events By Agent",
-          "dataset": "events_by_agent",
-          "x": "agent",
-          "y": "events"
+          "widget": {
+            "name": "total-runs",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "event_summary",
+                  "fields": [{ "name": "runs", "expression": "`runs`" }],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": { "fieldName": "runs", "displayName": "Runs" }
+              },
+              "frame": { "title": "Runs", "showTitle": true }
+            }
+          },
+          "position": { "x": 4, "y": 1, "width": 4, "height": 3 }
         },
         {
-          "widget": "table",
-          "title": "Latest Events",
-          "dataset": "agent_events",
-          "columns": ["run_id", "agent", "event", "tool", "detail", "ts"],
-          "pageSize": 50
-        }
-      ]
-    },
-    {
-      "name": "Latest Run",
-      "displayName": "Latest Run Detail",
-      "layout": [
-        {
-          "widget": "table",
-          "title": "Latest Run — Events Per Agent",
-          "dataset": "latest_run_summary",
-          "columns": ["run_id", "agent", "events", "started_at", "ended_at"]
+          "widget": {
+            "name": "total-agents",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "event_summary",
+                  "fields": [{ "name": "agents", "expression": "`agents`" }],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": { "fieldName": "agents", "displayName": "Agents" }
+              },
+              "frame": { "title": "Agents", "showTitle": true }
+            }
+          },
+          "position": { "x": 8, "y": 1, "width": 4, "height": 3 }
         },
         {
-          "widget": "table",
-          "title": "Latest Run — All Events",
-          "dataset": "agent_events",
-          "filter": "run_id = (SELECT MAX(run_id) FROM edw_migration.ops.agent_events)",
-          "columns": ["agent", "event", "tool", "detail", "ts"],
-          "pageSize": 100
+          "widget": {
+            "name": "by-agent-bar",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "events_by_agent",
+                  "fields": [
+                    { "name": "agent", "expression": "`agent`" },
+                    { "name": "events", "expression": "`events`" }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": { "fieldName": "agent", "displayName": "Agent" },
+                "y": { "fieldName": "events", "displayName": "Events" }
+              },
+              "frame": { "title": "Events By Agent", "showTitle": true }
+            }
+          },
+          "position": { "x": 0, "y": 4, "width": 6, "height": 6 }
+        },
+        {
+          "widget": {
+            "name": "over-time-line",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "events_over_time",
+                  "fields": [
+                    { "name": "minute", "expression": "`minute`" },
+                    { "name": "events", "expression": "`events`" },
+                    { "name": "agent", "expression": "`agent`" }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "line",
+              "encodings": {
+                "x": { "fieldName": "minute", "displayName": "Minute" },
+                "y": { "fieldName": "events", "displayName": "Events" },
+                "color": { "fieldName": "agent", "displayName": "Agent" }
+              },
+              "frame": { "title": "Events Over Time (24h)", "showTitle": true }
+            }
+          },
+          "position": { "x": 6, "y": 4, "width": 6, "height": 6 }
+        },
+        {
+          "widget": {
+            "name": "latest-table",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "latest_events",
+                  "fields": [
+                    { "name": "run_id", "expression": "`run_id`" },
+                    { "name": "agent", "expression": "`agent`" },
+                    { "name": "event", "expression": "`event`" },
+                    { "name": "tool", "expression": "`tool`" },
+                    { "name": "detail", "expression": "`detail`" },
+                    { "name": "ts", "expression": "`ts`" }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  { "fieldName": "ts", "displayName": "Timestamp" },
+                  { "fieldName": "run_id", "displayName": "Run ID" },
+                  { "fieldName": "agent", "displayName": "Agent" },
+                  { "fieldName": "event", "displayName": "Event" },
+                  { "fieldName": "tool", "displayName": "Tool" },
+                  { "fieldName": "detail", "displayName": "Detail" }
+                ]
+              },
+              "frame": { "title": "Latest Events", "showTitle": true }
+            }
+          },
+          "position": { "x": 0, "y": 10, "width": 12, "height": 8 }
         }
       ]
     }

@@ -1,21 +1,42 @@
 # Databricks Asset Bundle root for the EDW migration demo.
-# Deploy:  databricks bundle deploy
-# Run:     databricks bundle run edw_migration_medallion
+# Validate: databricks bundle validate
+# Deploy:   BUNDLE_VAR_warehouse_id=<id> databricks bundle deploy -t dev
+# Run:      databricks bundle run edw_migration_medallion -t dev
 #
-# Free Edition constraints baked in:
-#   - serverless SQL warehouse only (no classic clusters)
-#   - max 5 concurrent job tasks (the job below is sequential, so well under)
-#   - restricted outbound internet (federation to Azure SQL works; other
-#     egress may not)
+# Free Edition: serverless SQL warehouse only; max 5 concurrent job tasks.
+#
+# Warehouse ID: set via environment (recommended):
+#   export BUNDLE_VAR_warehouse_id="$(databricks warehouses list -o json | jq -r '.[0].id')"
+# Or pass: databricks bundle deploy -t dev --var="warehouse_id=<id>"
 
 bundle:
   name: edw_migration
 
 variables:
   warehouse_id:
-    description: "Free Edition serverless SQL warehouse ID (find via: databricks warehouses list)"
-    type: string
-    default: ${DATABRICKS_WAREHOUSE_ID}
+    description: "Serverless SQL warehouse ID (set BUNDLE_VAR_warehouse_id or --var)"
+  catalog:
+    description: "Managed UC catalog for medallion + ops"
+    default: edw_migration
+  azure_sql_host:
+    description: "Azure SQL FQDN host (e.g. sql-edwmig-xxx.database.windows.net)"
+    default: ""
+  azure_sql_user:
+    description: "Azure SQL admin login"
+    default: edwadmin
 
 include:
   - databricks/jobs/edw_migration_medallion.yml
+  - databricks/jobs/dashboard.yml
+
+targets:
+  dev:
+    default: true
+    mode: development
+    workspace:
+      # Uses DATABRICKS_HOST / profile from env or ~/.databrickscfg
+      root_path: ~/.bundle/${bundle.name}/${bundle.target}
+  demo:
+    mode: production
+    workspace:
+      root_path: /Workspace/Shared/.bundle/${bundle.name}/${bundle.target}

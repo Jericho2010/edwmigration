@@ -21,9 +21,9 @@ checks and report pass/fail per check.
 
 ## Process
 
-1. **Run the reconcile SQL** via the Databricks CLI:
+1. **Run the reconcile SQL** via the Statement Execution API wrapper:
    ```bash
-   databricks sql execute --file databricks/tests/reconcile.sql --warehouse-id $DATABRICKS_WAREHOUSE_ID
+   ./agents/tools/run_sql.sh --file databricks/tests/reconcile.sql
    ```
    This inserts rows into `edw_migration.ops.reconcile_results` and prints a
    summary (passed/failed/total).

@@ -12,15 +12,16 @@ required at demo time).
 
 ## Reproducibility
 
-If you need to refresh the bacpac (e.g. it has drifted from upstream), run:
+The bacpac is **downloaded on first use** (not committed as a binary). Run:
 
 ```bash
-./refresh_bacpac.sh
+./import_azure_sql.sh
 ```
 
-That script downloads the bacpac from the Microsoft SQL Server samples release
-on GitHub and verifies the SHA-256. The committed copy is the source of truth
-for the demo; the download is only for maintainers.
+That downloads from the Microsoft SQL Server samples release on GitHub and
+prints the SHA-256. Pin `EXPECTED_SHA256` in the script after the first
+successful download. SqlPackage import is performed by
+`infra/azure/bootstrap.sh`.
 
 ## Import
 

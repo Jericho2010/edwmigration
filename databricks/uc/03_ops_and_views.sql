@@ -11,7 +11,7 @@
 --   ops.agent_events        — Cursor hooks write structured events here (observability)
 --
 -- Run via:
---   databricks sql execute --file databricks/uc/03_ops_and_views.sql
+--   ./agents/tools/run_sql.sh --file databricks/uc/03_ops_and_views.sql
 
 -- ---------------------------------------------------------------------------
 -- ops.load_control
@@ -45,7 +45,7 @@ CREATE TABLE IF NOT EXISTS edw_migration.ops.migration_backlog (
 )
 COMMENT 'Assess agent inventory of procs to migrate';
 ALTER TABLE edw_migration.ops.migration_backlog
-  ADD CONSTRAINT migration_backlog_pk PRIMARY KEY (item_id);
+  ADD CONSTRAINT migration_backlog_pk PRIMARY KEY (item_id) NOT ENFORCED;
 
 -- ---------------------------------------------------------------------------
 -- ops.proc_conversion_map
@@ -89,14 +89,10 @@ CREATE TABLE IF NOT EXISTS edw_migration.ops.agent_events (
   detail          STRING,                  -- free-form context
   ts              TIMESTAMP    NOT NULL
 )
+USING DELTA
+CLUSTER BY (run_id, ts)
 COMMENT 'Cursor hook event log (observability sink for the agent workflow)'
 TBLPROPERTIES ('delta.enableChangeDataFeed' = 'true');
-
--- Index-ish: optimize common dashboard queries by run_id + ts.
--- Delta does not support indexes; the dashboard queries filter on run_id and
--- order by ts, so OPTIMIZE + ZORDER on (run_id, ts) is the right lever.
--- Run periodically:
---   OPTIMIZE edw_migration.ops.agent_events ZORDER BY (run_id, ts);
 
 -- ---------------------------------------------------------------------------
 -- source_fed convenience views (created here so 01_federation_setup.sql

@@ -1,10 +1,9 @@
 -- 32_mart_customer_current.sql
--- Gold layer: mart_customer_current
--- Replaces Integration.MigrateStagedCustomerData (mutating proc).
--- Pattern: current-state snapshot (only is_current = true rows).
+-- Gold: mart_customer_current — current SCD2 customers only.
 
 CREATE OR REPLACE TABLE edw_migration.gold.mart_customer_current AS
 SELECT
+  c.customer_key,
   c.customer_id,
   c.customer_name,
   c.bill_to_customer_id,

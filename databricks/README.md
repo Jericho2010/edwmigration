@@ -26,10 +26,15 @@ flowchart LR
 ## Deploy & run
 
 ```bash
-# From repo root:
-databricks bundle deploy
-databricks bundle run edw_migration_medallion
+export BUNDLE_VAR_warehouse_id="$DATABRICKS_WAREHOUSE_ID"
+databricks bundle validate -t dev
+databricks bundle deploy -t dev
+databricks bundle run edw_migration_medallion -t dev
 ```
+
+SQL file paths in `databricks/jobs/*.yml` are **relative to that YAML file**
+(AI Dev Kit path-resolution rule). Warehouse ID comes from
+`BUNDLE_VAR_warehouse_id` (not `${DATABRICKS_WAREHOUSE_ID}` inside YAML).
 
 ## Free Edition constraints
 
