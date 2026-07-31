@@ -32,9 +32,18 @@ for arg in "$@"; do
 done
 
 run() {
-  # Echo then execute (or just echo if dry-run).
-  echo "+ $*"
+  # Echo then execute (or just echo if dry-run). Mask the SQL password in
+  # the echoed command — connection strings and sqlcmd -P would otherwise
+  # leak it into terminal scrollback and CI logs.
+  local display="$*"
+  if [ -n "${AZ_SQL_PASSWORD:-}" ]; then
+    display="${display//${AZ_SQL_PASSWORD}/********}"
+  fi
+  echo "+ $display"
   if [ "$DRY_RUN" -eq 0 ]; then
+    # Intentional: callers pass a single command string with inline quoting
+    # (connection strings, -Q "..." args) that must be re-parsed by the shell.
+    # shellcheck disable=SC2294
     eval "$@"
   fi
 }

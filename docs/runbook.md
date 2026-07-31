@@ -46,6 +46,10 @@ Fill in at least:
 set -a; . ./.env; set +a
 ```
 
+> **Shortcut:** `make demo` runs §§2–5 (bootstrap → federation → bundle
+> deploy → job run) with prereq checks. The sections below are the same
+> steps spelled out, for narrating or debugging.
+
 ---
 
 ## 2. Provision Azure SQL + load the EDW
@@ -197,6 +201,27 @@ echo "$RUN_ID" > agents/out/CURRENT_RUN
 ```
 
 See [agents/samples/README.md](../agents/samples/README.md).
+
+### Self-healing fault-injection demo
+
+Prove the control plane catches legacy-side drift and refuses to ship:
+
+```bash
+# 1. Inject — bump one fixture expectation so reconcile must fail
+./agents/tools/inject_fault.sh --fixture fact_sale_count
+./agents/tools/inject_fault.sh --status
+
+# 2. In Cursor, ask the coordinator to re-run Test and Gate
+#    (or rerun databricks/tests/reconcile.sql, then delegate edw-gate).
+#    Test reports fixture_fact_sale_count = fail; Gate blocks the run and
+#    the subagentStop hook fires the retry follow-up.
+
+# 3. Close the loop
+./agents/tools/inject_fault.sh --revert
+#    Re-run Test + Gate — the run ships green.
+```
+
+Full talk track: [demo-script.md](demo-script.md) “Self-healing arc”.
 
 ---
 

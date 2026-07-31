@@ -19,7 +19,7 @@ jobs:
 
       - name: Install tools
         run: |
-          pip install pyyaml
+          pip install pyyaml jsonschema shellcheck-py sqlfluff
           # Databricks CLI for bundle validate (auth optional for schema-level checks)
           curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
 
@@ -47,9 +47,41 @@ jobs:
             print("OK", p)
           PY
 
+      - name: Validate sample artifacts against JSON contracts
+        run: |
+          python3 - <<'PY'
+          import json
+          from jsonschema import Draft7Validator
+          pairs = [
+            ("agents/contracts/context.schema.json", "agents/samples/run/context.json"),
+            ("agents/contracts/migration_backlog.schema.json", "agents/samples/run/migration_backlog.json"),
+            ("agents/contracts/migration_manifest.schema.json", "agents/samples/run/migration_manifest.json"),
+          ]
+          failed = False
+          for schema_path, doc_path in pairs:
+              schema = json.load(open(schema_path))
+              Draft7Validator.check_schema(schema)
+              doc = json.load(open(doc_path))
+              errors = list(Draft7Validator(schema).iter_errors(doc))
+              for e in errors:
+                  print(f"FAIL {doc_path}: {e.message}")
+                  failed = True
+              if not errors:
+                  print(f"OK   {doc_path}")
+          raise SystemExit(1 if failed else 0)
+          PY
+
       - name: Shell syntax check
         run: |
           find . -name '*.sh' -not -path './.git/*' -print0 | xargs -0 -n1 bash -n
+
+      - name: ShellCheck
+        run: |
+          find . -name '*.sh' -not -path './.git/*' -print0 | xargs -0 shellcheck
+
+      - name: SQL lint (Databricks SQL parse check)
+        run: |
+          sqlfluff lint databricks/ --nocolor
 
       - name: Bundle validate (structure)
         env:

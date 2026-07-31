@@ -23,6 +23,13 @@ Bootstrap imports it with `SqlPackage`. Details:
 `[Configuration]`, and `[Application]`. These files are the **Convert**
 teaching surface.
 
+Seven `Integration.*` sources are **vendored** here (from Microsoft's
+MIT-licensed `sql-server-samples` wwi-dw-ssdt project) so Assess/Convert can
+run without a live Azure SQL export — the five `MigrateStaged*Data` procs in
+the demo scope (Sale, StockHolding, Customer, City, StockItem) plus the
+`GetLineageKey` / `GetLastETLCutoffTime` helpers. A live export overwrites
+them with the true on-database definitions.
+
 ## `fixtures/`
 
 `export_fixtures.sh` captures reconcile fixtures (mutates DB via Migrate* procs):

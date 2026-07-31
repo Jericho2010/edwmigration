@@ -38,6 +38,26 @@ the meeting.
 
 ---
 
+## Self-healing arc (10 min, add to the 30/45-min versions)
+
+The gate-is-the-hero segment. Precondition: a green run exists (medallion
+job + one coordinator run completed; `ops.fixture_expectations` staged).
+
+| Min | Screen / cue | Say |
+|---|---|---|
+| 0–1 | Terminal | “The migration pattern only matters if it catches drift. Watch.” Run `./agents/tools/inject_fault.sh --fixture fact_sale_count`. |
+| 1–4 | Cursor | “Legacy moved under us — stale export, changed business rule, whatever.” Ask the coordinator to re-run Test and Gate. Reconcile fails `fixture_fact_sale_count`; the manifest comes back `gate: fail` with the blocker. |
+| 4–6 | Dashboard | “Nothing shipped. The blocker is a row in `ops.agent_events` and the manifest — not a Slack message.” Show the hook's retry follow-up firing in Cursor. |
+| 6–9 | Terminal | “The DBA confirms the export was stale.” Run `./agents/tools/inject_fault.sh --revert`, re-run Test + Gate in Cursor. Manifest flips to `gate: pass`. |
+| 9–10 | Manifest | “Deterministic ship/no-ship, human-in-the-loop where it matters, full audit trail in the lakehouse.” |
+
+If the prospect asks “could the agent fix it itself?”: a *logic* fault in a
+converted notebook — yes, that's the Convert retry path (`max_retries: 2`).
+A *data* fault like this one — correctly no; the gate forces a human
+decision. Both answers are the product story.
+
+---
+
 ## 45-minute version (workshop)
 
 Follow the [runbook](runbook.md) live with the prospect driving the keyboard where possible.

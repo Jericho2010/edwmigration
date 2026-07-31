@@ -30,12 +30,19 @@ include:
   - databricks/jobs/dashboard.yml
 
 targets:
+  # dev: the normal self-serve path (docs/runbook.md). Development mode —
+  # resources are prefixed [dev] and owned by the deploying user.
   dev:
     default: true
     mode: development
     workspace:
       # Uses DATABRICKS_HOST / profile from env or ~/.databrickscfg
       root_path: ~/.bundle/${bundle.name}/${bundle.target}
+  # demo: SE-owned pre-provisioned workspace for live presentations.
+  # Production mode (no [dev] prefixes, Shared root) so prospects see clean
+  # resource names. Deploy ahead of the meeting with:
+  #   databricks bundle deploy -t demo --var="warehouse_id=<id>"
+  # then run the 15/30-min tracks in docs/demo-script.md against it.
   demo:
     mode: production
     workspace:

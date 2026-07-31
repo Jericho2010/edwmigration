@@ -12,7 +12,7 @@ if [ -f "$CURRENT" ]; then
   fi
 fi
 
-NEWEST="$(ls -1dt "${REPO_ROOT}"/agents/out/*/context.json 2>/dev/null | head -1 || true)"
+NEWEST="$(find "${REPO_ROOT}/agents/out" -mindepth 2 -maxdepth 2 -name context.json -printf '%T@ %p\n' 2>/dev/null | sort -rn | head -1 | cut -d' ' -f2- || true)"
 if [ -n "$NEWEST" ]; then
   basename "$(dirname "$NEWEST")"
   exit 0

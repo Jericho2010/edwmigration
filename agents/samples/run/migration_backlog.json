@@ -1,14 +1,14 @@
 [
   {
     "item_id": "item-001",
-    "legacy_proc": "Integration.GetStockItemUpdates",
-    "classification": "get",
-    "reads": "Dimension.Stock Item",
-    "writes": "",
+    "legacy_proc": "Integration.MigrateStagedStockItemData",
+    "classification": "migrate",
+    "reads": "Integration.StockItem_Staging",
+    "writes": "Dimension.Stock Item",
     "target_layer": "gold",
     "target_path": "databricks/converted/30_mart_daily_sales.sql",
     "priority": "high",
-    "risk_flags": "windowed,aggregation",
+    "risk_flags": "mutates_db,scd2",
     "status": "converted"
   },
   {

@@ -4,7 +4,7 @@
   "blockers": [],
   "converted_artifacts": [
     {
-      "legacy_proc": "Integration.GetStockItemUpdates",
+      "legacy_proc": "Integration.MigrateStagedStockItemData",
       "target_path": "databricks/converted/30_mart_daily_sales.sql",
       "status": "final"
     },

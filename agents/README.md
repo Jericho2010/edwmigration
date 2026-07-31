@@ -79,6 +79,7 @@ When a baseline exists, write `databricks/converted/<same-basename>.sql`.
 | `tools/render_federation_sql.sh` | Fill Azure host/admin into `01_federation_setup.sql` |
 | `tools/sync_prompts.sh` | Regenerate `.cursor/agents/` from prompts |
 | `tools/render_manifest_table.py` | Pretty-print a gate manifest |
+| `tools/inject_fault.sh` | Fault injection for the self-healing demo (`--revert` to restore) |
 
 ## Running the agents
 

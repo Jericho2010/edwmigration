@@ -1,0 +1,8 @@
+[sqlfluff]
+dialect = databricks
+max_line_length = 120
+# Purpose: fail CI on unparseable Databricks SQL (PRS violations cannot be
+# excluded). Style groups are off — the medallion files intentionally use
+# SELECT * views over federation, alias-less scalar subqueries, and
+# redundant ELSE NULL for teaching clarity.
+exclude_rules = layout, capitalisation, convention, references, aliasing, ambiguous, structure

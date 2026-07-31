@@ -25,7 +25,21 @@ if ! command -v python3 >/dev/null 2>&1; then
   exit 0
 fi
 
-SQL="$(python3 - "$BUF_FILE" "$UC_TABLE" <<'PY'
+# Snapshot-then-swap: atomically move the buffer aside so events appended by
+# log_event.sh while we flush land in a fresh BUF_FILE instead of being
+# truncated away after the INSERT.
+SNAP_FILE="${BUF_FILE}.flushing.$$"
+mv "$BUF_FILE" "$SNAP_FILE"
+
+restore_snapshot() {
+  # Put unflushed events back into the buffer (best effort).
+  if [ -s "$SNAP_FILE" ]; then
+    cat "$SNAP_FILE" >> "$BUF_FILE"
+  fi
+  rm -f "$SNAP_FILE"
+}
+
+if ! SQL="$(python3 - "$SNAP_FILE" "$UC_TABLE" <<'PY'
 import json, sys
 path, table = sys.argv[1], sys.argv[2]
 
@@ -55,21 +69,28 @@ if not rows:
     sys.exit(0)
 print(f"INSERT INTO {table} (run_id, agent, event, tool, detail, ts) VALUES " + ",".join(rows))
 PY
-)"
+)"; then
+  echo "[_flush_events] WARNING: could not build INSERT; events remain buffered." >&2
+  restore_snapshot
+  exit 0
+fi
 
 if [ -z "${SQL:-}" ]; then
+  rm -f "$SNAP_FILE"
   exit 0
 fi
 
 if [ ! -x "$RUN_SQL" ]; then
   echo "[_flush_events] ${RUN_SQL} missing or not executable; events remain buffered." >&2
+  restore_snapshot
   exit 0
 fi
 
 if "$RUN_SQL" --sql "$SQL" >/dev/null 2>&1; then
-  : > "$BUF_FILE"
+  rm -f "$SNAP_FILE"
   echo "[_flush_events] flushed ${RUN_ID} to ${UC_TABLE}." >&2
 else
   echo "[_flush_events] WARNING: flush failed; events remain buffered." >&2
+  restore_snapshot
 fi
 exit 0

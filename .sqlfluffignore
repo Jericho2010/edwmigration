@@ -1,0 +1,8 @@
+# Uses CREATE CONNECTION / CREATE FOREIGN CATALOG — not in sqlfluff's databricks grammar.
+databricks/uc/01_federation_setup.sql
+# Uses BEGIN ... EXIT HANDLER compound statements — not in the grammar.
+databricks/uc/02_federation_smoke.sql
+# Uses COLLATE UTF8_LCASE — not in the grammar.
+databricks/silver/23_constraints_and_collation.sql
+# legacy/procs is vendored T-SQL (Microsoft sample), not Databricks SQL.
+legacy/

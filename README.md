@@ -61,7 +61,8 @@ Agent delegation graph: [docs/img/agent_delegation.png](docs/img/agent_delegatio
 
 ## Quickstart (~45 minutes)
 
-Full detail lives in the [runbook](docs/runbook.md). Abbreviated path:
+Full detail lives in the [runbook](docs/runbook.md). Abbreviated path below —
+or one command for steps 1–3: `make demo` (see [Makefile](Makefile)).
 
 ```bash
 # 0) Prereqs — docs/prerequisites.md
