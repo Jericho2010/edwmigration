@@ -11,6 +11,32 @@ bundle, launch the coordinator in Cursor, watch the agents work.
 
 ![Architecture](docs/img/architecture.png)
 
+## Watch it run
+
+Real terminal, live Databricks Free Edition workspace, no Azure
+(offline mode — [re-record](docs/media/record_demo.sh)):
+
+**Seed the "legacy EDW"** — 25k deterministic WWI-shaped rows into `source_fed`:
+
+![Seed](docs/img/demo_seed.gif)
+
+**Run the medallion DAG** — same bundle, same job:
+
+![Job](docs/img/demo_job.gif)
+
+**The self-healing arc** — inject drift, the gate blocks, Genie explains why,
+revert, green:
+
+![Fault arc](docs/img/demo_fault.gif)
+
+**Ask the copilot** — the migrated gold marts, in plain English:
+
+![Genie](docs/img/demo_genie.gif)
+
+**The gate manifest** — deterministic ship/no-ship, as data:
+
+![Manifest](docs/img/demo_manifest.gif)
+
 ## Who this is for
 
 | Audience | How to use this repo |

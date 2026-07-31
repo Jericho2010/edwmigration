@@ -195,6 +195,15 @@ fail the gate?" — config and certified Q&A live in
 `databricks/genie/space_config.json`. Talk track:
 [demo-script.md](demo-script.md) "Genie copilot".
 
+Terminal alternative (used by the recorded demo scenes):
+
+```bash
+./agents/tools/ask_genie.sh <space_id> "Top 10 stock items by gross revenue?"
+```
+
+Prints Genie's generated SQL, the result table, and its natural-language
+answer — handy for asciinema captures and CI smoke tests.
+
 ---
 
 ## 6. Run the agent workflow in Cursor
