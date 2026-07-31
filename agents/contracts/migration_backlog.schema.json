@@ -1,0 +1,56 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://edw-migration.demo/agents/contracts/migration_backlog.schema.json",
+  "title": "Migration backlog",
+  "description": "Output of the Assess agent: one item per legacy proc to migrate. Written by the coordinator on behalf of the (readonly) Assess subagent.",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": ["item_id", "legacy_proc", "classification", "reads", "writes", "target_layer", "target_path", "priority", "risk_flags", "status"],
+    "additionalProperties": false,
+    "properties": {
+      "item_id": {
+        "type": "string",
+        "description": "Stable ID for this backlog item (e.g. 'item-001')."
+      },
+      "legacy_proc": {
+        "type": "string",
+        "description": "Fully-qualified proc name, e.g. 'Integration.GetStockItemUpdates'."
+      },
+      "classification": {
+        "type": "string",
+        "enum": ["get", "migrate", "other"],
+        "description": "get = returns result set; migrate = INSERT/UPDATE into Dimension table; other = helper."
+      },
+      "reads": {
+        "type": "string",
+        "description": "Comma-separated source tables the proc reads from."
+      },
+      "writes": {
+        "type": "string",
+        "description": "Comma-separated target tables the proc writes to (empty for get)."
+      },
+      "target_layer": {
+        "type": "string",
+        "enum": ["silver", "gold", "n/a"]
+      },
+      "target_path": {
+        "type": "string",
+        "description": "Repo-relative path of the converted notebook, e.g. 'databricks/gold/30_mart_daily_sales.sql'."
+      },
+      "priority": {
+        "type": "string",
+        "enum": ["high", "medium", "low"]
+      },
+      "risk_flags": {
+        "type": "string",
+        "description": "Comma-separated risk tags, e.g. 'mutates_db,scd2,windowed'."
+      },
+      "status": {
+        "type": "string",
+        "enum": ["pending", "in_progress", "converted", "tested", "done", "blocked"]
+      }
+    }
+  },
+  "minItems": 1
+}

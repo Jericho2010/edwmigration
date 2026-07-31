@@ -1,0 +1,65 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://edw-migration.demo/agents/contracts/migration_manifest.schema.json",
+  "title": "Migration manifest",
+  "description": "Output of the Gate agent: deterministic ship/no-ship decision. Written by the coordinator on behalf of the (readonly) Gate subagent.",
+  "type": "object",
+  "required": ["run_id", "gate", "blockers", "converted_artifacts", "attempt"],
+  "additionalProperties": false,
+  "properties": {
+    "run_id": {
+      "type": "string",
+      "description": "The migration run this manifest covers.",
+      "pattern": "^[0-9a-fA-F-]{36}$"
+    },
+    "gate": {
+      "type": "string",
+      "enum": ["pass", "fail"],
+      "description": "Deterministic ship/no-ship decision."
+    },
+    "blockers": {
+      "type": "array",
+      "description": "List of blockers if gate=fail. Empty if gate=pass.",
+      "items": {
+        "type": "object",
+        "required": ["id", "message"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string" },
+          "message": { "type": "string" },
+          "backlog_item_id": { "type": "string" }
+        }
+      }
+    },
+    "converted_artifacts": {
+      "type": "array",
+      "description": "List of notebooks produced by the Convert agent for this run.",
+      "items": {
+        "type": "object",
+        "required": ["legacy_proc", "target_path", "status"],
+        "additionalProperties": false,
+        "properties": {
+          "legacy_proc": { "type": "string" },
+          "target_path": { "type": "string" },
+          "status": { "type": "string", "enum": ["draft", "review", "final"] }
+        }
+      }
+    },
+    "attempt": {
+      "type": "integer",
+      "description": "Attempt number this manifest was produced on. Compared against max_retries by on_subagent_stop.sh.",
+      "minimum": 0
+    },
+    "summary": {
+      "type": "object",
+      "description": "Roll-up counts for the dashboard.",
+      "properties": {
+        "backlog_total": { "type": "integer" },
+        "backlog_converted": { "type": "integer" },
+        "reconcile_passed": { "type": "integer" },
+        "reconcile_failed": { "type": "integer" },
+        "agent_events_recorded": { "type": "integer" }
+      }
+    }
+  }
+}

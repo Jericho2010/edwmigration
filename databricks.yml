@@ -1,0 +1,21 @@
+# Databricks Asset Bundle root for the EDW migration demo.
+# Deploy:  databricks bundle deploy
+# Run:     databricks bundle run edw_migration_medallion
+#
+# Free Edition constraints baked in:
+#   - serverless SQL warehouse only (no classic clusters)
+#   - max 5 concurrent job tasks (the job below is sequential, so well under)
+#   - restricted outbound internet (federation to Azure SQL works; other
+#     egress may not)
+
+bundle:
+  name: edw_migration
+
+variables:
+  warehouse_id:
+    description: "Free Edition serverless SQL warehouse ID (find via: databricks warehouses list)"
+    type: string
+    default: ${DATABRICKS_WAREHOUSE_ID}
+
+include:
+  - databricks/jobs/edw_migration_medallion.yml

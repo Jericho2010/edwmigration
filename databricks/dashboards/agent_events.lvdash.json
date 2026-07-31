@@ -1,0 +1,112 @@
+{
+  "datasets": [
+    {
+      "name": "agent_events",
+      "displayName": "Agent Events",
+      "warehouseId": "${DATABRICKS_WAREHOUSE_ID}",
+      "statement": "SELECT run_id, agent, event, tool, detail, ts FROM edw_migration.ops.agent_events ORDER BY ts DESC",
+      "refreshIntervalSeconds": 10,
+      "columns": [
+        { "name": "run_id", "displayName": "Run ID", "type": "string" },
+        { "name": "agent", "displayName": "Agent", "type": "string" },
+        { "name": "event", "displayName": "Event", "type": "string" },
+        { "name": "tool", "displayName": "Tool", "type": "string" },
+        { "name": "detail", "displayName": "Detail", "type": "string" },
+        { "name": "ts", "displayName": "Timestamp", "type": "timestamp" }
+      ]
+    },
+    {
+      "name": "events_over_time",
+      "displayName": "Events Over Time",
+      "warehouseId": "${DATABRICKS_WAREHOUSE_ID}",
+      "statement": "SELECT date_trunc('minute', ts) AS minute, agent, COUNT(*) AS events FROM edw_migration.ops.agent_events WHERE ts >= current_timestamp() - INTERVAL 1 HOUR GROUP BY 1, 2 ORDER BY 1",
+      "refreshIntervalSeconds": 10,
+      "columns": [
+        { "name": "minute", "displayName": "Minute", "type": "timestamp" },
+        { "name": "agent", "displayName": "Agent", "type": "string" },
+        { "name": "events", "displayName": "Events", "type": "int" }
+      ]
+    },
+    {
+      "name": "events_by_agent",
+      "displayName": "Events By Agent",
+      "warehouseId": "${DATABRICKS_WAREHOUSE_ID}",
+      "statement": "SELECT agent, COUNT(*) AS events FROM edw_migration.ops.agent_events GROUP BY 1 ORDER BY 2 DESC",
+      "refreshIntervalSeconds": 10,
+      "columns": [
+        { "name": "agent", "displayName": "Agent", "type": "string" },
+        { "name": "events", "displayName": "Events", "type": "int" }
+      ]
+    },
+    {
+      "name": "latest_run_summary",
+      "displayName": "Latest Run Summary",
+      "warehouseId": "${DATABRICKS_WAREHOUSE_ID}",
+      "statement": "SELECT run_id, agent, COUNT(*) AS events, MIN(ts) AS started_at, MAX(ts) AS ended_at FROM edw_migration.ops.agent_events WHERE run_id = (SELECT MAX(run_id) FROM edw_migration.ops.agent_events) GROUP BY 1, 2 ORDER BY 1, 2",
+      "refreshIntervalSeconds": 10,
+      "columns": [
+        { "name": "run_id", "displayName": "Run ID", "type": "string" },
+        { "name": "agent", "displayName": "Agent", "type": "string" },
+        { "name": "events", "displayName": "Events", "type": "int" },
+        { "name": "started_at", "displayName": "Started At", "type": "timestamp" },
+        { "name": "ended_at", "displayName": "Ended At", "type": "timestamp" }
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "name": "Overview",
+      "displayName": "Agent Activity Overview",
+      "layout": [
+        {
+          "widget": "counter",
+          "title": "Total Events",
+          "dataset": "agent_events",
+          "aggregation": "count"
+        },
+        {
+          "widget": "line",
+          "title": "Events Over Time (last hour)",
+          "dataset": "events_over_time",
+          "x": "minute",
+          "y": "events",
+          "groupBy": "agent"
+        },
+        {
+          "widget": "bar",
+          "title": "Events By Agent",
+          "dataset": "events_by_agent",
+          "x": "agent",
+          "y": "events"
+        },
+        {
+          "widget": "table",
+          "title": "Latest Events",
+          "dataset": "agent_events",
+          "columns": ["run_id", "agent", "event", "tool", "detail", "ts"],
+          "pageSize": 50
+        }
+      ]
+    },
+    {
+      "name": "Latest Run",
+      "displayName": "Latest Run Detail",
+      "layout": [
+        {
+          "widget": "table",
+          "title": "Latest Run — Events Per Agent",
+          "dataset": "latest_run_summary",
+          "columns": ["run_id", "agent", "events", "started_at", "ended_at"]
+        },
+        {
+          "widget": "table",
+          "title": "Latest Run — All Events",
+          "dataset": "agent_events",
+          "filter": "run_id = (SELECT MAX(run_id) FROM edw_migration.ops.agent_events)",
+          "columns": ["agent", "event", "tool", "detail", "ts"],
+          "pageSize": 100
+        }
+      ]
+    }
+  ]
+}

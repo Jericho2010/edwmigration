@@ -1,0 +1,24 @@
+{
+  "hooks": {
+    "subagentStart": {
+      "command": ".cursor/hooks/log_event.sh",
+      "failClosed": false
+    },
+    "subagentStop": {
+      "command": ".cursor/hooks/on_subagent_stop.sh",
+      "failClosed": true
+    },
+    "afterFileEdit": {
+      "command": ".cursor/hooks/log_event.sh",
+      "failClosed": false
+    },
+    "afterShellExecution": {
+      "command": ".cursor/hooks/log_event.sh",
+      "failClosed": false
+    },
+    "afterMCPExecution": {
+      "command": ".cursor/hooks/log_event.sh",
+      "failClosed": false
+    }
+  }
+}
