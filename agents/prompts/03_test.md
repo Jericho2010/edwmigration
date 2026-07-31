@@ -59,7 +59,9 @@ checks and report pass/fail per check.
 ## Outputs (return as JSON in your final message)
 
 Return the `reconcile_report.json` object above. The coordinator writes it
-to `agents/out/<run_id>/reconcile_report.json`.
+to `agents/out/<run_id>/reconcile_report.json`. Contract:
+`agents/contracts/reconcile_report.schema.json` (CI-validated against
+`agents/samples/run/reconcile_report.json`).
 
 ## Constraints
 

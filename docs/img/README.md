@@ -12,3 +12,17 @@ Mermaid sources and rendered PNGs for enablement docs.
 npx -y @mermaid-js/mermaid-cli@11 -i docs/img/architecture.mmd -o docs/img/architecture.png
 npx -y @mermaid-js/mermaid-cli@11 -i docs/img/agent_delegation.mmd -o docs/img/agent_delegation.png
 ```
+
+## Demo recordings (GIF)
+
+Live terminal scenes embedded in the [root README](../../README.md#watch-it-run)
+"Watch it run" section. Sources (asciinema casts) and the re-record script
+live in [docs/media/](../media/README.md).
+
+| File | Scene |
+|---|---|
+| `demo_seed.gif` | Offline seed → `source_fed` (no Azure) |
+| `demo_job.gif` | Medallion job run via bundle |
+| `demo_fault.gif` | Fault injection → gate blocks → Genie explains → revert → green |
+| `demo_genie.gif` | Natural-language questions over gold marts |
+| `demo_manifest.gif` | Gate manifest render (`make offline-gate`) |

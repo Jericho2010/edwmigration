@@ -7,6 +7,11 @@ Prep once: complete [runbook](runbook.md) through medallion deploy so the
 dashboard and tables exist. Keep Azure warm (`SELECT 1` via sqlcmd) before
 the meeting.
 
+No live environment? The README "Watch it run" GIFs
+([docs/media/](media/README.md)) are real recordings of the seed, job,
+fault arc, Genie copilot, and gate manifest — play them full-screen as the
+fallback talk track, or re-record on your own workspace.
+
 ---
 
 ## 15-minute version (hallway / discovery)

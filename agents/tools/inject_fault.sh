@@ -108,6 +108,8 @@ PY
 
     # Snapshot the current row for --revert. In dry-run mode, fabricate a
     # plausible snapshot so the inject/revert cycle is testable offline.
+    # WARNING: never run --revert for real against a dry-run state file —
+    # it restores fabricated values (compare='gte' etc.) into the table.
     if [ "${INJECT_FAULT_DRY_RUN:-0}" = "1" ]; then
       SNAP='{"fixture_name":"'"$FIXTURE"'","expected":null,"compare":"gte","notes":"dry-run snapshot"}'
     else

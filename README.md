@@ -54,6 +54,10 @@ revert, green:
 - **Cursor agent playbook** — portable prompts + Cursor subagents/hooks
 - **Observability** — hooks → `ops.agent_events` → AI/BI dashboard (bundle-deployed)
 - **DAB job** — one Lakeflow Job for the full pipeline + lineage check
+- **Offline mode** — `make demo-offline` seeds `source_fed`; same pipeline, no Azure
+- **Genie copilot** — natural-language Q&A over `ops.*` + gold marts ([space as code](databricks/genie/space_config.json))
+- **Self-healing arc** — [fault injection](agents/tools/inject_fault.sh) → gate blocks → revert → green
+- **Recorded run** — five live GIFs above, re-recordable via [docs/media/](docs/media/README.md)
 
 ## Architecture (one picture)
 
