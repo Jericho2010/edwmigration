@@ -135,7 +135,7 @@ echo
 echo "[6/9] importing WideWorldImportersDW bacpac via SqlPackage ..."
 if [ ! -s "$BACPAC_PATH" ]; then
   echo "  bacpac not found at ${BACPAC_PATH}; downloading ..."
-  run "${REPO_ROOT}/legacy/wideworldimportersdw/import_azure_sql.sh"
+  run "${REPO_ROOT}/legacy/wideworldimportersdw/download_bacpac.sh"
 fi
 CONN_STR="Server=tcp:${AZ_SQL_SERVER}.database.windows.net,1433;Database=${AZ_SQL_DB};User ID=${AZ_SQL_ADMIN};Password=${AZ_SQL_PASSWORD};Encrypt=true;TrustServerCertificate=false;"
 run "SqlPackage /a:Import /tf:'${BACPAC_PATH}' /tcs:'${CONN_STR}'"

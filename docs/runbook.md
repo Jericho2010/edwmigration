@@ -86,6 +86,20 @@ It queries `edw_migration.ops.agent_events`.
 Initially the table is empty — the hooks only write events when the agent
 workflow runs (next step).
 
+## 5b. Fixture expectations
+
+After `export_fixtures.sh` (part of bootstrap), expectations are regenerated:
+
+```bash
+./legacy/fixtures/build_expectations.sh
+# Writes legacy/fixtures/expectations.json and
+# databricks/tests/13_stage_fixture_expectations.sql
+```
+
+The medallion job stages these into `ops.fixture_expectations` and reconcile
+compares gold/bronze counts. Offline sample expectation
+`sample_offline_city` (gte 1) always runs.
+
 ## 6. Run the agent workflow in Cursor
 
 1. Open this repo in Cursor.

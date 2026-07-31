@@ -1,19 +1,17 @@
 # DAB job: medallion pipeline.
-# Paths are relative to THIS file (databricks/jobs/) — see AI Dev Kit databricks-bundles Path Resolution.
-# Free Edition: max 5 concurrent tasks; peak fan-out here stays under 5.
+# Paths are relative to THIS file (databricks/jobs/) — AI Dev Kit databricks-bundles Path Resolution.
+# Free Edition: max 5 concurrent tasks; peak fan-out stays under 5.
 
 resources:
   jobs:
     edw_migration_medallion:
       name: "[${bundle.target}] edw_migration_medallion"
-      description: "EDW migration demo: federation smoke → bronze → silver → gold → reconcile"
+      description: "EDW migration demo: federation smoke → bronze → silver → gold → fixtures → reconcile → lineage"
       tags:
         demo: edw-migration
         edition: free
       max_concurrent_runs: 1
       timeout_seconds: 7200
-      email_notifications:
-        on_failure: []
       tasks:
         - task_key: federation_smoke
           timeout_seconds: 900
@@ -107,16 +105,56 @@ resources:
               path: ../gold/33_mart_city_dimension.sql
             warehouse_id: ${var.warehouse_id}
 
+        - task_key: metric_daily_sales
+          depends_on:
+            - task_key: silver_fact_sale
+          timeout_seconds: 900
+          sql_task:
+            file:
+              path: ../gold/34_metric_daily_sales.sql
+            warehouse_id: ${var.warehouse_id}
+
+        - task_key: silver_constraints
+          depends_on:
+            - task_key: silver_fact_sale
+            - task_key: gold_customer_current
+            - task_key: gold_city_dimension
+          timeout_seconds: 900
+          sql_task:
+            file:
+              path: ../silver/23_constraints_and_collation.sql
+            warehouse_id: ${var.warehouse_id}
+
+        - task_key: stage_fixtures
+          depends_on:
+            - task_key: federation_smoke
+          timeout_seconds: 600
+          sql_task:
+            file:
+              path: ../tests/13_stage_fixture_expectations.sql
+            warehouse_id: ${var.warehouse_id}
+
         - task_key: reconcile
           depends_on:
             - task_key: gold_daily_sales
             - task_key: gold_stock_movements
             - task_key: gold_customer_current
             - task_key: gold_city_dimension
+            - task_key: stage_fixtures
+            - task_key: metric_daily_sales
           timeout_seconds: 900
           sql_task:
             file:
               path: ../tests/reconcile.sql
+            warehouse_id: ${var.warehouse_id}
+
+        - task_key: lineage_check
+          depends_on:
+            - task_key: reconcile
+          timeout_seconds: 600
+          sql_task:
+            file:
+              path: ../uc/04_lineage_check.sql
             warehouse_id: ${var.warehouse_id}
 
       permissions:

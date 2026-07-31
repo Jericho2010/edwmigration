@@ -22,6 +22,13 @@ Five subagents, generated from `agents/prompts/*.md` by
 
 ## Hooks
 
+`.cursor/hooks.json` uses Cursor schema `version: 1` with **arrays** of
+hook definitions per event (not bare objects). `loop_limit: 2` on
+`subagentStop` matches `max_retries` in `context.json`.
+Cursor payloads do **not** include `run_id`; hooks resolve it from
+`agents/out/CURRENT_RUN` (written by the coordinator).
+
+
 Cursor hooks fire on agent lifecycle events and run deterministic scripts.
 This is the observability sink and the retry-loop enforcer.
 

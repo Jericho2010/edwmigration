@@ -1,0 +1,22 @@
+flowchart LR
+  subgraph azure [Free Azure SQL EDW]
+    Bacpac[WWI_DW_bacpac]
+    FreeDB[Azure_SQL_free_DB]
+    Bacpac -->|SqlPackage| FreeDB
+  end
+  subgraph dbx [Databricks Free Edition]
+    Fed[wwi_dw_fed]
+    Bronze[bronze]
+    Silver[silver]
+    Gold[gold]
+    Ops[ops_agent_events]
+    FreeDB --> Fed
+    Fed -->|CTAS| Bronze
+    Bronze --> Silver
+    Silver --> Gold
+  end
+  subgraph cursor [Cursor]
+    Coord[edw_coordinator]
+    Coord -.-> dbx
+  end
+  azure -.federation.-> dbx

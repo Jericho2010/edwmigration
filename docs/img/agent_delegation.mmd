@@ -1,0 +1,12 @@
+flowchart TD
+  SE[SE_human] -->|kickoff| Coord[edw_coordinator]
+  Coord -->|delegates| Assess[edw_assess_readonly]
+  Assess -->|backlog_JSON| Coord
+  Coord -->|delegates| Convert[edw_convert]
+  Convert -->|notebook_path| Coord
+  Coord -->|delegates| Test[edw_test_readonly]
+  Test -->|reconcile_report| Coord
+  Coord -->|delegates| Gate[edw_gate_readonly]
+  Gate -->|manifest_JSON| Coord
+  Coord -->|fail_retries_left| Convert
+  Gate -->|migration_manifest| SE

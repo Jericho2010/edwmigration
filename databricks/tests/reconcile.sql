@@ -132,6 +132,60 @@ SELECT
 ;
 
 -- ---------------------------------------------------------------------------
+-- Check 6+: fixture expectations (ops.fixture_expectations)
+-- Stage via databricks/tests/13_stage_fixture_expectations.sql first.
+-- compare modes:
+--   exact_when_expected_set — skip if expected IS NULL; else actual == expected
+--   gte — actual >= expected
+--   nonempty_when_missing_expected — if expected NULL then actual > 0 else exact
+-- ---------------------------------------------------------------------------
+CREATE OR REPLACE TEMPORARY VIEW _fixture_eval AS
+SELECT
+  e.fixture_name,
+  e.target_table,
+  e.expected,
+  e.compare,
+  CASE e.target_table
+    WHEN 'edw_migration.gold.mart_city_dimension'
+      THEN (SELECT COUNT(*) FROM edw_migration.gold.mart_city_dimension)
+    WHEN 'edw_migration.gold.mart_customer_current'
+      THEN (SELECT COUNT(*) FROM edw_migration.gold.mart_customer_current)
+    WHEN 'edw_migration.gold.mart_stock_movements'
+      THEN (SELECT COUNT(*) FROM edw_migration.gold.mart_stock_movements)
+    WHEN 'edw_migration.bronze.fact_sale'
+      THEN (SELECT COUNT(*) FROM edw_migration.bronze.fact_sale)
+    WHEN 'edw_migration.gold.mart_daily_internet_sales'
+      THEN (SELECT COUNT(*) FROM edw_migration.gold.mart_daily_internet_sales)
+    ELSE NULL
+  END AS actual
+FROM edw_migration.ops.fixture_expectations e;
+
+INSERT INTO edw_migration.ops.reconcile_results
+SELECT
+  concat('fixture_', fixture_name) AS check_id,
+  target_table AS table_name,
+  CAST(expected AS STRING) AS expected,
+  CAST(actual AS STRING) AS actual,
+  CAST(
+    CASE
+      WHEN expected IS NULL THEN actual
+      ELSE actual - expected
+    END AS STRING
+  ) AS delta,
+  CASE
+    WHEN actual IS NULL THEN 'fail'
+    WHEN compare = 'exact_when_expected_set' AND expected IS NULL THEN 'pass'
+    WHEN compare = 'exact_when_expected_set' AND actual = expected THEN 'pass'
+    WHEN compare = 'gte' AND expected IS NOT NULL AND actual >= expected THEN 'pass'
+    WHEN compare = 'nonempty_when_missing_expected' AND expected IS NULL AND actual > 0 THEN 'pass'
+    WHEN compare = 'nonempty_when_missing_expected' AND expected IS NOT NULL AND actual = expected THEN 'pass'
+    ELSE 'fail'
+  END AS result,
+  v_run_id AS run_id,
+  v_ts AS ts
+FROM _fixture_eval;
+
+-- ---------------------------------------------------------------------------
 -- Summary
 -- ---------------------------------------------------------------------------
 SELECT

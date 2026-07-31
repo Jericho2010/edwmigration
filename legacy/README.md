@@ -6,7 +6,7 @@ source, and the reconcile fixtures captured from running those procs.
 
 ```text
 legacy/
-  wideworldimportersdw/   WideWorldImportersDW-Standard.bacpac + import_azure_sql.sh
+  wideworldimportersdw/   WideWorldImportersDW-Standard.bacpac + download_bacpac.sh
   procs/                  One .sql file per [Integration]/* proc (the migration teaching surface)
   fixtures/               CSV snapshots used by the Test agent to reconcile gold tables
 ```
@@ -15,7 +15,7 @@ legacy/
 
 ### `wideworldimportersdw/`
 
-The Microsoft sample EDW as a `.bacpac`. `import_azure_sql.sh` **downloads**
+The Microsoft sample EDW as a `.bacpac`. `download_bacpac.sh` **downloads**
 it from Microsoft's SQL Server samples release on first use (not committed
 as a binary — ~21 MB). Pin `EXPECTED_SHA256` in that script after the first
 download. Bootstrap then runs `SqlPackage /a:Import` against Azure SQL.
@@ -50,7 +50,7 @@ bacpac is imported. To run them manually:
 set -a; . ./.env; set +a
 
 # 2. (Re-)import the bacpac into Azure SQL
-./legacy/wideworldimportersdw/import_azure_sql.sh
+./legacy/wideworldimportersdw/download_bacpac.sh
 
 # 3. Export proc source
 ./legacy/procs/export_proc_source.sh

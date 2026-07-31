@@ -25,7 +25,10 @@ suggestions for next steps beyond the blockers list.
    For each item in `migration_backlog.json`:
    - Check `ops.proc_conversion_map` for a row with
      `legacy_proc = item.legacy_proc` and `status IN ('draft','review','final')`.
-   - If missing or `status = 'blocked'`, add a blocker:
+   - Accept `target_path` under either `databricks/gold|silver/` (baseline) or
+     `databricks/converted/` (agent output that must not overwrite the job DAG).
+   - Verify the file exists on disk at `target_path`.
+   - If missing, blocked, or path missing on disk, add a blocker:
      `{id: "unconverted:<item_id>", message: "<legacy_proc> not converted", backlog_item_id: "<item_id>"}`.
 
 2. **Every reconcile check must pass.**

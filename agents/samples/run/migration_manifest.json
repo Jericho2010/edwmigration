@@ -1,0 +1,25 @@
+{
+  "run_id": "00000000-0000-4000-8000-000000000001",
+  "gate": "pass",
+  "blockers": [],
+  "converted_artifacts": [
+    {
+      "legacy_proc": "Integration.GetStockItemUpdates",
+      "target_path": "databricks/converted/30_mart_daily_sales.sql",
+      "status": "final"
+    },
+    {
+      "legacy_proc": "Integration.MigrateStagedCustomerData",
+      "target_path": "databricks/converted/32_mart_customer_current.sql",
+      "status": "final"
+    }
+  ],
+  "attempt": 0,
+  "summary": {
+    "backlog_total": 2,
+    "backlog_converted": 2,
+    "reconcile_passed": 2,
+    "reconcile_failed": 0,
+    "agent_events_recorded": 12
+  }
+}

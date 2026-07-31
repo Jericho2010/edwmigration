@@ -36,14 +36,14 @@ checks and report pass/fail per check.
    ORDER BY check_id;
    ```
 
-3. **Compare gold to fixtures** where applicable:
-   - `gold.mart_daily_internet_sales` vs `legacy/fixtures/get_stock_item_updates.csv`
-   - `gold.mart_customer_current` vs `legacy/fixtures/dim_customer_after_migrate.csv`
-   - `gold.mart_stock_movements` vs `legacy/fixtures/dim_stock_item_after_migrate.csv`
-   - `gold.mart_city_dimension` vs `legacy/fixtures/get_city_updates.csv` or
-     `legacy/fixtures/dim_city_snapshot.csv`
-   For each, count rows and (where numeric) sum a key column. Tolerance:
-   counts must match exactly; numeric sums within 0.01%.
+3. **Fixture expectations** are staged into `ops.fixture_expectations` by
+   `databricks/tests/13_stage_fixture_expectations.sql` (from
+   `legacy/fixtures/expectations.json`, built by `build_expectations.sh`
+   after `export_fixtures.sh`). `reconcile.sql` Check 6+ evaluates each row:
+   - `exact_when_expected_set` — skip if expected is null; else actual == expected
+   - `gte` — actual >= expected
+   - `nonempty_when_missing_expected` — actual > 0 when expected null
+   Confirm fixture checks appear in `ops.reconcile_results` for this run.
 
 4. **Build the report** as JSON:
    ```json

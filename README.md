@@ -12,7 +12,7 @@ EDW live.
 ## What you get
 
 - A downloadable WideWorldImportersDW `.bacpac` (Microsoft sample EDW, ~21 MB;
-  fetched by `legacy/wideworldimportersdw/import_azure_sql.sh` on first run).
+  fetched by `legacy/wideworldimportersdw/download_bacpac.sh` on first run).
 - One-click Azure SQL provisioning on the **free offer** (zero bill beyond
   allowance, `AutoPause` on limit).
 - Lakehouse Federation from Databricks Free Edition to Azure SQL — assess
@@ -90,9 +90,10 @@ flowchart LR
      > Start an EDW migration run. Scope: Fact.Sale, Fact.Stockholding,
      > Dimension.Customer, Dimension.City, Dimension.StockItem. Migrate the
      > Integration.* procs.
-   - Watch `ops.agent_events` live in the AI/BI dashboard
-     (`databricks/dashboards/agent_events.lvdash.json`).
+   - Watch `ops.agent_events` live in the deployed AI/BI dashboard
+     (`[dev] EDW Migration Agent Events`).
    - Read the final manifest at `agents/out/<run_id>/migration_manifest.json`.
+   - Offline Gate demo samples: `agents/samples/run/` (see that README).
 
 6. **Tear down when done:**
    ```bash

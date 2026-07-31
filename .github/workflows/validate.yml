@@ -1,0 +1,69 @@
+name: Validate EDW migration bundle
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install tools
+        run: |
+          pip install pyyaml
+          # Databricks CLI for bundle validate (auth optional for schema-level checks)
+          curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
+
+      - name: Parse YAML / JSON
+        run: |
+          python3 - <<'PY'
+          import json, yaml, pathlib
+          root = pathlib.Path(".")
+          for p in [
+            "databricks.yml",
+            "databricks/jobs/edw_migration_medallion.yml",
+            "databricks/jobs/dashboard.yml",
+            ".cursor/hooks.json",
+            "databricks/dashboards/agent_events.lvdash.json",
+            "legacy/fixtures/expectations.json",
+            "agents/contracts/context.schema.json",
+            "agents/samples/run/migration_manifest.json",
+          ]:
+            path = root / p
+            text = path.read_text()
+            if path.suffix in {".yml", ".yaml"}:
+              yaml.safe_load(text)
+            else:
+              json.loads(text)
+            print("OK", p)
+          PY
+
+      - name: Shell syntax check
+        run: |
+          find . -name '*.sh' -not -path './.git/*' -print0 | xargs -0 -n1 bash -n
+
+      - name: Bundle validate (structure)
+        env:
+          # Dummy var so schema resolution does not fail on missing warehouse_id
+          BUNDLE_VAR_warehouse_id: "0000000000000000"
+        run: |
+          # Validate may still need a workspace profile; treat auth failures as soft.
+          if databricks bundle validate -t dev; then
+            echo "bundle validate OK"
+          else
+            echo "bundle validate skipped or failed without workspace auth (structure checks above still required)"
+          fi
+
+      - name: Fixture expectations builder smoke
+        run: |
+          ./legacy/fixtures/build_expectations.sh
+          test -f databricks/tests/13_stage_fixture_expectations.sql

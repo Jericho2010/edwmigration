@@ -1,0 +1,22 @@
+{
+  "run_id": "00000000-0000-4000-8000-000000000001",
+  "checks": [
+    {
+      "check_id": "bronze_vs_source_fact_sale_rowcount",
+      "table": "bronze.fact_sale",
+      "expected": "100",
+      "actual": "100",
+      "delta": "0",
+      "result": "pass"
+    },
+    {
+      "check_id": "fixture_sample_offline_city",
+      "table": "edw_migration.gold.mart_city_dimension",
+      "expected": "1",
+      "actual": "10",
+      "delta": "9",
+      "result": "pass"
+    }
+  ],
+  "summary": { "passed": 2, "failed": 0, "total": 2 }
+}

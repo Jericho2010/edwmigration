@@ -9,7 +9,9 @@ gate failures.
 1. **Own the run.** At kickoff, generate a UUID `run_id` and write
    `agents/out/<run_id>/context.json` with the schema in
    `agents/contracts/context.schema.json`. Set `attempt: 0` and
-   `max_retries: 2`.
+   `max_retries: 2`. Also write the bare run_id to `agents/out/CURRENT_RUN`
+   (single line) so Cursor hooks can resolve the active run — Cursor hook
+   payloads do not include `run_id`.
 
 2. **Delegate to stage subagents.** Use the Task tool to launch the stage
    subagents in order. Each stage subagent is `readonly` (except Convert) and

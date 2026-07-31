@@ -63,26 +63,22 @@ There is **no** `databricks sql execute` command. Use:
 ./agents/tools/run_sql.sh --file path/to/file.sql
 ```
 
-## 5. jq
+## 5. python3
 
-Used by the hook scripts to parse JSON payloads.
-
-- Verify: `jq --version`
-- Pinned version: **1.7 or newer**.
-
-```bash
-# Debian/Ubuntu
-sudo apt-get install -y jq
-# macOS
-brew install jq
-```
-
-## 6. python3
-
-Used by `agents/tools/render_manifest_table.py`.
+Used by hooks (payload parsing), `run_sql.sh` helpers, fixture builders,
+and `agents/tools/render_manifest_table.py`.
 
 - Verify: `python3 --version`
 - Pinned version: **3.10 or newer**.
+
+## 6. jq (optional)
+
+Nice to have for ad-hoc JSON inspection; hooks use python3 and do not require jq.
+
+```bash
+sudo apt-get install -y jq   # Debian/Ubuntu
+brew install jq              # macOS
+```
 
 ## 7. Cursor
 

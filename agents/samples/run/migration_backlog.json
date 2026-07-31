@@ -1,0 +1,26 @@
+[
+  {
+    "item_id": "item-001",
+    "legacy_proc": "Integration.GetStockItemUpdates",
+    "classification": "get",
+    "reads": "Dimension.Stock Item",
+    "writes": "",
+    "target_layer": "gold",
+    "target_path": "databricks/converted/30_mart_daily_sales.sql",
+    "priority": "high",
+    "risk_flags": "windowed,aggregation",
+    "status": "converted"
+  },
+  {
+    "item_id": "item-002",
+    "legacy_proc": "Integration.MigrateStagedCustomerData",
+    "classification": "migrate",
+    "reads": "Integration.Customer_Staging",
+    "writes": "Dimension.Customer",
+    "target_layer": "gold",
+    "target_path": "databricks/converted/32_mart_customer_current.sql",
+    "priority": "high",
+    "risk_flags": "mutates_db,scd2",
+    "status": "converted"
+  }
+]

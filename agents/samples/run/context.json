@@ -1,0 +1,16 @@
+{
+  "run_id": "00000000-0000-4000-8000-000000000001",
+  "foreign_catalog": "wwi_dw_fed",
+  "uc_catalog": "edw_migration",
+  "legacy_proc_schema": "Integration",
+  "scoped_tables": [
+    "Fact.Sale",
+    "Fact.Stockholding",
+    "Dimension.Customer",
+    "Dimension.City",
+    "Dimension.StockItem"
+  ],
+  "databricks_host": "https://dbc-example.cloud.databricks.com",
+  "max_retries": 2,
+  "attempt": 0
+}

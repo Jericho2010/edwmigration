@@ -88,5 +88,5 @@ emit_csv \
 
 echo "[export_fixtures] done. Files in ${SCRIPT_DIR}/"
 echo "[export_fixtures] WARNING: the database has been mutated by the Migrate* procs."
-echo "[export_fixtures] Re-import the bacpac (legacy/wideworldimportersdw/import_azure_sql.sh)"
-echo "[export_fixtures] before re-running this script for a clean baseline."
+echo "[export_fixtures] Re-import the bacpac via bootstrap/SqlPackage before a clean re-run."
+echo "[export_fixtures] Then re-run this script and ./legacy/fixtures/build_expectations.sh"

@@ -1,24 +1,41 @@
 {
+  "version": 1,
   "hooks": {
-    "subagentStart": {
-      "command": ".cursor/hooks/log_event.sh",
-      "failClosed": false
-    },
-    "subagentStop": {
-      "command": ".cursor/hooks/on_subagent_stop.sh",
-      "failClosed": true
-    },
-    "afterFileEdit": {
-      "command": ".cursor/hooks/log_event.sh",
-      "failClosed": false
-    },
-    "afterShellExecution": {
-      "command": ".cursor/hooks/log_event.sh",
-      "failClosed": false
-    },
-    "afterMCPExecution": {
-      "command": ".cursor/hooks/log_event.sh",
-      "failClosed": false
-    }
+    "subagentStart": [
+      {
+        "command": ".cursor/hooks/log_event.sh",
+        "failClosed": false,
+        "timeout": 30
+      }
+    ],
+    "subagentStop": [
+      {
+        "command": ".cursor/hooks/on_subagent_stop.sh",
+        "failClosed": true,
+        "timeout": 60,
+        "loop_limit": 2
+      }
+    ],
+    "afterFileEdit": [
+      {
+        "command": ".cursor/hooks/log_event.sh",
+        "failClosed": false,
+        "timeout": 15
+      }
+    ],
+    "afterShellExecution": [
+      {
+        "command": ".cursor/hooks/log_event.sh",
+        "failClosed": false,
+        "timeout": 15
+      }
+    ],
+    "afterMCPExecution": [
+      {
+        "command": ".cursor/hooks/log_event.sh",
+        "failClosed": false,
+        "timeout": 15
+      }
+    ]
   }
 }

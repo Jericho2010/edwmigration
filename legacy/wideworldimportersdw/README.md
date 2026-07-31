@@ -15,7 +15,7 @@ required at demo time).
 The bacpac is **downloaded on first use** (not committed as a binary). Run:
 
 ```bash
-./import_azure_sql.sh
+./download_bacpac.sh
 ```
 
 That downloads from the Microsoft SQL Server samples release on GitHub and
