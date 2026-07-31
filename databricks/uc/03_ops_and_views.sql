@@ -45,6 +45,9 @@ CREATE TABLE IF NOT EXISTS edw_migration.ops.migration_backlog (
 )
 COMMENT 'Assess agent inventory of procs to migrate';
 ALTER TABLE edw_migration.ops.migration_backlog
+  DROP CONSTRAINT IF EXISTS migration_backlog_pk;
+
+ALTER TABLE edw_migration.ops.migration_backlog
   ADD CONSTRAINT migration_backlog_pk PRIMARY KEY (item_id) NOT ENFORCED;
 
 -- ---------------------------------------------------------------------------
@@ -94,30 +97,10 @@ CLUSTER BY (run_id, ts)
 COMMENT 'Cursor hook event log (observability sink for the agent workflow)'
 TBLPROPERTIES ('delta.enableChangeDataFeed' = 'true');
 
--- ---------------------------------------------------------------------------
--- source_fed convenience views (created here so 01_federation_setup.sql
--- stays focused on the connection + foreign catalog; views are pure metadata).
--- These are also created in 01_federation_setup.sql with CREATE OR REPLACE;
--- this file ensures they exist even if 01 was run before the schemas were
--- fully populated.
--- ---------------------------------------------------------------------------
-CREATE OR REPLACE VIEW edw_migration.source_fed.dim_customer AS
-  SELECT * FROM wwi_dw_fed.dimension.customer;
-
-CREATE OR REPLACE VIEW edw_migration.source_fed.dim_city AS
-  SELECT * FROM wwi_dw_fed.dimension.city;
-
-CREATE OR REPLACE VIEW edw_migration.source_fed.dim_stock_item AS
-  SELECT * FROM wwi_dw_fed.dimension.`stock item`;
-
-CREATE OR REPLACE VIEW edw_migration.source_fed.dim_date AS
-  SELECT * FROM wwi_dw_fed.dimension.date;
-
-CREATE OR REPLACE VIEW edw_migration.source_fed.fact_sale AS
-  SELECT * FROM wwi_dw_fed.fact.sale;
-
-CREATE OR REPLACE VIEW edw_migration.source_fed.fact_stockholding AS
-  SELECT * FROM wwi_dw_fed.fact.stockholding;
+-- NOTE: source_fed is intentionally NOT touched here. Online it holds
+-- federation views created by 01_federation_setup.sql; offline it holds
+-- seeded Delta tables from databricks/offline/. Recreating views here would
+-- clobber the offline seed (and fail without the foreign catalog).
 
 -- ---------------------------------------------------------------------------
 -- Done

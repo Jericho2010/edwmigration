@@ -71,7 +71,7 @@ CREATE OR REPLACE VIEW edw_migration.source_fed.fact_sale AS
   SELECT * FROM wwi_dw_fed.fact.sale;
 
 CREATE OR REPLACE VIEW edw_migration.source_fed.fact_stockholding AS
-  SELECT * FROM wwi_dw_fed.fact.stockholding;
+  SELECT * FROM wwi_dw_fed.fact.`stock holding`;
 
 SELECT 'federation_setup_ok' AS check_name,
        COUNT(*) AS fact_sale_rows

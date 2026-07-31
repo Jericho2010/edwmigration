@@ -63,6 +63,8 @@ Agent delegation graph: [docs/img/agent_delegation.png](docs/img/agent_delegatio
 
 Full detail lives in the [runbook](docs/runbook.md). Abbreviated path below —
 or one command for steps 1–3: `make demo` (see [Makefile](Makefile)).
+No Azure? `make demo-offline` runs the same pipeline on a seeded `source_fed`
+(Databricks workspace still required).
 
 ```bash
 # 0) Prereqs — docs/prerequisites.md

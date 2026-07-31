@@ -75,6 +75,31 @@ What bootstrap does:
 8. Creates Databricks secrets scope `edw-migration` and stores the SQL password.
 9. Smoke-tests the DB.
 
+### Alternative: offline source mode (no Azure)
+
+Skip §§2–3 entirely. `make demo-offline` seeds `edw_migration.source_fed` as
+native Delta tables from generated WWI-shaped CSVs
+(`databricks/offline/generate_seed.py`, deterministic), then deploys and runs
+the same bundle. Bronze and everything downstream are byte-for-byte
+unchanged — they only ever read `source_fed.*`.
+
+```bash
+make demo-offline     # = seed → ops tables → bundle deploy → job run
+# or just the seed:   make seed
+```
+
+The job's first task (`federation_smoke`) checks the `source_fed` contract,
+so it passes in both modes. Known divergence: the seeded `dim_customer`
+carries a `City` column (WWI City ID) that the current silver SCD2 expects;
+the 2016 vendored bacpac's `Dimension.Customer` does not have one — if you
+run the *online* path against that bacpac, drop the `City` mapping in
+`silver/21_dim_customer_scd2.sql` and the city join in
+`gold/32_mart_customer_current.sql`.
+
+Use a fresh workspace/catalog for offline mode if an online run already
+created `source_fed` *views* (a view and a table cannot share a name):
+`DROP CATALOG edw_migration CASCADE` first.
+
 ---
 
 ## 3. Bootstrap Unity Catalog + Federation

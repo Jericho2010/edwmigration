@@ -89,7 +89,9 @@ Follow the [runbook](runbook.md) live with the prospect driving the keyboard whe
 5. **Cursor coordinator** — 10 min  
 6. **Inspect gold / reconcile / dashboard / tear down** — 5 min  
 
-Offline fallback if Azure free allowance is exhausted: copy
+Azure-free fallback (preferred): `make demo-offline` — the whole pipeline,
+dashboard, and Genie story on a seeded `source_fed`, no Azure at all. Fully
+offline fallback (no workspace either): copy
 [agents/samples/run/](../agents/samples/run/) into `agents/out/<run_id>/`
 and walk Gate + manifest + dashboard schema.
 
@@ -100,7 +102,7 @@ and walk Gate + manifest + dashboard schema.
 | Objection | Response |
 |---|---|
 | “Free Edition isn’t production.” | Correct — this proves the *migration pattern* and agent operating model. Production = same UC/medallion ideas on a paid workspace, often with Lakeflow Connect or private networking. |
-| “Opening SQL to 0.0.0.0/0 is crazy.” | Agree for real data. Acceptable only for public sample + teardown. Paid path: private link / allowlisted egress. |
+| “Opening SQL to 0.0.0.0/0 is crazy.” | Agree for real data. Acceptable only for public sample + teardown — or skip Azure entirely with `make demo-offline` (seeded `source_fed`, same pipeline). Paid path: private link / allowlisted egress. |
 | “Agents will hallucinate SQL.” | Gate + reconcile fixtures are the control plane; Convert is draft; ship/no-ship is deterministic. |
 | “Why not dbt / ADF / …?” | Out of scope. The teaching surface is UC + serverless SQL + agent stages + product observability. |
 

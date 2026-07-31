@@ -9,7 +9,9 @@ SET VAR v_started = current_timestamp();
 -- ---------------------------------------------------------------------------
 -- fact_sale
 -- ---------------------------------------------------------------------------
-CREATE OR REPLACE TABLE edw_migration.bronze.fact_sale AS
+CREATE OR REPLACE TABLE edw_migration.bronze.fact_sale
+TBLPROPERTIES ('delta.columnMapping.mode' = 'name')
+AS
 SELECT
   *,
   current_timestamp() AS _bronze_loaded_at,
@@ -24,7 +26,9 @@ FROM edw_migration.bronze.fact_sale;
 -- ---------------------------------------------------------------------------
 -- fact_stockholding
 -- ---------------------------------------------------------------------------
-CREATE OR REPLACE TABLE edw_migration.bronze.fact_stockholding AS
+CREATE OR REPLACE TABLE edw_migration.bronze.fact_stockholding
+TBLPROPERTIES ('delta.columnMapping.mode' = 'name')
+AS
 SELECT
   *,
   current_timestamp() AS _bronze_loaded_at,

@@ -1,7 +1,8 @@
 # Makefile — one-command orchestration for the EDW migration demo.
 #
-#   make demo       — full path: prereqs → Azure → federation → deploy → job run
-#   make teardown   — delete the Azure resource group
+#   make demo         — full path: prereqs → Azure → federation → deploy → job run
+#   make demo-offline — same demo without Azure: seeded source_fed → deploy → run
+#   make teardown     — delete the Azure resource group
 #
 # Requires .env (cp infra/azure/.env.example .env and edit). The .env file is
 # included below, so its variables are visible to every target; keep values
@@ -39,16 +40,29 @@ federation: check ## UC federation setup + ops tables
 
 deploy: check ## Bundle validate + deploy (dev target)
 	databricks bundle validate -t dev
+	@# Fresh-workspace quirk: the dashboard resource fails unless the bundle's
+	@# resources folder already exists in the workspace.
+	@USER=$$(databricks current-user me --output json | jq -r .userName); \
+	databricks workspace mkdirs "/Workspace/Users/$$USER/.bundle/edw_migration/dev/resources"
 	databricks bundle deploy -t dev
 
 run: ## Run the medallion job
 	databricks bundle run edw_migration_medallion -t dev
 
-demo: bootstrap federation deploy run ## Full end-to-end setup
+demo: bootstrap federation deploy run ## Full end-to-end setup (Azure-backed)
 	@echo
 	@echo "Infra ready. Next: open this repo in Cursor and launch edw-coordinator"
 	@echo "(kickoff text in docs/runbook.md §6). Watch the AI/BI dashboard"
 	@echo "'[dev] EDW Migration Agent Events'."
+
+seed: check ## Offline source mode: seed source_fed + ops tables (no Azure)
+	./databricks/offline/seed_source.sh
+	./agents/tools/run_sql.sh --file databricks/uc/03_ops_and_views.sql
+
+demo-offline: check seed deploy run ## Full demo without Azure: seed → deploy → run
+	@echo
+	@echo "Offline infra ready (source_fed seeded, no Azure). Next: edw-coordinator"
+	@echo "in Cursor (docs/runbook.md §6), then optionally 'make genie'."
 
 genie: check ## Create/update the "EDW Migration Copilot" Genie space (run after `run`)
 	./databricks/genie/create_genie_space.sh

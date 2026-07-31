@@ -3,7 +3,25 @@
 -- AI Dev Kit databricks-dbsql guidance: define PK/FK for dimensional models;
 -- use COLLATE UTF8_LCASE on user-facing string columns.
 
--- Preserve existing tables; add constraints where supported.
+-- Delta PK/FK require non-nullable key columns; silver CTAS output is
+-- nullable by default, so tighten keys first. DROP IF EXISTS keeps the file
+-- safe to re-run (the job re-executes it on every medallion run).
+ALTER TABLE edw_migration.silver.dim_city ALTER COLUMN city_key SET NOT NULL;
+ALTER TABLE edw_migration.silver.dim_stock_item ALTER COLUMN stock_item_key SET NOT NULL;
+ALTER TABLE edw_migration.silver.dim_customer_scd2 ALTER COLUMN customer_key SET NOT NULL;
+ALTER TABLE edw_migration.silver.dim_date ALTER COLUMN date_key SET NOT NULL;
+ALTER TABLE edw_migration.silver.fact_sale ALTER COLUMN sale_key SET NOT NULL;
+ALTER TABLE edw_migration.silver.fact_sale ALTER COLUMN customer_key SET NOT NULL;
+ALTER TABLE edw_migration.silver.fact_sale ALTER COLUMN stock_item_key SET NOT NULL;
+
+ALTER TABLE edw_migration.silver.dim_city DROP CONSTRAINT IF EXISTS dim_city_pk;
+ALTER TABLE edw_migration.silver.dim_stock_item DROP CONSTRAINT IF EXISTS dim_stock_item_pk;
+ALTER TABLE edw_migration.silver.dim_customer_scd2 DROP CONSTRAINT IF EXISTS dim_customer_scd2_pk;
+ALTER TABLE edw_migration.silver.dim_date DROP CONSTRAINT IF EXISTS dim_date_pk;
+ALTER TABLE edw_migration.silver.fact_sale DROP CONSTRAINT IF EXISTS fact_sale_pk;
+ALTER TABLE edw_migration.silver.fact_sale DROP CONSTRAINT IF EXISTS fact_sale_fk_customer;
+ALTER TABLE edw_migration.silver.fact_sale DROP CONSTRAINT IF EXISTS fact_sale_fk_stock;
+
 ALTER TABLE edw_migration.silver.dim_city
   ADD CONSTRAINT dim_city_pk PRIMARY KEY (city_key) NOT ENFORCED;
 

@@ -12,7 +12,9 @@ SET VAR v_started = current_timestamp();
 -- ---------------------------------------------------------------------------
 -- dim_customer
 -- ---------------------------------------------------------------------------
-CREATE OR REPLACE TABLE edw_migration.bronze.dim_customer AS
+CREATE OR REPLACE TABLE edw_migration.bronze.dim_customer
+TBLPROPERTIES ('delta.columnMapping.mode' = 'name')
+AS
 SELECT
   *,
   current_timestamp() AS _bronze_loaded_at,
@@ -27,7 +29,9 @@ FROM edw_migration.bronze.dim_customer;
 -- ---------------------------------------------------------------------------
 -- dim_city
 -- ---------------------------------------------------------------------------
-CREATE OR REPLACE TABLE edw_migration.bronze.dim_city AS
+CREATE OR REPLACE TABLE edw_migration.bronze.dim_city
+TBLPROPERTIES ('delta.columnMapping.mode' = 'name')
+AS
 SELECT
   *,
   current_timestamp() AS _bronze_loaded_at,
@@ -42,7 +46,9 @@ FROM edw_migration.bronze.dim_city;
 -- ---------------------------------------------------------------------------
 -- dim_stock_item
 -- ---------------------------------------------------------------------------
-CREATE OR REPLACE TABLE edw_migration.bronze.dim_stock_item AS
+CREATE OR REPLACE TABLE edw_migration.bronze.dim_stock_item
+TBLPROPERTIES ('delta.columnMapping.mode' = 'name')
+AS
 SELECT
   *,
   current_timestamp() AS _bronze_loaded_at,
@@ -57,7 +63,9 @@ FROM edw_migration.bronze.dim_stock_item;
 -- ---------------------------------------------------------------------------
 -- dim_date
 -- ---------------------------------------------------------------------------
-CREATE OR REPLACE TABLE edw_migration.bronze.dim_date AS
+CREATE OR REPLACE TABLE edw_migration.bronze.dim_date
+TBLPROPERTIES ('delta.columnMapping.mode' = 'name')
+AS
 SELECT
   *,
   current_timestamp() AS _bronze_loaded_at,

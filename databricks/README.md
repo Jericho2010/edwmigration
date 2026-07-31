@@ -12,6 +12,7 @@ databricks/
   tests/                  Fixture staging + reconcile.sql
   dashboards/             agent_events.lvdash.json (AI/BI)
   genie/                  Genie space config + idempotent deploy script
+  offline/                Offline source mode: seed generator + loader (no Azure)
 ```
 
 ### Genie space (optional)
