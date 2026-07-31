@@ -1,46 +1,77 @@
 # Runbook
 
-End-to-end run of the EDW → Databricks migration demo, including the agent
-workflow.
+End-to-end operator guide for the EDW → Databricks AI-assisted migration demo.
+
+**Audience:** anyone running the demo for real (SE, prospect engineer, partner).  
+**Time:** ~45 minutes first run; ~20 minutes if Azure is already provisioned.  
+**Cost:** $0 on Free Edition + Azure SQL free offer when you tear down Azure after.
+
+Related: [prerequisites](prerequisites.md) · [architecture](architecture.md) · [demo script](demo-script.md) · [troubleshooting](troubleshooting.md)
+
+---
 
 ## 0. Prerequisites
 
-Complete [prerequisites.md](prerequisites.md) first. You need:
-- `az`, `SqlPackage`, `sqlcmd`, `databricks`, `jq`, `python3`, Cursor
-- A Databricks Free Edition workspace URL + PAT
-- An Azure subscription
+Complete [prerequisites.md](prerequisites.md). You need:
+
+| Required | Optional |
+|---|---|
+| `az`, `SqlPackage`, `sqlcmd`, `databricks` CLI, `python3`, Cursor | `jq` (pretty-print JSON) |
+| Databricks Free Edition workspace + PAT + serverless warehouse ID | — |
+| Azure subscription (for the free SQL DB) | — |
+
+---
 
 ## 1. Configure
 
 ```bash
-git clone <this repo>
+git clone https://github.com/Jericho2010/edwmigration.git
 cd edwmigration
 cp infra/azure/.env.example .env
 $EDITOR .env
-# Fill in:
-#   AZ_SUBSCRIPTION_ID, AZ_SQL_SERVER (globally unique), AZ_SQL_PASSWORD
-#   DATABRICKS_HOST, DATABRICKS_TOKEN, DATABRICKS_WAREHOUSE_ID
+```
+
+Fill in at least:
+
+| Variable | Purpose |
+|---|---|
+| `AZ_SUBSCRIPTION_ID` | Azure subscription |
+| `AZ_SQL_SERVER` | Globally unique SQL logical server name |
+| `AZ_SQL_PASSWORD` | Strong admin password (never commit) |
+| `DATABRICKS_HOST` | Workspace URL |
+| `DATABRICKS_TOKEN` | PAT |
+| `DATABRICKS_WAREHOUSE_ID` | Serverless SQL warehouse ID |
+
+```bash
 set -a; . ./.env; set +a
 ```
 
+---
+
 ## 2. Provision Azure SQL + load the EDW
 
+The WideWorldImportersDW `.bacpac` is **vendored** in
+`legacy/wideworldimportersdw/` (SHA-256 pinned). `download_bacpac.sh` only
+runs if the file is missing or the hash does not match.
+
 ```bash
-./infra/azure/bootstrap.sh --dry-run   # validate without spending
+./infra/azure/bootstrap.sh --dry-run   # validate without creating resources
 ./infra/azure/bootstrap.sh             # ~10 min
 ```
 
-What this does:
-1. Creates RG + SQL logical server.
-2. Creates the free-offer DB (`AutoPause` on limit).
-3. Creates firewall rules (client IP + `0.0.0.0/0` for Databricks egress).
-4. Imports the WWI bacpac via `SqlPackage`.
-5. Warms up the (now-cold) serverless DB.
-6. Exports proc source to `legacy/procs/*.sql`.
-7. Exports reconcile fixtures to `legacy/fixtures/*.csv`.
-8. Creates the Databricks secrets scope `edw-migration` and stores the SQL
-   password.
+What bootstrap does:
+
+1. Creates resource group + SQL logical server.
+2. Creates the free-offer database (`AutoPause` on limit exhaustion).
+3. Creates firewall rules (your client IP + `0.0.0.0/0` for Free Edition egress — see [firewall.md](firewall.md)).
+4. Imports the vendored bacpac via `SqlPackage`.
+5. Warms the serverless DB (cold pause would break federation).
+6. Exports proc source → `legacy/procs/*.sql`.
+7. Exports reconcile fixtures → `legacy/fixtures/*.csv` and regenerates expectations.
+8. Creates Databricks secrets scope `edw-migration` and stores the SQL password.
 9. Smoke-tests the DB.
+
+---
 
 ## 3. Bootstrap Unity Catalog + Federation
 
@@ -51,21 +82,24 @@ What this does:
 ./agents/tools/run_sql.sh --file databricks/uc/02_federation_smoke.sql
 ```
 
-This creates:
-- The `edw_migration` catalog with `source_fed`, `bronze`, `silver`, `gold`,
-  `ops` schemas.
-- The federation connection `azure_sql_edw` and foreign catalog `wwi_dw_fed`.
-- Minimal `GRANT`s for `account users`.
-- The `ops.*` tables including `ops.agent_events` (the observability sink).
-- The `source_fed.*` convenience views.
+Creates:
 
-`run_sql.sh` uses the Databricks Statement Execution API (`databricks api post
-/api/2.0/sql/statements`). There is no `databricks sql execute` CLI command.
+- Managed catalog `edw_migration` with schemas `source_fed`, `bronze`, `silver`, `gold`, `ops`
+- Federation connection `azure_sql_edw` + foreign catalog `wwi_dw_fed`
+- Minimal `GRANT`s for `account users`
+- `ops.*` tables including `ops.agent_events` (observability sink)
+- `source_fed.*` convenience views over the foreign catalog
 
-## 4. Validate, deploy, and run the medallion
+`run_sql.sh` uses the Databricks Statement Execution API
+(`databricks api post /api/2.0/sql/statements`). There is **no**
+`databricks sql execute` CLI command.
+
+---
+
+## 4. Deploy and run the medallion job
 
 ```bash
-# Required: warehouse ID as a bundle variable (env convention from DABs)
+# Warehouse ID as a DAB variable (required)
 export BUNDLE_VAR_warehouse_id="$DATABRICKS_WAREHOUSE_ID"
 
 databricks bundle validate -t dev
@@ -73,109 +107,133 @@ databricks bundle deploy -t dev
 databricks bundle run edw_migration_medallion -t dev
 ```
 
-The job DAG fans out where safe (under Free Edition's max 5 concurrent tasks):
-federation smoke → bronze dims/facts → silver → gold marts → reconcile.
-The AI/BI dashboard is deployed by the same `bundle deploy` (no manual import).
+### Job DAG (what runs)
 
-## 5. Open the observability dashboard
+SQL paths in `databricks/jobs/*.yml` are **relative to that YAML file**.
 
-After deploy, open the dashboard named
-`[dev] EDW Migration Agent Events` in Databricks AI/BI Dashboards.
-It queries `edw_migration.ops.agent_events`.
+```text
+federation_smoke
+  ├─► bronze_dims ─┬─► silver_dims ──────────────┬─► gold_stock / gold_city
+  │                └─► silver_customer_scd2 ─────┴─► gold_customer_current
+  ├─► bronze_facts ─┐
+  │                 └─► silver_fact_sale ─┬─► gold_daily_sales
+  │                                      └─► metric_daily_sales
+  └─► stage_fixtures
+          │
+          ▼
+  (all gold + fixtures + metric) → reconcile → lineage_check
+```
 
-Initially the table is empty — the hooks only write events when the agent
-workflow runs (next step).
+Peak fan-out stays under Free Edition’s **max 5 concurrent tasks**.  
+The same `bundle deploy` publishes the AI/BI dashboard
+`[dev] EDW Migration Agent Events` (no manual Lakeview import).
 
-## 5b. Fixture expectations
+### Fixture expectations
 
-After `export_fixtures.sh` (part of bootstrap), expectations are regenerated:
+Bootstrap regenerates expectations. To rebuild manually after re-exporting fixtures:
 
 ```bash
 ./legacy/fixtures/build_expectations.sh
-# Writes legacy/fixtures/expectations.json and
-# databricks/tests/13_stage_fixture_expectations.sql
+# → legacy/fixtures/expectations.json
+# → databricks/tests/13_stage_fixture_expectations.sql
 ```
 
-The medallion job stages these into `ops.fixture_expectations` and reconcile
-compares gold/bronze counts. Offline sample expectation
-`sample_offline_city` (gte 1) always runs.
+The job stages expectations into `ops.fixture_expectations`; reconcile
+compares gold/bronze counts. Offline sample expectation `sample_offline_city`
+(gte 1) always runs.
+
+---
+
+## 5. Open the observability dashboard
+
+After deploy, open **`[dev] EDW Migration Agent Events`** in Databricks AI/BI.
+
+It queries `edw_migration.ops.agent_events`. The table is empty until the
+Cursor agent workflow runs (next step) — hooks write events on lifecycle
+transitions.
+
+---
 
 ## 6. Run the agent workflow in Cursor
 
-1. Open this repo in Cursor.
-2. Launch the `edw-coordinator` subagent (via the chat panel or the
-   subagent picker).
-3. Send a kickoff message, e.g.:
+1. Open this repo in Cursor (so `.cursor/agents/` and `.cursor/hooks.json` load).
+2. Launch the **`edw-coordinator`** subagent.
+3. Kickoff message (copy/paste):
+
    > Start an EDW migration run. Scope: Fact.Sale, Fact.Stockholding,
-   > Dimension.Customer, Dimension.City, Dimension.StockItem. Migrate the
-   > Integration.* procs.
+   > Dimension.Customer, Dimension.City, Dimension.StockItem.
+   > Migrate the Integration.* procs.
+
 4. The coordinator will:
-   - Generate a `run_id` and write `agents/out/<run_id>/context.json`.
-   - Launch `edw-assess` → it returns a migration backlog.
-   - For each backlog item, launch `edw-convert` → it writes a notebook to
-     `databricks/silver|gold/`.
-   - Launch `edw-test` → it runs `reconcile.sql` and returns a report.
-   - Launch `edw-gate` → it returns a manifest (pass/fail + blockers).
-   - If gate=fail and retries remain, re-delegate to convert.
-5. Watch `ops.agent_events` populate in the dashboard as the hooks fire on
-   each lifecycle event.
-6. When the run completes, read the manifest:
-   ```bash
-   cat agents/out/<run_id>/migration_manifest.json | jq .
-   ```
-   Or render it as a table:
-   ```bash
-   ./agents/tools/render_manifest_table.py agents/out/<run_id>/migration_manifest.json
-   ```
+   - Mint a `run_id`, write `agents/out/<run_id>/context.json`, and write
+     the bare id to `agents/out/CURRENT_RUN` (hooks resolve `run_id` from here —
+     Cursor payloads do not include it).
+   - Delegate **Assess** → returns backlog JSON → coordinator persists it.
+   - For each backlog item, delegate **Convert** → writes under
+     `databricks/converted/` when a baseline silver/gold file already exists
+     (does not overwrite the job DAG baselines).
+   - Delegate **Test** → reconcile report JSON.
+   - Delegate **Gate** → migration manifest (pass/fail + blockers).
+   - On gate=fail with retries left, re-delegate Convert (`loop_limit: 2` /
+     `max_retries: 2`).
+
+5. Watch `ops.agent_events` populate in the dashboard as hooks fire.
+
+6. When complete:
+
+```bash
+./agents/tools/render_manifest_table.py agents/out/<run_id>/migration_manifest.json
+# or: python3 -m json.tool agents/out/<run_id>/migration_manifest.json
+```
+
+### Offline Gate demo (no Azure / no live agents)
+
+```bash
+RUN_ID=00000000-0000-4000-8000-000000000001
+mkdir -p "agents/out/${RUN_ID}"
+cp agents/samples/run/* "agents/out/${RUN_ID}/"
+echo "$RUN_ID" > agents/out/CURRENT_RUN
+./agents/tools/render_manifest_table.py "agents/out/${RUN_ID}/migration_manifest.json"
+```
+
+See [agents/samples/README.md](../agents/samples/README.md).
+
+---
 
 ## 7. Inspect the results
 
-- **Bronze:** `edw_migration.bronze.*` — 1:1 land from source.
-- **Silver:** `edw_migration.silver.*` — conformed, SCD2 on customer.
-- **Gold:** `edw_migration.gold.*` — marts replacing the legacy procs.
-- **Ops:** `edw_migration.ops.*` — load_control, migration_backlog,
-  proc_conversion_map, reconcile_results, agent_events.
-- **Manifest:** `agents/out/<run_id>/migration_manifest.json` — the final
-  ship/no-ship decision.
+| Surface | What to look at |
+|---|---|
+| Bronze | `edw_migration.bronze.*` — 1:1 land from source |
+| Silver | `edw_migration.silver.*` — conformed types, SCD2 customer |
+| Gold | `edw_migration.gold.*` — marts replacing Integration.* outcomes |
+| Metric view | Daily sales metric (AI/BI-friendly) |
+| Ops | `load_control`, `migration_backlog`, `proc_conversion_map`, `reconcile_results`, `agent_events`, `fixture_expectations` |
+| Agent output | `agents/out/<run_id>/` + `databricks/converted/` |
+| Manifest | `migration_manifest.json` — ship / no-ship |
+
+---
 
 ## 8. Tear down
 
 ```bash
 ./infra/azure/teardown.sh
-# Optionally remove the Databricks secrets scope:
+# Optional — remove the secrets scope:
 databricks secrets delete-scope edw-migration
 ```
 
-This deletes the entire Azure resource group (server, DB, firewall rules).
-The Databricks catalog `edw_migration` and foreign catalog `wwi_dw_fed`
-remain — drop them manually if you want a clean slate:
+Teardown deletes the Azure resource group (server, DB, firewall).  
+Databricks objects remain; clean slate:
 
 ```sql
 DROP CATALOG edw_migration CASCADE;
 DROP CONNECTION azure_sql_edw;
--- wwi_dw_fed is dropped implicitly when the connection is dropped.
+-- foreign catalog wwi_dw_fed drops with the connection
 ```
 
-## Troubleshooting
+---
 
-- **Federation smoke fails with `FAILED_JDBC.CONNECTION`:** the Azure SQL DB
-  is cold (auto-paused). Warm it up:
-  ```bash
-  sqlcmd -S tcp:<server>.database.windows.net,1433 -U <admin> -P <pass> -d WideWorldImportersDW -Q "SELECT 1"
-  ```
-  Then re-run the smoke.
-- **Federation smoke fails with network error:** Free Edition outbound is
-  restricted. Confirm the `AllowDatabricksDemo` firewall rule (`0.0.0.0/0`)
-  exists. See [firewall.md](firewall.md).
-- **`databricks bundle deploy` fails:** ensure `DATABRICKS_WAREHOUSE_ID` is
-  set in `.env` and the warehouse is running.
-- **Hook flush fails:** events remain buffered in
-  `agents/out/<run_id>/events.buf.jsonl`. The run continues (failClosed:
-  false on logging hooks). Inspect the buffer or re-flush manually:
-  ```bash
-  ./.cursor/hooks/_flush_events.sh <run_id>
-  ```
-- **Gate fails repeatedly:** read the blockers in the manifest. Each blocker
-  points to either an unconverted proc or a failed reconcile check. Re-run
-  the coordinator after fixing the underlying issue (or increase
-  `max_retries` in `context.json`).
+## Next failures
+
+See [troubleshooting.md](troubleshooting.md) for cold DB, firewall, bundle,
+hooks, and gate failures.

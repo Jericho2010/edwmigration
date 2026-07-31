@@ -14,8 +14,9 @@ constraints that shape the design.
   query fails with a network error, confirm the Azure SQL firewall allows
   `0.0.0.0/0` (see [firewall.md](firewall.md)).
 - **Max 5 concurrent job tasks.** The medallion job
-  (`databricks/jobs/edw_migration_medallion.yml`) is sequential, so it stays
-  well under this limit. If you add parallel tasks, keep the total under 5.
+  (`databricks/jobs/edw_migration_medallion.yml`) fans out where safe
+  (e.g. bronze dims/facts, several gold marts) but peak concurrency stays
+  ≤ 5. If you add parallel tasks, keep the peak under 5.
 - **One active Lakeflow pipeline per type.** Not a constraint for this demo
   (we use a Lakeflow Job, not a pipeline), but worth knowing if you extend.
 - **No classic SQL warehouses.** Only serverless. The `DATABRICKS_WAREHOUSE_ID`
@@ -54,8 +55,8 @@ constraints that shape the design.
   scope.
 - **Streaming.** No Structured Streaming or Auto Loader. The source is a
   batch EDW.
-- **Production-grade orchestration.** The job is a single sequential
-  Lakeflow Job. No retries, no SLAs, no alerting beyond the reconcile checks.
+- **Production-grade orchestration.** The job is a single Lakeflow Job with
+  a small DAG. No retries, no SLAs, no alerting beyond the reconcile checks.
 - **Multi-region / DR.** Single region, single workspace.
 - **Cost optimization.** The demo targets $0. Production cost optimization
   (photon, cluster policies, spot, etc.) is out of scope.

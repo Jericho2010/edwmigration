@@ -8,6 +8,8 @@
 - `02_federation_smoke.sql` — fail-fast smoke (Databricks SQL Scripting).
 - `03_ops_and_views.sql` — `ops.*` tables (incl. `agent_events` with
   `CLUSTER BY`) + `source_fed` views. Idempotent.
+- `04_lineage_check.sql` — post-reconcile UC lineage sanity (job task
+  `lineage_check`).
 
 ## Run order
 

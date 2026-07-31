@@ -2,21 +2,36 @@
 
 Install these before running `bootstrap.sh` or the agent workflow.
 
+## Checklist
+
+| # | Tool | Min version | Verify |
+|---|---|---|---|
+| 1 | Azure CLI (`az`) | 2.63.0+ | `az account show` |
+| 2 | SqlPackage | 162.0.198+ | `SqlPackage /version` |
+| 3 | sqlcmd (Go-based preferred) | 1.2.0+ | `sqlcmd -?` |
+| 4 | Databricks CLI | 0.230.0+ (0.281.0+ for dashboard `dataset_catalog`) | `databricks --version` |
+| 5 | python3 | 3.10+ | `python3 --version` |
+| 6 | Cursor | current | Repo opens; `.cursor/agents/` visible |
+| 7 | Databricks Free Edition | — | Host + PAT + serverless warehouse ID |
+| 8 | Azure subscription | — | Free SQL offer available in chosen region |
+
+Optional: `jq` for ad-hoc JSON pretty-printing (hooks use `python3`).
+
+---
+
 ## 1. Azure CLI (`az`)
 
 - Install: https://learn.microsoft.com/cli/azure/install-azure-cli
 - Login: `az login`
 - Verify: `az account show`
-- Pinned version: **2.63.0 or newer** (for `--use-free-limit` and
-  `--free-limit-exhaustion-behavior` support).
+- Needed for `--use-free-limit` / `--free-limit-exhaustion-behavior` (2.63.0+).
 
 ## 2. SqlPackage
 
-Used to import the `.bacpac` into Azure SQL.
+Imports the `.bacpac` into Azure SQL.
 
 - Install: https://learn.microsoft.com/sql/tools/sqlpackage/sqlpackage-download
 - Verify: `SqlPackage /version`
-- Pinned version: **162.0.198 (Nov 2023) or newer**.
 
 ### Linux install (one-liner)
 
@@ -29,12 +44,11 @@ export PATH="$HOME/sqlpackage:$PATH"
 
 ## 3. sqlcmd
 
-Used to export proc source and fixtures from Azure SQL.
+Exports proc source and fixtures from Azure SQL.
 
 - Install: https://learn.microsoft.com/sql/tools/sqlcmd/sqlcmd-utility
 - Verify: `sqlcmd -?`
-- Pinned version: **1.2.0 (Go-based) or newer**. The legacy `sqlcmd` (ODBC)
-  also works but the Go-based one is easier to install on Linux/macOS.
+- Go-based **1.2.0+** preferred; legacy ODBC `sqlcmd` also works.
 
 ### Linux install (one-liner)
 
@@ -47,16 +61,14 @@ export PATH="$HOME/sqlcmd:$PATH"
 
 ## 4. Databricks CLI (`databricks`)
 
-Used to deploy the bundle, run the job, manage secrets, and call the
-Statement Execution API (via `agents/tools/run_sql.sh`).
+Deploys the bundle, runs the job, manages secrets, and calls the Statement
+Execution API via `agents/tools/run_sql.sh`.
 
 - Install: https://docs.databricks.com/cli/install.html
 - Login: `databricks auth login --host <your-workspace-url>`
 - Verify: `databricks auth profiles`
-- Pinned version: **0.230.0 or newer** (for `bundle`; **0.281.0+** for
-  dashboard `dataset_catalog` / `dataset_schema`).
 
-There is **no** `databricks sql execute` command. Use:
+There is **no** `databricks sql execute` command:
 
 ```bash
 ./agents/tools/run_sql.sh --sql "SELECT 1"
@@ -65,15 +77,10 @@ There is **no** `databricks sql execute` command. Use:
 
 ## 5. python3
 
-Used by hooks (payload parsing), `run_sql.sh` helpers, fixture builders,
-and `agents/tools/render_manifest_table.py`.
-
-- Verify: `python3 --version`
-- Pinned version: **3.10 or newer**.
+Used by hooks (payload parsing), `run_sql.sh` helpers, fixture builders, and
+`agents/tools/render_manifest_table.py`.
 
 ## 6. jq (optional)
-
-Nice to have for ad-hoc JSON inspection; hooks use python3 and do not require jq.
 
 ```bash
 sudo apt-get install -y jq   # Debian/Ubuntu
@@ -82,27 +89,28 @@ brew install jq              # macOS
 
 ## 7. Cursor
 
-The agent workflow runs in Cursor (subagents + hooks).
+Agent workflow (subagents + hooks).
 
 - Install: https://cursor.com
-- Verify: open this repo in Cursor; the `.cursor/agents/` and
-  `.cursor/hooks.json` should be picked up automatically.
+- Open this repo at the git root so `.cursor/agents/` and `.cursor/hooks.json`
+  load automatically.
 
 ## 8. Databricks Free Edition workspace
 
 - Sign up: https://www.databricks.com/learn/free-edition
-- Note your workspace URL (e.g.
-  `https://dbc-XXXXXX.cloud.databricks.com`).
-- Generate a personal access token (PAT) in the workspace settings.
-- Find your serverless SQL warehouse ID (or create a 2X-Small one):
+- Note workspace URL (e.g. `https://dbc-XXXXXX.cloud.databricks.com`).
+- Create a personal access token (PAT).
+- Find or create a **serverless** SQL warehouse (2X-Small is fine):
   `databricks warehouses list`.
 
 ## 9. Azure subscription
 
-- Any Azure subscription works. The free offer is per-subscription.
+- Any subscription works; free offer is per-subscription.
 - First free DB locks the region for all free DBs on that subscription.
 - 100,000 vCore-seconds + 32 GB data + 32 GB backup per DB per month.
-- See [docs/limits.md](limits.md) for full constraints.
+- Details: [limits.md](limits.md).
+
+---
 
 ## Verify everything
 
@@ -111,8 +119,9 @@ az --version
 SqlPackage /version
 sqlcmd -?
 databricks --version
-jq --version
 python3 --version
+# optional: jq --version
 ```
 
-All should print a version without error.
+All required commands should print a version without error. Then continue to
+the [runbook](runbook.md).

@@ -4,6 +4,9 @@ description: Convert one legacy T-SQL stored procedure (from legacy/procs/) into
 model: inherit
 readonly: false
 ---
+
+# 02_convert.md — Convert subagent prompt
+
 You are the **Convert** stage of an EDW-to-Databricks migration run. You are
 NOT readonly: you write notebooks to `databricks/silver/` or `databricks/gold/`.
 You are path-scoped by this prompt — only write under those two directories.
@@ -35,7 +38,8 @@ notebook that fits the medallion contract.
    - `Integration.Get<Entity>Updates` → `CREATE OR REPLACE TABLE AS SELECT`
      gold mart.
    - Temp tables (`#tmp`) → CTEs.
-   - `WHILE`/cursor loops → set-based SQL (prefer set-based).
+   - `WHILE`/cursor loops → set-based SQL or `reduce`/`mapPartitions` if
+     unavoidable (prefer set-based).
 
 3. **Write the notebook** to `target_path`. If a baseline file already exists
    under `databricks/silver/` or `databricks/gold/`, write the agent conversion

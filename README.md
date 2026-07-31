@@ -1,41 +1,45 @@
 # EDW → Databricks AI-Assisted Migration Demo
 
-A self-serve, fully replicable demo of migrating a medium-complexity EDW
-(star schema + stored procedures) from **free Azure SQL** into **Databricks
-Free Edition** Unity Catalog, using a **Cursor coordinator + subagent
-playbook** with hook-driven observability and a deterministic retry loop.
+Self-serve enablement repo for Databricks field engineers and technical
+prospects: migrate a medium-complexity EDW (star schema + stored procedures)
+from **Azure SQL free offer** into **Databricks Free Edition** Unity Catalog,
+with a **Cursor coordinator + stage subagents** driving Assess → Convert →
+Test → Gate, and live observability in an AI/BI dashboard.
 
-The repo is the deliverable. Clone it, run `bootstrap.sh`, run the bundle,
-launch the coordinator subagent in Cursor, and watch the agents migrate the
-EDW live.
+**The repo is the deliverable.** Clone it, bootstrap Azure, deploy the
+bundle, launch the coordinator in Cursor, watch the agents work.
+
+![Architecture](docs/img/architecture.png)
+
+## Who this is for
+
+| Audience | How to use this repo |
+|---|---|
+| Databricks SE / field | Run the [demo script](docs/demo-script.md); leave the prospect with the GitHub URL |
+| Customer / prospect engineer | Follow the [quickstart](#quickstart--45-minutes) and [runbook](docs/runbook.md) |
+| Partner / enablement | Fork, extend procs/agents; see [CONTRIBUTING.md](CONTRIBUTING.md) |
 
 ## What you get
 
-- A downloadable WideWorldImportersDW `.bacpac` (Microsoft sample EDW, ~21 MB;
-  fetched by `legacy/wideworldimportersdw/download_bacpac.sh` on first run).
-- One-click Azure SQL provisioning on the **free offer** (zero bill beyond
-  allowance, `AutoPause` on limit).
-- Lakehouse Federation from Databricks Free Edition to Azure SQL — assess
-  and reconcile in place, materialize a bronze → silver → gold medallion.
-- A Cursor **coordinator subagent** that drives **Assess → Convert → Test →
-  Gate** stage subagents, with a bounded retry loop on gate failures.
-- **Observability via Cursor hooks** writing structured events to a Unity
-  Catalog Delta table (`edw_migration.ops.agent_events`), viewed live in an
-  **AI/BI dashboard**.
-- A Databricks Asset Bundle that runs the whole medallion as a single
-  Lakeflow Job.
+- **WideWorldImportersDW** sample EDW (`.bacpac` vendored, SHA pinned)
+- **Zero-cost Azure SQL** free offer (`AutoPause` on limit) + teardown script
+- **Lakehouse Federation** into Unity Catalog (`wwi_dw_fed`) for assess/reconcile
+- **Medallion** bronze → silver → gold + metric view, PK/FK, reconcile vs fixtures
+- **Cursor agent playbook** — portable prompts + Cursor subagents/hooks
+- **Observability** — hooks → `ops.agent_events` → AI/BI dashboard (bundle-deployed)
+- **DAB job** — one Lakeflow Job for the full pipeline + lineage check
 
-## Architecture
+## Architecture (one picture)
 
 ```mermaid
 flowchart LR
-  subgraph azure [Free Azure SQL EDW]
-    Bacpac[WWI-DW bacpac 21MB in repo]
-    FreeDB[Azure SQL free offer DB]
-    Bacpac -->|SqlPackage import| FreeDB
+  subgraph azure [Free Azure SQL]
+    Bacpac[WWI bacpac]
+    FreeDB[Serverless free DB]
+    Bacpac -->|SqlPackage| FreeDB
   end
   subgraph dbx [Databricks Free Edition]
-    Fed[wwi_dw_fed foreign catalog]
+    Fed[wwi_dw_fed]
     Bronze[bronze]
     Silver[silver]
     Gold[gold]
@@ -46,92 +50,91 @@ flowchart LR
     Silver --> Gold
   end
   subgraph cursor [Cursor]
-    Coord[coordinator writes all artifacts]
+    Coord[edw-coordinator]
     Coord -.-> dbx
   end
-  azure -.federation.-> dbx
+  azure -.Federation.-> dbx
 ```
 
-## Quickstart (30 min)
+Deeper design notes: [docs/architecture.md](docs/architecture.md).  
+Agent delegation graph: [docs/img/agent_delegation.png](docs/img/agent_delegation.png).
 
-1. **Prerequisites** — see [docs/prerequisites.md](docs/prerequisites.md).
-   You need: Azure subscription, `az`, `SqlPackage`, `sqlcmd`, `databricks`
-   CLI, `jq`, `python3`, Cursor, and a Databricks Free Edition workspace.
+## Quickstart (~45 minutes)
 
-2. **Clone & configure:**
-   ```bash
-   git clone <this repo>
-   cd edwmigration
-   cp infra/azure/.env.example .env
-   $EDITOR .env   # fill in subscription, server name, password, Databricks host/token/warehouse
-   set -a; . ./.env; set +a
-   ```
+Full detail lives in the [runbook](docs/runbook.md). Abbreviated path:
 
-3. **Provision Azure SQL + load the EDW:**
-   ```bash
-   ./infra/azure/bootstrap.sh --dry-run   # validate
-   ./infra/azure/bootstrap.sh             # ~10 min
-   ```
+```bash
+# 0) Prereqs — docs/prerequisites.md
+git clone https://github.com/Jericho2010/edwmigration.git
+cd edwmigration
+cp infra/azure/.env.example .env
+# Edit .env: Azure + DATABRICKS_HOST / TOKEN / WAREHOUSE_ID
+set -a; . ./.env; set +a
 
-4. **Deploy the Databricks medallion:**
-   ```bash
-   export BUNDLE_VAR_warehouse_id="$DATABRICKS_WAREHOUSE_ID"
-   ./agents/tools/render_federation_sql.sh > /tmp/01_fed.sql
-   ./agents/tools/run_sql.sh --file /tmp/01_fed.sql
-   ./agents/tools/run_sql.sh --file databricks/uc/03_ops_and_views.sql
-   databricks bundle validate -t dev
-   databricks bundle deploy -t dev
-   databricks bundle run edw_migration_medallion -t dev
-   ```
+# 1) Azure SQL EDW (~10 min)
+./infra/azure/bootstrap.sh --dry-run
+./infra/azure/bootstrap.sh
 
-5. **Run the agent workflow in Cursor:**
-   - Open this repo in Cursor.
-   - Launch the `edw-coordinator` subagent with a kickoff message like:
-     > Start an EDW migration run. Scope: Fact.Sale, Fact.Stockholding,
-     > Dimension.Customer, Dimension.City, Dimension.StockItem. Migrate the
-     > Integration.* procs.
-   - Watch `ops.agent_events` live in the deployed AI/BI dashboard
-     (`[dev] EDW Migration Agent Events`).
-   - Read the final manifest at `agents/out/<run_id>/migration_manifest.json`.
-   - Offline Gate demo samples: `agents/samples/run/` (see that README).
+# 2) UC + Federation
+./agents/tools/render_federation_sql.sh > /tmp/01_fed.sql
+./agents/tools/run_sql.sh --file /tmp/01_fed.sql
+./agents/tools/run_sql.sh --file databricks/uc/03_ops_and_views.sql
 
-6. **Tear down when done:**
-   ```bash
-   ./infra/azure/teardown.sh
-   ```
+# 3) Medallion job + dashboard
+export BUNDLE_VAR_warehouse_id="$DATABRICKS_WAREHOUSE_ID"
+databricks bundle validate -t dev
+databricks bundle deploy -t dev
+databricks bundle run edw_migration_medallion -t dev
+
+# 4) Agents — open this repo in Cursor, launch edw-coordinator:
+#    "Start an EDW migration run. Scope: Fact.Sale, Fact.Stockholding,
+#     Dimension.Customer, Dimension.City, Dimension.StockItem.
+#     Migrate the Integration.* procs."
+# Watch: AI/BI dashboard "[dev] EDW Migration Agent Events"
+
+# 5) Tear down Azure when finished
+./infra/azure/teardown.sh
+```
+
+Offline Gate demo without Azure: copy [agents/samples/run/](agents/samples/run/)
+into `agents/out/<run_id>/` (see [agents/samples/README.md](agents/samples/README.md)).
+
+## Documentation map
+
+| Doc | Purpose |
+|---|---|
+| [docs/README.md](docs/README.md) | Index of all docs |
+| [docs/demo-script.md](docs/demo-script.md) | SE talk track (15 / 30 / 45 min) |
+| [docs/runbook.md](docs/runbook.md) | End-to-end operator runbook |
+| [docs/prerequisites.md](docs/prerequisites.md) | Tools, versions, verify commands |
+| [docs/architecture.md](docs/architecture.md) | Medallion, federation, agents, hooks |
+| [docs/troubleshooting.md](docs/troubleshooting.md) | Failures and fixes |
+| [docs/limits.md](docs/limits.md) | Free Edition + Azure free offer |
+| [docs/firewall.md](docs/firewall.md) | Why `0.0.0.0/0` and how to tear it down |
+| [docs/lakeflow_connect.md](docs/lakeflow_connect.md) | Why Federation, not Lakeflow Connect |
+| [agents/README.md](agents/README.md) | Agent playbook |
+| [databricks/README.md](databricks/README.md) | Medallion contracts + DAB |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | How to extend the demo |
 
 ## Repo layout
 
 ```text
-infra/azure/            Azure SQL provisioning (bootstrap, teardown, .env.example)
-legacy/                 Source EDW: bacpac, proc source, fixtures
-databricks/             UC + Federation, bronze/silver/gold, DAB bundle, reconcile, dashboard
-agents/                 Tool-agnostic prompts + contracts + tools
-.cursor/                Cursor subagents + hooks (observability + retry)
-docs/                   Runbook, prerequisites, limits, firewall, Lakeflow Connect
+infra/azure/     bootstrap.sh, teardown.sh, .env.example
+legacy/          bacpac, procs/, fixtures/
+databricks/      uc/, bronze/, silver/, gold/, jobs/, tests/, dashboards/
+agents/          prompts/, contracts/, tools/, samples/
+.cursor/         agents/ + hooks.json + hooks/
+docs/            runbook, architecture, demo-script, …
 ```
-
-## Documentation
-
-- [docs/runbook.md](docs/runbook.md) — full end-to-end run including the agent workflow
-- [docs/prerequisites.md](docs/prerequisites.md) — pinned tool versions and install links
-- [docs/limits.md](docs/limits.md) — Free Edition + Azure SQL free offer constraints
-- [docs/firewall.md](docs/firewall.md) — the `0.0.0.0/0` demo rule and its risk
-- [docs/lakeflow_connect.md](docs/lakeflow_connect.md) — why we use Federation, not Lakeflow Connect
-- [agents/README.md](agents/README.md) — the agent playbook (prompts, contracts, subagents)
-- [.cursor/README.md](.cursor/README.md) — Cursor subagents and hooks wiring
-- [databricks/README.md](databricks/README.md) — medallion contracts and deploy/run
 
 ## Cost
 
-- **Azure SQL:** free offer (100,000 vCore-seconds + 32 GB + 32 GB backup per
-  DB per month). `AutoPause` on limit exhaustion — never charges beyond the
-  allowance. See [docs/limits.md](docs/limits.md).
-- **Databricks:** Free Edition (serverless only, restricted outbound, max 5
-  concurrent job tasks). See [docs/limits.md](docs/limits.md).
-- **Total:** $0 if you tear down after the demo.
+| Surface | Model |
+|---|---|
+| Azure SQL | Free offer — `AutoPause` when allowance exhausted ([limits](docs/limits.md)) |
+| Databricks | Free Edition — serverless only ([limits](docs/limits.md)) |
+| **Total** | **$0** if you tear down Azure after the demo |
 
 ## License
 
-MIT. See [LICENSE](LICENSE). The WideWorldImporters sample is also MIT
-licensed by Microsoft.
+MIT — see [LICENSE](LICENSE). WideWorldImporters sample is MIT (Microsoft).

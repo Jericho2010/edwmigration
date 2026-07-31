@@ -1,0 +1,74 @@
+# Demo script (field / SE)
+
+Timed talk tracks for presenting this repo to a technical prospect.
+Leave them with: **https://github.com/Jericho2010/edwmigration**
+
+Prep once: complete [runbook](runbook.md) through medallion deploy so the
+dashboard and tables exist. Keep Azure warm (`SELECT 1` via sqlcmd) before
+the meeting.
+
+---
+
+## 15-minute version (hallway / discovery)
+
+| Min | Screen / cue | Say |
+|---|---|---|
+| 0–2 | GitHub README | “Self-serve EDW migration demo: free Azure SQL → Databricks Free Edition, Cursor agents, live AI/BI observability. Zero cost if you tear down.” |
+| 2–5 | Architecture diagram | “Source is WideWorldImportersDW — real star schema and Integration.* stored procs, not AdventureWorks OLTP. We federate into UC, then bronze → silver → gold.” |
+| 5–8 | Job run / Catalog Explorer | “One Lakeflow Job lands and transforms. Reconcile compares gold to fixtures exported from the legacy procs.” |
+| 8–12 | Cursor + dashboard | “Coordinator drives Assess → Convert → Test → Gate. Hooks stream agent events into `ops.agent_events` — same dashboard you’d leave with a customer.” |
+| 12–15 | Manifest + teardown story | “Gate is deterministic ship/no-ship. Firewall is open for Free Edition egress on sample data only — teardown deletes the RG.” |
+
+**Leave-behind:** clone URL + [prerequisites](prerequisites.md) + “run the runbook weekend.”
+
+---
+
+## 30-minute version (technical deep dive)
+
+| Min | Screen / cue | Say |
+|---|---|---|
+| 0–3 | README “What you get” | Frame audience: SE enablement + prospect self-serve. |
+| 3–8 | Azure portal or bootstrap log | Free offer, AutoPause, why bacpac (not bak), why `0.0.0.0/0` ([firewall.md](firewall.md)). |
+| 8–14 | Federation SQL + `wwi_dw_fed` | Lakehouse Federation on serverless; why not Lakeflow Connect on Free Edition ([lakeflow_connect.md](lakeflow_connect.md)). |
+| 14–20 | Medallion notebooks + job DAG | Show fan-out under 5 concurrent tasks; SCD2 customer; gold marts mapped to Integration.* outcomes. |
+| 20–26 | Cursor agent run (or sample artifacts) | Write model: readonly stages return JSON; Convert lands in `databricks/converted/` so baselines stay job-safe. |
+| 26–30 | AI/BI dashboard + manifest | Hooks → Delta → dashboard; Gate blockers; teardown. |
+
+**Optional live path:** kick off `edw-coordinator` mid-meeting and narrate events as they appear (have `CURRENT_RUN` and warehouse warm).
+
+---
+
+## 45-minute version (workshop)
+
+Follow the [runbook](runbook.md) live with the prospect driving the keyboard where possible.
+
+1. **Configure** (.env) — 5 min  
+2. **Bootstrap Azure** (or show pre-provisioned) — 10 min  
+3. **Federation + ops tables** — 5 min  
+4. **Bundle deploy + job run** — 10 min (narrate DAG while it runs)  
+5. **Cursor coordinator** — 10 min  
+6. **Inspect gold / reconcile / dashboard / tear down** — 5 min  
+
+Offline fallback if Azure free allowance is exhausted: copy
+[agents/samples/run/](../agents/samples/run/) into `agents/out/<run_id>/`
+and walk Gate + manifest + dashboard schema.
+
+---
+
+## Objection handling (short)
+
+| Objection | Response |
+|---|---|
+| “Free Edition isn’t production.” | Correct — this proves the *migration pattern* and agent operating model. Production = same UC/medallion ideas on a paid workspace, often with Lakeflow Connect or private networking. |
+| “Opening SQL to 0.0.0.0/0 is crazy.” | Agree for real data. Acceptable only for public sample + teardown. Paid path: private link / allowlisted egress. |
+| “Agents will hallucinate SQL.” | Gate + reconcile fixtures are the control plane; Convert is draft; ship/no-ship is deterministic. |
+| “Why not dbt / ADF / …?” | Out of scope. The teaching surface is UC + serverless SQL + agent stages + product observability. |
+
+---
+
+## Prospect takeaways (say these explicitly)
+
+1. You can clone and run this without a Databricks AE in the room.  
+2. Federation + medallion is the Free Edition–legal path; Connect needs classic compute.  
+3. Agent migration is useful when paired with **contracts, reconcile, and a gate**.  
+4. Observability belongs in the lakehouse (`ops.agent_events`), not a laptop log file.

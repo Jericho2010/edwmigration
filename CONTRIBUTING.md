@@ -1,56 +1,62 @@
 # Contributing
 
-Contributions are welcome. This demo is meant to be extended.
+Contributions welcome — this demo is meant to be extended.
 
 ## Ways to contribute
 
-- **Add a new proc pattern.** If you convert a WWI proc that uses a T-SQL
-  pattern not covered by `agents/prompts/convert_style.md`, add the mapping
-  to the style guide and a corresponding gold notebook.
-- **Add a new stage agent.** If you want a stage between Assess and Convert
-  (e.g. a "Plan" agent that orders the backlog by dependency), add a prompt
-  in `agents/prompts/`, a subagent in `.cursor/agents/`, and update the
-  coordinator prompt to delegate to it.
-- **Add a reconcile check.** Add a new INSERT into `ops.reconcile_results`
-  in `databricks/tests/reconcile.sql`. The Test agent will pick it up
-  automatically.
-- **Port to another runtime.** The prompts in `agents/prompts/` are
-  tool-agnostic. If you wire them into Claude Code, Codex, or another agent
-  runtime, add a note in the README and a porting guide in `docs/`.
-- **Improve the dashboard.** Add widgets to
+- **Add a proc pattern.** If you convert a WWI proc that uses a T-SQL pattern
+  not covered by `agents/prompts/convert_style.md`, update the style guide and
+  add a gold (or `converted/`) notebook.
+- **Add a stage agent.** New prompt in `agents/prompts/`, regenerate Cursor
+  subagents with `sync_prompts.sh`, update the coordinator prompt to delegate.
+- **Add a reconcile check.** Insert into `ops.reconcile_results` in
+  `databricks/tests/reconcile.sql` (and expectations if fixture-backed).
+- **Port to another runtime.** Prompts in `agents/prompts/` are tool-agnostic;
+  document the port under `docs/`.
+- **Improve the dashboard.** Extend
   `databricks/dashboards/agent_events.lvdash.json`.
+- **Docs.** Prefer accuracy over length; update [docs/README.md](docs/README.md)
+  when adding a new top-level doc.
 
 ## Development workflow
 
 1. Fork and clone.
 2. Make your changes.
-3. If you edited any prompt in `agents/prompts/`, re-sync the Cursor
-   subagents:
+3. If you edited `agents/prompts/*`, re-sync:
    ```bash
    ./agents/tools/sync_prompts.sh
    ```
 4. Test end-to-end on a fresh Azure SQL free-offer DB:
    ```bash
+   set -a; . ./.env; set +a
    ./infra/azure/teardown.sh
    ./infra/azure/bootstrap.sh
-   databricks bundle deploy && databricks bundle run edw_migration_medallion
+   export BUNDLE_VAR_warehouse_id="$DATABRICKS_WAREHOUSE_ID"
+   databricks bundle validate -t dev
+   databricks bundle deploy -t dev
+   databricks bundle run edw_migration_medallion -t dev
    ```
-5. Run the agent workflow in Cursor and confirm the gate passes.
+5. Run the agent workflow in Cursor and confirm Gate can pass (or document
+   expected blockers).
 6. Open a PR.
+
+Offline agent/Gate checks: [agents/samples/README.md](agents/samples/README.md).
 
 ## Style
 
-- Shell scripts: `set -euo pipefail`, `bash` shebang, no `cd` inside
-  scripts (use absolute paths or `SCRIPT_DIR`).
-- SQL: snake_case for new objects; backtick-quote WWI's PascalCase-with-spaces
+- Shell: `set -euo pipefail`, bash shebang; prefer `SCRIPT_DIR` over `cd`.
+- SQL: snake_case for new objects; backtick-quote WWI PascalCase-with-spaces
   columns when selecting from the foreign catalog.
 - Prompts: markdown, self-contained (subagents do not inherit User Rules).
-- Hooks: `failClosed: false` for logging, `failClosed: true` for control
-  flow (retry). Never let a logging hook break the agent run.
+- Hooks: `failClosed: false` for logging, `failClosed: true` for control flow
+  (retry). Never let a logging hook break the agent run.
+- Docs: keep the [runbook](docs/runbook.md) and [architecture](docs/architecture.md)
+  aligned with code; avoid claiming the job is fully sequential or that `jq`
+  is required.
 
 ## Commit messages
 
-Conventional Commits style:
+Conventional Commits:
 
 ```
 feat: add SCD2 reconcile check for dim_customer
@@ -60,5 +66,5 @@ docs: clarify firewall 0.0.0.0/0 risk
 
 ## Issues
 
-Open an issue for bugs, gaps, or feature requests. Tag with `demo`,
-`agents`, or `medallion` as appropriate.
+Open an issue for bugs, gaps, or feature requests. Tags: `demo`, `agents`,
+`medallion`, `docs`.

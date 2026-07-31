@@ -1,29 +1,30 @@
-# databricks/ — Databricks medallion assets
+# databricks/ — medallion assets + DAB
 
 ```text
 databricks/
-  databricks.yml                DAB bundle root (variables, include)
-  uc/                           Unity Catalog + Federation setup
-  bronze/                       1:1 land from source_fed, with audit columns
-  silver/                       Conformed types, SCD2 on customer, orphan quarantine
-  gold/                         1:1 mapping to legacy Integration.* proc outcomes (marts)
-  jobs/                         edw_migration_medallion.yml (DAB job resource)
-  tests/                        reconcile.sql
-  dashboards/                    agent_events.lvdash.json (AI/BI dashboard)
+  databricks.yml          Bundle root (variables, includes, targets.dev)
+  uc/                     Unity Catalog + Federation + lineage check
+  bronze/                 1:1 land from source_fed + audit columns
+  silver/                 Conform, SCD2 customer, orphan quarantine, constraints
+  gold/                   Marts + metric view (job baselines)
+  converted/              Agent Convert output (does not overwrite baselines)
+  jobs/                   Medallion job + dashboard resource YAMLs
+  tests/                  Fixture staging + reconcile.sql
+  dashboards/             agent_events.lvdash.json (AI/BI)
 ```
 
 ## Medallion flow
 
 ```mermaid
 flowchart LR
-  Fed[source_fed views over wwi_dw_fed] --> Bronze[bronze CTAS land]
+  Fed[source_fed over wwi_dw_fed] --> Bronze[bronze CTAS]
   Bronze --> Silver[silver conform + SCD2]
-  Silver --> Gold[gold marts 1:1 with legacy proc outcomes]
-  Gold --> Reconcile[reconcile.sql vs fixtures]
+  Silver --> Gold[gold marts]
+  Gold --> Reconcile[reconcile vs fixtures]
   Bronze -.row counts.-> Reconcile
 ```
 
-## Deploy & run
+## Deploy and run
 
 ```bash
 export BUNDLE_VAR_warehouse_id="$DATABRICKS_WAREHOUSE_ID"
@@ -32,39 +33,54 @@ databricks bundle deploy -t dev
 databricks bundle run edw_migration_medallion -t dev
 ```
 
-SQL file paths in `databricks/jobs/*.yml` are **relative to that YAML file**
-(AI Dev Kit path-resolution rule). Warehouse ID comes from
-`BUNDLE_VAR_warehouse_id` (not `${DATABRICKS_WAREHOUSE_ID}` inside YAML).
+- SQL paths in `jobs/*.yml` are **relative to that YAML file**
+  (AI Dev Kit path-resolution rule).
+- Warehouse ID: `BUNDLE_VAR_warehouse_id` (not `${DATABRICKS_WAREHOUSE_ID}`
+  inside YAML).
+- Dashboard deploys with the same bundle (no manual import).
+
+### Job tasks (dependency order)
+
+`federation_smoke` → parallel bronze dims/facts + `stage_fixtures` → silver
+dims / SCD2 / fact_sale → gold marts + metric view + constraints →
+`reconcile` → `lineage_check`. Peak fan-out stays under Free Edition’s
+5 concurrent tasks. Full YAML: `jobs/edw_migration_medallion.yml`.
 
 ## Free Edition constraints
 
-- Serverless SQL warehouse only (no classic clusters).
-- Max 5 concurrent job tasks — the job is sequential, so well under.
-- Restricted outbound internet — federation to Azure SQL works because the
-  server is on the trusted allowlist; other egress may not.
-- See [docs/limits.md](../docs/limits.md).
+- Serverless SQL warehouse only.
+- Max 5 concurrent job tasks.
+- Restricted outbound internet — Azure SQL federation works; arbitrary egress may not.
+- Details: [docs/limits.md](../docs/limits.md).
 
 ## Medallion contracts
 
 ### Bronze
 
-1:1 land from `source_fed.*`, snake_case names, audit columns
-`_bronze_loaded_at`, `_source_system='wwi_azure_sql'`, `_batch_id`. Pattern:
-`CREATE OR REPLACE TABLE ... AS SELECT ...`. `ops.load_control` row per load.
+1:1 land from `source_fed.*`, snake_case, audit columns
+`_bronze_loaded_at`, `_source_system='wwi_azure_sql'`, `_batch_id`.
+`CREATE OR REPLACE TABLE … AS SELECT`. `ops.load_control` per load.
 
 ### Silver
 
-Conform types, normalize keys, SCD2 on customer, orphan-fact quarantine on
-`Fact.Sale`.
+Conform types, normalize keys (WWI `` `Customer Key` `` /
+`` `Stock Item Key` ``), SCD2 on customer, orphan-fact quarantine on sales.
 
-### Gold
+### Gold (baselines for the job)
 
-1:1 mapping to legacy proc outcomes. Each gold table replaces one or more
-`Integration.*` procs.
-
-| Gold table | Replaces | Pattern |
+| Gold object | Replaces (conceptually) | Pattern |
 |---|---|---|
-| `mart_daily_internet_sales` | `Integration.GetStockItemUpdates` + aggregation | `CREATE OR REPLACE TABLE AS SELECT` daily |
-| `mart_stock_movements` | `Integration.MigrateStagedStockItemData` | `INSERT OVERWRITE` snapshot |
-| `mart_customer_current` | `Integration.MigrateStagedCustomerData` | current-state snapshot |
-| `mart_city_dimension` | `Integration.GetCityUpdates` | `CREATE OR REPLACE TABLE AS SELECT` |
+| `mart_daily_internet_sales` | GetStockItemUpdates + aggregation | CTAS daily |
+| `mart_stock_movements` | MigrateStagedStockItemData | INSERT OVERWRITE |
+| `mart_customer_current` | MigrateStagedCustomerData | current snapshot |
+| `mart_city_dimension` | GetCityUpdates | CTAS |
+| daily sales metric view | BI consumption | UC metric view |
+
+### `converted/`
+
+Agent Convert notebooks land here when a baseline silver/gold file already
+exists, so the job DAG stays stable. See [converted/README.md](converted/README.md).
+
+## UC setup order
+
+See [uc/README.md](uc/README.md). Use `agents/tools/run_sql.sh` (Statement API).

@@ -4,6 +4,9 @@ description: Inventory the source EDW (WideWorldImportersDW via the wwi_dw_fed f
 model: inherit
 readonly: true
 ---
+
+# 01_assess.md — Assess subagent prompt
+
 You are the **Assess** stage of an EDW-to-Databricks migration run. You are
 `readonly`: you may read files and run read-only SQL, but you may NOT write
 files or run state-changing SQL. You return structured JSON in your final
@@ -51,7 +54,7 @@ legacy stored procedure that needs to be converted to Databricks.
      `@LastCutoff`/`@NewCutoff`), `aggregation` (if it rolls up).
 
 4. **Validate against scoped_tables.** Flag any proc that reads/writes a
-   table outside the scoped set with an `out_of_scope` risk flag.
+   table outside the scoped set with a `out_of_scope` risk flag.
 
 ## Outputs (return as JSON in your final message)
 
@@ -59,13 +62,10 @@ Return a single JSON object with two keys:
 
 ```json
 {
-  "migration_backlog": [ ... ],
-  "assess_summary": "..."
+  "migration_backlog": [ ... ],   // array per agents/contracts/migration_backlog.schema.json
+  "assess_summary": "..."         // markdown string: high-level findings, risks, counts
 }
 ```
-
-`migration_backlog` is an array per `agents/contracts/migration_backlog.schema.json`.
-`assess_summary` is a markdown string with high-level findings, risks, and counts.
 
 The coordinator will:
 - Write `migration_backlog` to `agents/out/<run_id>/migration_backlog.json`.

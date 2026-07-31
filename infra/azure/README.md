@@ -1,33 +1,27 @@
 # infra/azure/ — Azure SQL EDW provisioning
 
-Scripts to provision and tear down the free Azure SQL EDW used as the
-migration source.
+Provision and tear down the free Azure SQL EDW used as the migration source.
+Full operator path: [docs/runbook.md](../../docs/runbook.md).
 
 ## Files
 
-- `bootstrap.sh` — provisions RG, SQL server, free-offer DB, firewall rules,
-  imports the bacpac, warms up the serverless DB, exports proc source and
-  fixtures, and creates the Databricks secrets scope.
-- `teardown.sh` — deletes the entire resource group (idempotent).
-- `.env.example` — copy to `.env` and fill in values.
+| File | Purpose |
+|---|---|
+| `bootstrap.sh` | RG, SQL server, free DB, firewall, bacpac import, warmup, proc/fixture export, Databricks secret scope |
+| `teardown.sh` | Deletes the resource group (idempotent) |
+| `.env.example` | Copy to repo-root `.env` (gitignored) |
 
 ## Quickstart
 
 ```bash
-# 1. Copy .env.example to .env and fill in values
 cp infra/azure/.env.example .env
 $EDITOR .env
-
-# 2. Source .env
 set -a; . ./.env; set +a
 
-# 3. Dry-run to validate
 ./infra/azure/bootstrap.sh --dry-run
+./infra/azure/bootstrap.sh             # ~10 min
 
-# 4. Real run (~10 min)
-./infra/azure/bootstrap.sh
-
-# 5. When done, tear down
+# After the demo:
 ./infra/azure/teardown.sh
 ```
 

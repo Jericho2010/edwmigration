@@ -63,7 +63,8 @@ notebook that fits the medallion contract.
 - Only write to `databricks/silver/`, `databricks/gold/`, or
   `databricks/converted/`. Never touch `databricks/bronze/`, `databricks/uc/`,
   `databricks/tests/`, or anything outside `databricks/`.
-  Prefer `databricks/converted/` when a baseline silver/gold file already exists.- Do not insert into `ops.*` tables — the coordinator does that.
+  Prefer `databricks/converted/` when a baseline silver/gold file already exists.
+- Do not insert into `ops.*` tables — the coordinator does that.
 - Do not modify `legacy/procs/*.sql` (source of truth).
 - If the proc cannot be cleanly converted (e.g. uses unsupported T-SQL),
   write a stub notebook with a `-- TODO: manual conversion required` comment
