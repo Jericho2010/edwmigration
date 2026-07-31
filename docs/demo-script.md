@@ -104,6 +104,7 @@ and walk Gate + manifest + dashboard schema.
 | “Free Edition isn’t production.” | Correct — this proves the *migration pattern* and agent operating model. Production = same UC/medallion ideas on a paid workspace, often with Lakeflow Connect or private networking. |
 | “Opening SQL to 0.0.0.0/0 is crazy.” | Agree for real data. Acceptable only for public sample + teardown — or skip Azure entirely with `make demo-offline` (seeded `source_fed`, same pipeline). Paid path: private link / allowlisted egress. |
 | “Agents will hallucinate SQL.” | Gate + reconcile fixtures are the control plane; Convert is draft; ship/no-ship is deterministic. |
+| “Doesn’t Lakebridge already do this?” | Lakebridge is the conversion engine (assess/transpile/reconcile); this repo is the operating model around *any* converter — gate, retry hooks, observability, copilot. At WWI scale Cursor agents are nearly as good; at enterprise scale, run Lakebridge transpile *inside* the Convert stage. Full table: [lakebridge.md](lakebridge.md). |
 | “Why not dbt / ADF / …?” | Out of scope. The teaching surface is UC + serverless SQL + agent stages + product observability. |
 
 ---
