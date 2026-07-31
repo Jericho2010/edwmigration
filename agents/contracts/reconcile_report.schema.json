@@ -1,0 +1,61 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://edw-migration.demo/agents/contracts/reconcile_report.schema.json",
+  "title": "Reconcile report",
+  "description": "Output of the Test agent: pass/fail per reconcile check for one run, plus a summary. Written by the coordinator on behalf of the (readonly) Test subagent; consumed by the Gate stage alongside the backlog and conversion map.",
+  "type": "object",
+  "required": ["run_id", "checks", "summary"],
+  "additionalProperties": false,
+  "properties": {
+    "run_id": {
+      "type": "string",
+      "description": "The migration run this report belongs to (matches agents/out/<run_id>/)."
+    },
+    "checks": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["check_id", "table", "expected", "actual", "delta", "result"],
+        "additionalProperties": false,
+        "properties": {
+          "check_id": {
+            "type": "string",
+            "description": "Stable check identifier, e.g. 'bronze_vs_source_fact_sale_rowcount' or 'fixture_<name>'."
+          },
+          "table": {
+            "type": "string",
+            "description": "Table the check ran against (e.g. 'bronze.fact_sale')."
+          },
+          "expected": {
+            "type": "string",
+            "description": "Expected value as a string (reconcile results are string-typed in ops.reconcile_results)."
+          },
+          "actual": {
+            "type": "string",
+            "description": "Observed value as a string."
+          },
+          "delta": {
+            "type": "string",
+            "description": "actual - expected as a string (signed)."
+          },
+          "result": {
+            "type": "string",
+            "enum": ["pass", "fail"],
+            "description": "A 'fail' here is a gate blocker."
+          }
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "required": ["passed", "failed", "total"],
+      "additionalProperties": false,
+      "properties": {
+        "passed": { "type": "integer", "minimum": 0 },
+        "failed": { "type": "integer", "minimum": 0 },
+        "total": { "type": "integer", "minimum": 1 }
+      }
+    }
+  }
+}

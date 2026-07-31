@@ -27,13 +27,15 @@ Enablement docs for the EDW → Databricks AI-assisted migration demo.
 | [limits.md](limits.md) | Free Edition + Azure SQL free offer constraints |
 | [firewall.md](firewall.md) | `0.0.0.0/0` demo rule risk and teardown |
 | [lakeflow_connect.md](lakeflow_connect.md) | Why Lakehouse Federation on Free Edition |
+| [lakebridge.md](lakebridge.md) | Lakebridge vs. Cursor + this repo — capability table and composition pattern |
 
 ## Field enablement
 
 | Doc | Contents |
 |---|---|
 | [demo-script.md](demo-script.md) | Timed talk tracks + screen cues + prospect takeaways |
-| [img/](img/) | Architecture and agent-delegation diagrams (Mermaid + PNG) |
+| [img/](img/) | Architecture and agent-delegation diagrams (Mermaid + PNG) + recorded demo GIFs |
+| [media/](media/) | Recorded terminal scenes (asciinema casts + re-record script) behind the README GIFs |
 
 ## Code-adjacent READMEs
 

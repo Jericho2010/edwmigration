@@ -56,6 +56,7 @@ jobs:
             ("agents/contracts/context.schema.json", "agents/samples/run/context.json"),
             ("agents/contracts/migration_backlog.schema.json", "agents/samples/run/migration_backlog.json"),
             ("agents/contracts/migration_manifest.schema.json", "agents/samples/run/migration_manifest.json"),
+            ("agents/contracts/reconcile_report.schema.json", "agents/samples/run/reconcile_report.json"),
           ]
           failed = False
           for schema_path, doc_path in pairs:

@@ -80,6 +80,7 @@ When a baseline exists, write `databricks/converted/<same-basename>.sql`.
 | `tools/sync_prompts.sh` | Regenerate `.cursor/agents/` from prompts |
 | `tools/render_manifest_table.py` | Pretty-print a gate manifest |
 | `tools/inject_fault.sh` | Fault injection for the self-healing demo (`--revert` to restore) |
+| `tools/ask_genie.sh` | Terminal client for the Genie Conversation API (SQL + result + NL answer) |
 
 ## Running the agents
 
