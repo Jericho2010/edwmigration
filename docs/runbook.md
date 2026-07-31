@@ -89,12 +89,12 @@ make demo-offline     # = seed → ops tables → bundle deploy → job run
 ```
 
 The job's first task (`federation_smoke`) checks the `source_fed` contract,
-so it passes in both modes. Known divergence: the seeded `dim_customer`
-carries a `City` column (WWI City ID) that the current silver SCD2 expects;
-the 2016 vendored bacpac's `Dimension.Customer` does not have one — if you
-run the *online* path against that bacpac, drop the `City` mapping in
-`silver/21_dim_customer_scd2.sql` and the city join in
-`gold/32_mart_customer_current.sql`.
+so it passes in both modes. The contract is identical in both modes by
+construction: the 2016 vendored bacpac's `Dimension.Customer` has no `City`
+column, so the online federation view shims it as `CAST(NULL AS INT)`
+(`uc/01_federation_setup.sql`). Offline runs join real city IDs in the gold
+customer mart; online runs show NULL geography. No per-mode SQL changes are
+needed.
 
 Use a fresh workspace/catalog for offline mode if an online run already
 created `source_fed` *views* (a view and a table cannot share a name):

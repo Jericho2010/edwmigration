@@ -55,8 +55,12 @@ GRANT USE CONNECTION ON CONNECTION azure_sql_edw TO `account users`;
 GRANT USE CATALOG ON CATALOG wwi_dw_fed TO `account users`;
 GRANT SELECT ON CATALOG wwi_dw_fed TO `account users`;
 
+-- The 2016 vendored bacpac's Dimension.Customer has no City column; the NULL
+-- shim keeps the source_fed contract identical to the offline seed
+-- (databricks/offline/), so silver/gold are mode-agnostic. Online marts show
+-- NULL geography; offline runs join real city IDs.
 CREATE OR REPLACE VIEW edw_migration.source_fed.dim_customer AS
-  SELECT * FROM wwi_dw_fed.dimension.customer;
+  SELECT *, CAST(NULL AS INT) AS `City` FROM wwi_dw_fed.dimension.customer;
 
 CREATE OR REPLACE VIEW edw_migration.source_fed.dim_city AS
   SELECT * FROM wwi_dw_fed.dimension.city;
