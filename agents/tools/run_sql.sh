@@ -60,12 +60,24 @@ for tool in jq databricks python3; do
   fi
 done
 
-# Split into statements unless the input uses SQL scripting (BEGIN...END).
+# Split into statements unless the input uses SQL scripting:
+#  - a BEGIN...END compound is sent whole;
+#  - session-variable scripts (DECLARE OR REPLACE VARIABLE + SET VAR + later
+#    references) must run as ONE compound — the API has no cross-statement
+#    session state. Wrap them, rewriting session syntax to compound syntax.
 STMT_DIR="$(mktemp -d)"
 trap 'rm -rf "$STMT_DIR"' EXIT
 
 if printf '%s' "$SQL" | grep -qE '^[[:space:]]*BEGIN([[:space:]]|$)'; then
   printf '%s' "$SQL" > "${STMT_DIR}/stmt_001.sql"
+elif printf '%s' "$SQL" | grep -qE '^[[:space:]]*DECLARE[[:space:]]+OR[[:space:]]+REPLACE[[:space:]]+VARIABLE'; then
+  {
+    echo 'BEGIN'
+    printf '%s\n' "$SQL" | sed -E \
+      -e 's/^([[:space:]]*)DECLARE[[:space:]]+OR[[:space:]]+REPLACE[[:space:]]+VARIABLE/\1DECLARE/' \
+      -e 's/^([[:space:]]*)SET[[:space:]]+VAR[[:space:]]+/\1SET /'
+    echo 'END'
+  } > "${STMT_DIR}/stmt_001.sql"
 else
   python3 - "$SQL" "$STMT_DIR" <<'PY'
 import re, sys

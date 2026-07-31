@@ -79,7 +79,7 @@ case "$MODE" in
     ORIG_SQL="$(python3 - "$STATE_FILE" "$TABLE" <<'PY'
 import json, sys
 state, table = json.load(open(sys.argv[1])), sys.argv[2]
-exp = "NULL" if state["expected"] is None else str(int(state["expected"]))
+exp = "NULL" if state.get("expected") is None else str(int(state["expected"]))
 notes = state["notes"].replace("'", "''")
 print(
     f"UPDATE {table} SET expected = {exp}, compare = '{state['compare']}', "
@@ -111,7 +111,9 @@ PY
     if [ "${INJECT_FAULT_DRY_RUN:-0}" = "1" ]; then
       SNAP='{"fixture_name":"'"$FIXTURE"'","expected":null,"compare":"gte","notes":"dry-run snapshot"}'
     else
-      SNAP="$("$RUN_SQL" --sql "SELECT to_json(named_struct('fixture_name', fixture_name, 'expected', expected, 'compare', compare, 'notes', notes)) AS row_json FROM ${TABLE} WHERE fixture_name = '$(esc "$FIXTURE")';" | python3 -c '
+      # ignoreNullFields=false: to_json drops null fields by default, which
+      # would lose expected=NULL (the unset-expectation state we must restore).
+      SNAP="$("$RUN_SQL" --sql "SELECT to_json(named_struct('fixture_name', fixture_name, 'expected', expected, 'compare', compare, 'notes', notes), map('ignoreNullFields', 'false')) AS row_json FROM ${TABLE} WHERE fixture_name = '$(esc "$FIXTURE")';" | python3 -c '
 import json, sys
 for line in sys.stdin:
     line = line.strip()
@@ -143,9 +145,9 @@ for line in sys.stdin:
     NEW_SQL="$(python3 - "$STATE_FILE" "$TABLE" "$DELTA" "$MARKER" <<'PY'
 import json, sys
 state, table, delta, marker = json.load(open(sys.argv[1])), sys.argv[2], int(sys.argv[3]), sys.argv[4]
-base = state["expected"] if state["expected"] is not None else 0
+base = state.get("expected") if state.get("expected") is not None else 0
 new_expected = int(base) + delta
-old_exp = "NULL" if state["expected"] is None else str(state["expected"])
+old_exp = "NULL" if state.get("expected") is None else str(state["expected"])
 notes = f"{marker} was expected={old_exp} compare={state['compare']} | {state['notes']}"
 notes = notes.replace("'", "''")
 print(
