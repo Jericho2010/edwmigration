@@ -156,6 +156,20 @@ It queries `edw_migration.ops.agent_events`. The table is empty until the
 Cursor agent workflow runs (next step) — hooks write events on lifecycle
 transitions.
 
+### Optional: Genie copilot
+
+After the job has run, deploy the "EDW Migration Copilot" Genie space
+(natural-language Q&A over `ops.*` + `gold.*`):
+
+```bash
+make genie   # or ./databricks/genie/create_genie_space.sh
+```
+
+The script prints the Genie room URL. Try "Why did the last migration run
+fail the gate?" — config and certified Q&A live in
+`databricks/genie/space_config.json`. Talk track:
+[demo-script.md](demo-script.md) "Genie copilot".
+
 ---
 
 ## 6. Run the agent workflow in Cursor

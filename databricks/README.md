@@ -11,7 +11,17 @@ databricks/
   jobs/                   Medallion job + dashboard resource YAMLs
   tests/                  Fixture staging + reconcile.sql
   dashboards/             agent_events.lvdash.json (AI/BI)
+  genie/                  Genie space config + idempotent deploy script
 ```
+
+### Genie space (optional)
+
+`./databricks/genie/create_genie_space.sh` (or `make genie`) deploys the
+"EDW Migration Copilot" Genie space over the `ops.*` control-plane tables and
+`gold.*` marts — natural-language questions like "Why did the last migration
+run fail the gate?" Config: `genie/space_config.json` (serialized Genie
+space v2; tables must be sorted by identifier, IDs are 32-hex without
+hyphens — both validated against the live Genie API).
 
 ## Medallion flow
 

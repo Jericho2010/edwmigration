@@ -58,6 +58,26 @@ decision. Both answers are the product story.
 
 ---
 
+## Genie copilot (5 min, closer)
+
+Natural-language layer over the same tables — the "executive asks a question"
+beat. Precondition: medallion job has run, then `make genie` (deploys the
+"EDW Migration Copilot" space from `databricks/genie/space_config.json`).
+
+| Min | Screen / cue | Say |
+|---|---|---|
+| 0–1 | Genie room | "Everything you just saw — the runs, the gate, the marts — is queryable in plain English. No SQL, no dashboard-building." |
+| 1–3 | Ask: **"Why did the last migration run fail the gate?"** | Genie answers from `ops.reconcile_results` — the failing check, expected vs actual, the delta. Show the generated SQL: it's the certified example shipped in `space_config.json`, not a guess. |
+| 3–4 | Ask: **"Which legacy stored procedures have been converted?"** | Answer comes from `ops.proc_conversion_map`. "The audit trail the gate uses is the same one your stakeholder queries conversationally." |
+| 4–5 | Ask: **"Top 10 stock items by gross revenue?"** | Switch domains: same space also serves the migrated gold marts. "One copilot for 'did the migration work' *and* 'was it worth migrating'." |
+
+The space is code: `databricks/genie/space_config.json` holds the table list,
+vocabulary instructions, and certified Q&A, deployed idempotently by
+`create_genie_space.sh`. Version-control the copilot the same way you
+version-control the pipeline.
+
+---
+
 ## 45-minute version (workshop)
 
 Follow the [runbook](runbook.md) live with the prospect driving the keyboard where possible.

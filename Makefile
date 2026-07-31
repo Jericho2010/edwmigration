@@ -19,7 +19,7 @@ export BUNDLE_VAR_warehouse_id
 
 TOOLS := az sqlcmd SqlPackage databricks jq curl python3
 
-.PHONY: check bootstrap federation deploy run demo teardown offline-gate
+.PHONY: check bootstrap federation deploy run demo teardown offline-gate genie
 
 check: ## Verify tools and .env
 	@for t in $(TOOLS); do \
@@ -49,6 +49,9 @@ demo: bootstrap federation deploy run ## Full end-to-end setup
 	@echo "Infra ready. Next: open this repo in Cursor and launch edw-coordinator"
 	@echo "(kickoff text in docs/runbook.md §6). Watch the AI/BI dashboard"
 	@echo "'[dev] EDW Migration Agent Events'."
+
+genie: check ## Create/update the "EDW Migration Copilot" Genie space (run after `run`)
+	./databricks/genie/create_genie_space.sh
 
 teardown: ## Delete the Azure resource group
 	./infra/azure/teardown.sh
