@@ -5,6 +5,10 @@
 agents/out/*
 !agents/out/.gitkeep
 
+# Rendered / generated SQL (produced by tools)
+databricks/_rendered/
+databricks/generated/
+
 # Python
 __pycache__/
 *.pyc
@@ -23,3 +27,7 @@ __pycache__/
 # Databricks
 .databricks/
 .databricks-resources.json
+
+# Local venv
+.venv/
+.venv

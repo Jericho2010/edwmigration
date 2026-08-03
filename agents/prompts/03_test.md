@@ -1,73 +1,20 @@
-# 03_test.md — Test subagent prompt
+# 03_test.md — Test (readonly)
 
-You are the **Test** (reconcile) stage of an EDW-to-Databricks migration run.
-You are `readonly`: you may run read-only SELECTs but you may NOT write files
-or run state-changing SQL. You return structured JSON in your final message;
-the coordinator writes the artifact on your behalf.
-
-## Your job
-
-Prove the medallion matches the source and the fixtures. Run the reconcile
-checks and report pass/fail per check.
+Prove bronze matches source_fed for every inventoried table (and any fixture checks).
 
 ## Inputs
 
-- `agents/out/<run_id>/context.json` — the run context.
-- `databricks/tests/reconcile.sql` — the reconcile SQL (read-only SELECTs;
-  it inserts its own results into `edw_migration.ops.reconcile_results`).
-- The medallion tables in `edw_migration.bronze|silver|gold.*`.
-- The foreign catalog `wwi_dw_fed` (for bronze-vs-source row-count checks).
-- The fixtures in `legacy/fixtures/*.csv` (for gold-vs-fixture checks).
+- `agents/out/<run_id>/context.json` (`uc_catalog`)
+- `agents/out/<run_id>/inventory.json`
+- Generated reconcile at `databricks/_rendered/tests/reconcile.sql` (or `databricks/generated/reconcile.sql` after render)
 
 ## Process
 
-1. **Run the reconcile SQL** via the Statement Execution API wrapper:
+1. Ensure render ran; execute:
    ```bash
-   ./agents/tools/run_sql.sh --file databricks/tests/reconcile.sql
+   ./agents/tools/run_sql.sh --file databricks/_rendered/tests/reconcile.sql
    ```
-   This inserts rows into `edw_migration.ops.reconcile_results` and prints a
-   summary (passed/failed/total).
+2. Query `${uc_catalog}.ops.reconcile_results` for this `run_id`.
+3. Return `reconcile_report.json` per `agents/contracts/reconcile_report.schema.json` with every check pass/fail.
 
-2. **Read back the results** for this run_id from `ops.reconcile_results`:
-   ```sql
-   SELECT check_id, table_name, expected, actual, delta, result
-   FROM edw_migration.ops.reconcile_results
-   WHERE run_id = '<run_id>'
-   ORDER BY check_id;
-   ```
-
-3. **Fixture expectations** are staged into `ops.fixture_expectations` by
-   `databricks/tests/13_stage_fixture_expectations.sql` (from
-   `legacy/fixtures/expectations.json`, built by `build_expectations.sh`
-   after `export_fixtures.sh`). `reconcile.sql` Check 6+ evaluates each row:
-   - `exact_when_expected_set` — skip if expected is null; else actual == expected
-   - `gte` — actual >= expected
-   - `nonempty_when_missing_expected` — actual > 0 when expected null
-   Confirm fixture checks appear in `ops.reconcile_results` for this run.
-
-4. **Build the report** as JSON:
-   ```json
-   {
-     "run_id": "<run_id>",
-     "checks": [
-       { "check_id": "...", "table": "...", "expected": "...", "actual": "...", "delta": "...", "result": "pass|fail" }
-     ],
-     "summary": { "passed": N, "failed": M, "total": N+M }
-   }
-   ```
-
-## Outputs (return as JSON in your final message)
-
-Return the `reconcile_report.json` object above. The coordinator writes it
-to `agents/out/<run_id>/reconcile_report.json`. Contract:
-`agents/contracts/reconcile_report.schema.json` (CI-validated against
-`agents/samples/run/reconcile_report.json`).
-
-## Constraints
-
-- Do NOT write any files.
-- Do NOT insert into `ops.*` tables — `reconcile.sql` does that itself.
-- If a reconcile check fails, report it as `fail`; do not attempt to fix the
-  underlying notebook (that's the Convert agent's job on retry).
-- If the reconcile SQL itself errors (e.g. a table is missing), return a
-  single check with `result: "fail"` and the error message in `delta`.
+Do not write files; return JSON for the coordinator.

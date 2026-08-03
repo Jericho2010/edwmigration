@@ -1,82 +1,50 @@
 -- 01_federation_setup.sql
--- Bootstrap Unity Catalog + Lakehouse Federation to the Azure SQL EDW.
+-- Generic UC + Lakehouse Federation bootstrap (no per-table coupling).
+-- Placeholders filled by agents/tools/render_sql.sh:
+--   __UC_CATALOG__  __FOREIGN_CATALOG__  __CONNECTION_NAME__  __SECRET_SCOPE__
+--   {{AZ_SQL_HOST}}  {{AZ_SQL_ADMIN}}  {{AZ_SQL_DB}}
 --
--- BEFORE RUNNING: replace placeholders (or use agents/tools/render_federation_sql.sh):
---   {{AZ_SQL_HOST}}  e.g. sql-edwmig-xxx.database.windows.net
---   {{AZ_SQL_ADMIN}} e.g. edwadmin
---
--- Prerequisites:
---   1. infra/azure/bootstrap.sh completed (DB warm, bacpac imported).
---   2. Secret scope edw-migration with secret azure-sql-password.
---   3. Serverless SQL warehouse on Free Edition with UC enabled.
---
--- Run:
---   ./agents/tools/render_federation_sql.sh | ./agents/tools/run_sql.sh --sql "$(cat)"
---   OR after substitution: ./agents/tools/run_sql.sh --file /tmp/01_federation_setup.rendered.sql
+-- Requires: CREATE CONNECTION + CREATE CATALOG (or metastore admin).
+-- Password: secret('__SECRET_SCOPE__', 'azure-sql-password').
 
-CREATE CATALOG IF NOT EXISTS edw_migration
-  COMMENT 'EDW migration demo: bronze/silver/gold/ops managed tables';
+CREATE CATALOG IF NOT EXISTS __UC_CATALOG__
+  COMMENT 'EDW migration managed catalog: source_fed/bronze/silver/gold/ops';
 
-CREATE SCHEMA IF NOT EXISTS edw_migration.source_fed
-  COMMENT 'Convenience views over wwi_dw_fed (stable snake_case names)';
-CREATE SCHEMA IF NOT EXISTS edw_migration.bronze
-  COMMENT '1:1 land from source_fed, with audit columns';
-CREATE SCHEMA IF NOT EXISTS edw_migration.silver
-  COMMENT 'Conformed types, SCD2 on customer, orphan-fact quarantine';
-CREATE SCHEMA IF NOT EXISTS edw_migration.gold
-  COMMENT 'Marts 1:1 with legacy Integration.* proc outcomes';
-CREATE SCHEMA IF NOT EXISTS edw_migration.ops
-  COMMENT 'load_control, migration_backlog, reconcile_results, agent_events';
+CREATE SCHEMA IF NOT EXISTS __UC_CATALOG__.source_fed
+  COMMENT 'Stable landing names over the foreign catalog (generated per inventory)';
+CREATE SCHEMA IF NOT EXISTS __UC_CATALOG__.bronze
+  COMMENT '1:1 land from source with audit columns';
+CREATE SCHEMA IF NOT EXISTS __UC_CATALOG__.silver
+  COMMENT 'Conformed dims/facts from converted procs + land';
+CREATE SCHEMA IF NOT EXISTS __UC_CATALOG__.gold
+  COMMENT 'Marts produced by converted procs';
+CREATE SCHEMA IF NOT EXISTS __UC_CATALOG__.ops
+  COMMENT 'Inventory, backlog, reconcile, agent_events';
 
-CREATE CONNECTION IF NOT EXISTS azure_sql_edw
+CREATE CONNECTION IF NOT EXISTS __CONNECTION_NAME__
   TYPE SQLSERVER
   OPTIONS (
     host '{{AZ_SQL_HOST}}',
     port '1433',
     user '{{AZ_SQL_ADMIN}}',
-    password secret('edw-migration', 'azure-sql-password'),
+    password secret('__SECRET_SCOPE__', 'azure-sql-password'),
     trustServerCertificate 'false'
   );
 
-CREATE FOREIGN CATALOG IF NOT EXISTS wwi_dw_fed
-  USING CONNECTION azure_sql_edw
-  OPTIONS (database 'WideWorldImportersDW');
+CREATE FOREIGN CATALOG IF NOT EXISTS __FOREIGN_CATALOG__
+  USING CONNECTION __CONNECTION_NAME__
+  OPTIONS (database '{{AZ_SQL_DB}}');
 
--- Governance (demo): grant current account + users group minimal access.
--- Adjust principal names for your workspace.
-GRANT USE CATALOG ON CATALOG edw_migration TO `account users`;
-GRANT USE SCHEMA ON SCHEMA edw_migration.source_fed TO `account users`;
-GRANT USE SCHEMA ON SCHEMA edw_migration.bronze TO `account users`;
-GRANT USE SCHEMA ON SCHEMA edw_migration.silver TO `account users`;
-GRANT USE SCHEMA ON SCHEMA edw_migration.gold TO `account users`;
-GRANT USE SCHEMA ON SCHEMA edw_migration.ops TO `account users`;
-GRANT SELECT ON CATALOG edw_migration TO `account users`;
-GRANT USE CONNECTION ON CONNECTION azure_sql_edw TO `account users`;
-GRANT USE CATALOG ON CATALOG wwi_dw_fed TO `account users`;
-GRANT SELECT ON CATALOG wwi_dw_fed TO `account users`;
-
--- The 2016 vendored bacpac's Dimension.Customer has no City column; the NULL
--- shim keeps the source_fed contract identical to the offline seed
--- (databricks/offline/), so silver/gold are mode-agnostic. Online marts show
--- NULL geography; offline runs join real city IDs.
-CREATE OR REPLACE VIEW edw_migration.source_fed.dim_customer AS
-  SELECT *, CAST(NULL AS INT) AS `City` FROM wwi_dw_fed.dimension.customer;
-
-CREATE OR REPLACE VIEW edw_migration.source_fed.dim_city AS
-  SELECT * FROM wwi_dw_fed.dimension.city;
-
-CREATE OR REPLACE VIEW edw_migration.source_fed.dim_stock_item AS
-  SELECT * FROM wwi_dw_fed.dimension.`stock item`;
-
-CREATE OR REPLACE VIEW edw_migration.source_fed.dim_date AS
-  SELECT * FROM wwi_dw_fed.dimension.date;
-
-CREATE OR REPLACE VIEW edw_migration.source_fed.fact_sale AS
-  SELECT * FROM wwi_dw_fed.fact.sale;
-
-CREATE OR REPLACE VIEW edw_migration.source_fed.fact_stockholding AS
-  SELECT * FROM wwi_dw_fed.fact.`stock holding`;
+GRANT USE CATALOG ON CATALOG __UC_CATALOG__ TO `account users`;
+GRANT USE SCHEMA ON SCHEMA __UC_CATALOG__.source_fed TO `account users`;
+GRANT USE SCHEMA ON SCHEMA __UC_CATALOG__.bronze TO `account users`;
+GRANT USE SCHEMA ON SCHEMA __UC_CATALOG__.silver TO `account users`;
+GRANT USE SCHEMA ON SCHEMA __UC_CATALOG__.gold TO `account users`;
+GRANT USE SCHEMA ON SCHEMA __UC_CATALOG__.ops TO `account users`;
+GRANT SELECT ON CATALOG __UC_CATALOG__ TO `account users`;
+GRANT USE CONNECTION ON CONNECTION __CONNECTION_NAME__ TO `account users`;
+GRANT USE CATALOG ON CATALOG __FOREIGN_CATALOG__ TO `account users`;
+GRANT SELECT ON CATALOG __FOREIGN_CATALOG__ TO `account users`;
 
 SELECT 'federation_setup_ok' AS check_name,
-       COUNT(*) AS fact_sale_rows
-FROM wwi_dw_fed.fact.sale;
+       current_catalog() AS current_catalog;

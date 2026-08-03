@@ -1,51 +1,46 @@
-# legacy/ — source EDW artifacts
+# legacy/ — demo-pack source artifacts
 
-Everything on the **source** side of the migration: WideWorldImportersDW
-bacpac, exported stored-procedure T-SQL, and reconcile fixtures.
+Sample-estate assets for WideWorldImportersDW (demo pack). The **engine** discovers
+tables/procs from whatever Azure SQL you connect; this folder holds the vendored
+bacpac, exported T-SQL, and optional reconcile fixtures for the guided demo.
 
 ```text
 legacy/
   wideworldimportersdw/   Vendored .bacpac + download_bacpac.sh (SHA pinned)
-  procs/                  One .sql file per Integration/Configuration/Application proc
-  fixtures/               CSV snapshots + expectations.json for Test/reconcile
+  procs/                  Exported / vendored T-SQL (Convert input)
+  fixtures/               CSV snapshots + expectations for optional fixture reconcile
 ```
+
+Also see [demo/wwi/README.md](../demo/wwi/README.md).
 
 ## `wideworldimportersdw/`
 
-Microsoft sample EDW as a `.bacpac` (~22 MB), **committed** with SHA-256 pin
-`96e9b87d…`. `download_bacpac.sh` re-fetches only if missing or hash mismatch.
-Bootstrap imports it with `SqlPackage`. Details:
-[wideworldimportersdw/README.md](wideworldimportersdw/README.md).
+Microsoft sample EDW as a `.bacpac`, SHA-256 pinned. Bootstrap imports it with
+`SqlPackage`. Details: [wideworldimportersdw/README.md](wideworldimportersdw/README.md).
 
 ## `procs/`
 
-`export_proc_source.sh` dumps T-SQL for procedures in `[Integration]`,
-`[Configuration]`, and `[Application]`. These files are the **Convert**
-teaching surface.
+`export_proc_source.sh` dumps user procedures from the connected Azure SQL DB
+(used by bootstrap and by `discover_inventory.py`). Vendored `Integration.*`
+files let Convert work from git when a live export has not run yet; a live
+export overwrites them.
 
-Seven `Integration.*` sources are **vendored** here (from Microsoft's
-MIT-licensed `sql-server-samples` wwi-dw-ssdt project) so Assess/Convert can
-run without a live Azure SQL export — the five `MigrateStaged*Data` procs in
-the demo scope (Sale, StockHolding, Customer, City, StockItem) plus the
-`GetLineageKey` / `GetLastETLCutoffTime` helpers. A live export overwrites
-them with the true on-database definitions.
+Discovery does **not** hard-code this list — Assess builds the backlog from
+whatever procs are exported / inventoried.
 
 ## `fixtures/`
 
-`export_fixtures.sh` captures reconcile fixtures (mutates DB via Migrate* procs):
+`export_fixtures.sh` captures optional reconcile fixtures (can mutate DB via
+`Migrate*` procs). `build_expectations.sh` regenerates `expectations.json` and
+`databricks/tests/13_stage_fixture_expectations.sql` (catalog placeholder
+`__UC_CATALOG__`).
 
-| Proc style | Fixture |
-|---|---|
-| `Get*` (`@LastCutoff` / `@NewCutoff`) | Proc result set as CSV |
-| `Migrate*` | Target `Dimension.*` table state after execution |
-
-`build_expectations.sh` regenerates `expectations.json` and
-`databricks/tests/13_stage_fixture_expectations.sql` for the job’s
-`stage_fixtures` → `reconcile` path.
+Primary correctness for the engine is **generated** bronze-vs-source row-count
+reconcile from inventory; fixtures are demo-pack enrichment.
 
 ## Manual usage
 
-Normally invoked by `infra/azure/bootstrap.sh`. Standalone:
+Normally via `make bootstrap` / `edw-demo-guide`. Standalone:
 
 ```bash
 set -a; . ./.env; set +a

@@ -1,67 +1,39 @@
 # Limitations
 
-This demo is designed to run entirely within free tiers. Both have
-constraints that shape the design.
+Designed for free tiers where possible. Constraints shape the engine and the guided demo.
 
 ## Databricks Free Edition
 
-- **Serverless compute only.** No classic clusters. This rules out Lakeflow
-  Connect (which needs a classic cluster for the gateway). We use Lakehouse
-  Federation instead, which runs on serverless SQL warehouses.
-- **Restricted outbound internet.** Free Edition limits egress to a small
-  allowlist of trusted domains. Azure SQL (`*.database.windows.net`) is
-  reachable, but arbitrary external endpoints may not be. If a federation
-  query fails with a network error, confirm the Azure SQL firewall allows
-  `0.0.0.0/0` (see [firewall.md](firewall.md)).
-- **Max 5 concurrent job tasks.** The medallion job
-  (`databricks/jobs/edw_migration_medallion.yml`) fans out where safe
-  (e.g. bronze dims/facts, several gold marts) but peak concurrency stays
-  ≤ 5. If you add parallel tasks, keep the peak under 5.
-- **One active Lakeflow pipeline per type.** Not a constraint for this demo
-  (we use a Lakeflow Job, not a pipeline), but worth knowing if you extend.
-- **No classic SQL warehouses.** Only serverless. The `DATABRICKS_WAREHOUSE_ID`
-  in `.env` must point to a serverless SQL warehouse (2X-Small is fine).
-- **Workspace size / user limits.** See the Free Edition terms for current
-  limits.
+- **Serverless compute only.** No classic clusters → Lakehouse Federation, not Lakeflow Connect ([lakeflow_connect.md](lakeflow_connect.md)).
+- **Restricted outbound internet.** Azure SQL (`*.database.windows.net`) is typically reachable; arbitrary hosts may not be. Federation failures: check firewall ([firewall.md](firewall.md)).
+- **Max 5 concurrent job tasks.** The medallion job must keep peak concurrency ≤ 5.
+- **No classic SQL warehouses.** `DATABRICKS_WAREHOUSE_ID` must be serverless.
+- **CLI:** dashboard `dataset_catalog` needs Databricks CLI ≥ 0.281.0 (0.292+ preferred).
 
-## Azure SQL Database free offer
+## Azure SQL Database free offer (demo pack)
 
-- **100,000 vCore-seconds per month** per subscription. The bacpac import
-  (~5 min on a Gen5 1-vCore serverless) consumes roughly 300 vCore-seconds,
-  leaving plenty for the demo. Re-running bootstrap many times in a month
-  could exhaust the allowance.
-- **32 GB data per database.** WideWorldImportersDW-Standard is ~3.5 GB,
-  well under the limit.
-- **32 GB backup per database.** Auto-pauses and auto-scales; not a concern
-  for this demo.
-- **Up to 10 free databases per subscription.** One demo DB is fine.
-- **First free DB locks the region.** All free DBs on a subscription must be
-  in the same region as the first one. Pick a region up front (we default to
-  `eastus`).
-- **`AutoPause` on limit exhaustion.** When the free allowance is exhausted,
-  the DB auto-pauses instead of charging. It resumes on the next query
-  (after a warm-up delay).
-- **Serverless auto-pause after 15 min of inactivity.** A cold DB will fail
-  the federation smoke test with a JDBC connection error. `bootstrap.sh`
-  warms the DB before the smoke; if you skip bootstrap, run a `SELECT 1` via
-  `sqlcmd` first.
-- **Cannot restore a `.bak`.** The free offer does not support `.bak`
-  restore. We import a `.bacpac` via `SqlPackage` instead.
+- **100,000 vCore-seconds / month** per subscription. Bacpac import is a few hundred vCore-seconds.
+- **32 GB data / 32 GB backup** per DB. WWI Standard is well under.
+- **Up to 10 free DBs** per subscription; first free DB locks the region (default `eastus`).
+- **`AutoPause`** on limit exhaustion and after ~15 min idle — cold DB breaks federation until warmed.
+- **`.bacpac` only** (no `.bak` restore) via SqlPackage.
 
-## What this demo does NOT cover
+## Engine scope (by design)
 
-- **Real-time / CDC ingestion.** The medallion is full-refresh
-  (`CREATE OR REPLACE TABLE AS SELECT`). Incremental/CDC patterns are out of
-  scope.
-- **Streaming.** No Structured Streaming or Auto Loader. The source is a
-  batch EDW.
-- **Production-grade orchestration.** The job is a single Lakeflow Job with
-  a small DAG. No retries, no SLAs, no alerting beyond the reconcile checks.
-- **Multi-region / DR.** Single region, single workspace.
-- **Cost optimization.** The demo targets $0. Production cost optimization
-  (photon, cluster policies, spot, etc.) is out of scope.
+- **Source:** Azure SQL / SQL Server Federation only (for now).
+- **Land objects:** base **tables** only (not views).
+- **Full-auto discovery:** all visible base tables + user procs. If `tables_total > 200`, the coordinator warns and asks for confirm before land.
+- **Batch full-refresh** bronze land (`CREATE OR REPLACE TABLE AS SELECT`). No CDC/streaming in v1.
+- **Auth:** PAT supported now; OAuth (`databricks auth login`) is the enterprise target state.
 
-## Extending the demo
+## Out of scope
 
-See [CONTRIBUTING.md](../CONTRIBUTING.md) for how to add new proc patterns,
-new stage agents, or new reconcile checks.
+- Multi-cloud source connectors in the engine (CONNECTION types beyond SQLSERVER)
+- Lakeflow Connect / classic clusters
+- Lakebridge invocation (comparison only — [lakebridge.md](lakebridge.md))
+- Offline / seeded-source mode (removed)
+- Production SLAs, multi-region DR, cost optimization
+
+## Extending
+
+See [CONTRIBUTING.md](../CONTRIBUTING.md). Keep WWI object names out of the core engine; put sample-estate content under `demo/wwi/`, `infra/azure/`, or `legacy/`.

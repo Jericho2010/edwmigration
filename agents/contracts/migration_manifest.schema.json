@@ -52,10 +52,14 @@
     },
     "summary": {
       "type": "object",
-      "description": "Roll-up counts for the dashboard.",
+      "description": "Roll-up counts for the dashboard and demo acceptance.",
       "properties": {
         "backlog_total": { "type": "integer" },
         "backlog_converted": { "type": "integer" },
+        "tables_total": { "type": "integer" },
+        "tables_landed": { "type": "integer" },
+        "procs_total": { "type": "integer" },
+        "procs_converted": { "type": "integer" },
         "reconcile_passed": { "type": "integer" },
         "reconcile_failed": { "type": "integer" },
         "agent_events_recorded": { "type": "integer" }

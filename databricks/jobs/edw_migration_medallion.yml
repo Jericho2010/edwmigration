@@ -1,12 +1,12 @@
-# DAB job: medallion pipeline.
-# Paths are relative to THIS file (databricks/jobs/) — AI Dev Kit databricks-bundles Path Resolution.
-# Free Edition: max 5 concurrent tasks; peak fan-out stays under 5.
+# DAB job: discovery-driven medallion pipeline.
+# Paths relative to THIS file. SQL under ../_rendered/ after make render.
+# Free Edition: max 5 concurrent job tasks.
 
 resources:
   jobs:
     edw_migration_medallion:
       name: "[${bundle.target}] edw_migration_medallion"
-      description: "EDW migration demo: federation smoke → bronze → silver → gold → fixtures → reconcile → lineage"
+      description: "EDW migration: smoke → bronze land (generated) → silver/gold → reconcile → lineage"
       tags:
         demo: edw-migration
         edition: free
@@ -17,54 +17,45 @@ resources:
           timeout_seconds: 900
           sql_task:
             file:
-              path: ../uc/02_federation_smoke.sql
+              path: ../_rendered/uc/02_federation_smoke.sql
             warehouse_id: ${var.warehouse_id}
 
-        - task_key: bronze_dims
+        - task_key: bronze_land
           depends_on:
             - task_key: federation_smoke
-          timeout_seconds: 1800
+          timeout_seconds: 3600
           sql_task:
             file:
-              path: ../bronze/10_land_dims.sql
-            warehouse_id: ${var.warehouse_id}
-
-        - task_key: bronze_facts
-          depends_on:
-            - task_key: federation_smoke
-          timeout_seconds: 1800
-          sql_task:
-            file:
-              path: ../bronze/11_land_facts.sql
+              path: ../_rendered/bronze/10_land_all.sql
             warehouse_id: ${var.warehouse_id}
 
         - task_key: silver_dims
           depends_on:
-            - task_key: bronze_dims
+            - task_key: bronze_land
           timeout_seconds: 1800
           sql_task:
             file:
-              path: ../silver/20_dims_scd1.sql
+              path: ../_rendered/silver/20_dims_scd1.sql
             warehouse_id: ${var.warehouse_id}
 
         - task_key: silver_customer_scd2
           depends_on:
-            - task_key: bronze_dims
+            - task_key: bronze_land
           timeout_seconds: 1800
           sql_task:
             file:
-              path: ../silver/21_dim_customer_scd2.sql
+              path: ../_rendered/silver/21_dim_customer_scd2.sql
             warehouse_id: ${var.warehouse_id}
 
         - task_key: silver_fact_sale
           depends_on:
-            - task_key: bronze_facts
+            - task_key: bronze_land
             - task_key: silver_dims
             - task_key: silver_customer_scd2
           timeout_seconds: 1800
           sql_task:
             file:
-              path: ../silver/22_fact_sale.sql
+              path: ../_rendered/silver/22_fact_sale.sql
             warehouse_id: ${var.warehouse_id}
 
         - task_key: gold_daily_sales
@@ -73,17 +64,17 @@ resources:
           timeout_seconds: 1800
           sql_task:
             file:
-              path: ../gold/30_mart_daily_sales.sql
+              path: ../_rendered/gold/30_mart_daily_sales.sql
             warehouse_id: ${var.warehouse_id}
 
         - task_key: gold_stock_movements
           depends_on:
             - task_key: silver_dims
-            - task_key: bronze_facts
+            - task_key: bronze_land
           timeout_seconds: 1800
           sql_task:
             file:
-              path: ../gold/31_mart_stock_movements.sql
+              path: ../_rendered/gold/31_mart_stock_movements.sql
             warehouse_id: ${var.warehouse_id}
 
         - task_key: gold_customer_current
@@ -93,7 +84,7 @@ resources:
           timeout_seconds: 1800
           sql_task:
             file:
-              path: ../gold/32_mart_customer_current.sql
+              path: ../_rendered/gold/32_mart_customer_current.sql
             warehouse_id: ${var.warehouse_id}
 
         - task_key: gold_city_dimension
@@ -102,7 +93,17 @@ resources:
           timeout_seconds: 900
           sql_task:
             file:
-              path: ../gold/33_mart_city_dimension.sql
+              path: ../_rendered/gold/33_mart_city_dimension.sql
+            warehouse_id: ${var.warehouse_id}
+
+        - task_key: gold_stock_holding
+          depends_on:
+            - task_key: bronze_land
+            - task_key: silver_dims
+          timeout_seconds: 900
+          sql_task:
+            file:
+              path: ../_rendered/gold/35_mart_stock_holding.sql
             warehouse_id: ${var.warehouse_id}
 
         - task_key: metric_daily_sales
@@ -111,18 +112,7 @@ resources:
           timeout_seconds: 900
           sql_task:
             file:
-              path: ../gold/34_metric_daily_sales.sql
-            warehouse_id: ${var.warehouse_id}
-
-        - task_key: silver_constraints
-          depends_on:
-            - task_key: silver_fact_sale
-            - task_key: gold_customer_current
-            - task_key: gold_city_dimension
-          timeout_seconds: 900
-          sql_task:
-            file:
-              path: ../silver/23_constraints_and_collation.sql
+              path: ../_rendered/gold/34_metric_daily_sales.sql
             warehouse_id: ${var.warehouse_id}
 
         - task_key: stage_fixtures
@@ -131,7 +121,7 @@ resources:
           timeout_seconds: 600
           sql_task:
             file:
-              path: ../tests/13_stage_fixture_expectations.sql
+              path: ../_rendered/tests/13_stage_fixture_expectations.sql
             warehouse_id: ${var.warehouse_id}
 
         - task_key: reconcile
@@ -140,12 +130,13 @@ resources:
             - task_key: gold_stock_movements
             - task_key: gold_customer_current
             - task_key: gold_city_dimension
+            - task_key: gold_stock_holding
             - task_key: stage_fixtures
             - task_key: metric_daily_sales
           timeout_seconds: 900
           sql_task:
             file:
-              path: ../tests/reconcile.sql
+              path: ../_rendered/tests/reconcile.sql
             warehouse_id: ${var.warehouse_id}
 
         - task_key: lineage_check
@@ -154,7 +145,7 @@ resources:
           timeout_seconds: 600
           sql_task:
             file:
-              path: ../uc/04_lineage_check.sql
+              path: ../_rendered/uc/04_lineage_check.sql
             warehouse_id: ${var.warehouse_id}
 
       permissions:

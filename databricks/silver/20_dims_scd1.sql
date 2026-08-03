@@ -4,7 +4,7 @@
 -- WWI: Fact.Sale.`Customer Key` / `Stock Item Key` join to Dimension surrogate keys
 -- (not WWI business IDs).
 
-CREATE OR REPLACE TABLE edw_migration.silver.dim_city AS
+CREATE OR REPLACE TABLE __UC_CATALOG__.silver.dim_city AS
 SELECT
   `City Key` AS city_key,
   `WWI City ID` AS city_id,
@@ -14,9 +14,9 @@ SELECT
   `Latest Recorded Population` AS latest_population,
   `Valid From` AS valid_from,
   `Valid To` AS valid_to
-FROM edw_migration.bronze.dim_city;
+FROM __UC_CATALOG__.bronze.dim_city;
 
-CREATE OR REPLACE TABLE edw_migration.silver.dim_stock_item AS
+CREATE OR REPLACE TABLE __UC_CATALOG__.silver.dim_stock_item AS
 SELECT
   `Stock Item Key` AS stock_item_key,
   `WWI Stock Item ID` AS stock_item_id,
@@ -26,9 +26,9 @@ SELECT
   `Lead Time Days` AS lead_time_days,
   `Valid From` AS valid_from,
   `Valid To` AS valid_to
-FROM edw_migration.bronze.dim_stock_item;
+FROM __UC_CATALOG__.bronze.dim_stock_item;
 
-CREATE OR REPLACE TABLE edw_migration.silver.dim_date AS
+CREATE OR REPLACE TABLE __UC_CATALOG__.silver.dim_date AS
 SELECT
   `Date` AS date_key,
   `Day Number` AS day_number,
@@ -37,9 +37,9 @@ SELECT
   `Calendar Year` AS calendar_year,
   `Calendar Month Number` AS calendar_month_number,
   `Calendar Quarter` AS calendar_quarter
-FROM edw_migration.bronze.dim_date;
+FROM __UC_CATALOG__.bronze.dim_date;
 
 SELECT 'silver_dims_scd1_ok' AS check_name,
-       (SELECT COUNT(*) FROM edw_migration.silver.dim_city) AS dim_city_rows,
-       (SELECT COUNT(*) FROM edw_migration.silver.dim_stock_item) AS dim_stock_item_rows,
-       (SELECT COUNT(*) FROM edw_migration.silver.dim_date) AS dim_date_rows;
+       (SELECT COUNT(*) FROM __UC_CATALOG__.silver.dim_city) AS dim_city_rows,
+       (SELECT COUNT(*) FROM __UC_CATALOG__.silver.dim_stock_item) AS dim_stock_item_rows,
+       (SELECT COUNT(*) FROM __UC_CATALOG__.silver.dim_date) AS dim_date_rows;

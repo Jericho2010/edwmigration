@@ -1,51 +1,40 @@
-# Documentation index
+# Documentation
 
-Enablement docs for the EDW → Databricks AI-assisted migration demo.
-
-## Start here
-
-| If you are… | Read this |
-|---|---|
-| Running the demo for the first time | [prerequisites.md](prerequisites.md) → [runbook.md](runbook.md) |
-| Presenting as a Databricks SE | [demo-script.md](demo-script.md) |
-| Explaining the design | [architecture.md](architecture.md) |
-| Stuck on an error | [troubleshooting.md](troubleshooting.md) |
+Start here: [runbook.md](runbook.md) (guided demo) or the root [README](../README.md).
 
 ## Operator docs
 
-| Doc | Contents |
+| Doc | Purpose |
 |---|---|
-| [prerequisites.md](prerequisites.md) | Tool install, versions, verify checklist |
-| [runbook.md](runbook.md) | Configure → Azure → Federation → bundle → agents → teardown |
-| [troubleshooting.md](troubleshooting.md) | Cold DB, firewall, bundle, hooks, gate failures |
+| [prerequisites.md](prerequisites.md) | Tools, privileges, Azure + Databricks logins |
+| [runbook.md](runbook.md) | Guided demo + self-serve Azure SQL path |
+| [troubleshooting.md](troubleshooting.md) | Common failures and fixes |
 
 ## Design docs
 
-| Doc | Contents |
+| Doc | Purpose |
 |---|---|
-| [architecture.md](architecture.md) | Catalogs, medallion contracts, agent write model, hooks |
-| [limits.md](limits.md) | Free Edition + Azure SQL free offer constraints |
-| [firewall.md](firewall.md) | `0.0.0.0/0` demo rule risk and teardown |
-| [lakeflow_connect.md](lakeflow_connect.md) | Why Lakehouse Federation on Free Edition |
-| [lakebridge.md](lakebridge.md) | Lakebridge vs. Cursor + this repo — capability table and composition pattern |
+| [architecture.md](architecture.md) | Engine vs demo pack, discovery, observability |
+| [limits.md](limits.md) | Free Edition + Azure free SQL + engine scope |
+| [firewall.md](firewall.md) | Why `0.0.0.0/0` on the demo SQL server |
+| [lakeflow_connect.md](lakeflow_connect.md) | Why Federation on Free Edition |
+| [lakebridge.md](lakebridge.md) | Compete on Azure SQL → UC (do not compose) |
 
 ## Field enablement
 
-| Doc | Contents |
+| Doc | Purpose |
 |---|---|
-| [demo-script.md](demo-script.md) | Timed talk tracks + screen cues + prospect takeaways |
-| [img/](img/) | Architecture and agent-delegation diagrams (Mermaid + PNG) + recorded demo GIFs |
-| [media/](media/) | Recorded terminal scenes (asciinema casts + re-record script) behind the README GIFs |
+| [demo-script.md](demo-script.md) | SE talk track (15 / 30 / 45 min) |
+| [img/](img/) | Architecture diagrams + GIF notes |
+| [media/](media/) | Asciinema re-record script (Azure-backed) |
 
 ## Code-adjacent READMEs
 
-| Path | Contents |
+| Path | Purpose |
 |---|---|
-| [../agents/README.md](../agents/README.md) | Prompts, contracts, subagent roles |
-| [../agents/samples/README.md](../agents/samples/README.md) | Offline Gate sample artifacts |
-| [../databricks/README.md](../databricks/README.md) | Medallion + DAB deploy |
-| [../databricks/uc/README.md](../databricks/uc/README.md) | Federation SQL order |
-| [../.cursor/README.md](../.cursor/README.md) | Cursor hooks wiring |
-| [../infra/azure/README.md](../infra/azure/README.md) | Azure bootstrap |
+| [../agents/README.md](../agents/README.md) | Prompts, tools, Copilot adapter |
+| [../databricks/README.md](../databricks/README.md) | Medallion + DAB + Control Plane |
+| [../demo/wwi/README.md](../demo/wwi/README.md) | Sample DW demo pack |
+| [../infra/azure/README.md](../infra/azure/README.md) | Free Azure SQL bootstrap |
 | [../legacy/README.md](../legacy/README.md) | Bacpac, procs, fixtures |
-| [../CONTRIBUTING.md](../CONTRIBUTING.md) | Extending the demo |
+| [../CONTRIBUTING.md](../CONTRIBUTING.md) | How to extend engine vs demo pack |

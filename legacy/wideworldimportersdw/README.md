@@ -10,8 +10,9 @@ Microsoft sample data warehouse `WideWorldImportersDW` in `.bacpac` form.
 
 ## Vendored + verified
 
-The bacpac is **committed in this repo** so demos work offline. Integrity is
-enforced by `download_bacpac.sh`:
+The bacpac is **committed in this repo** so guided demos do not depend on a
+live GitHub download at bootstrap time. Integrity is enforced by
+`download_bacpac.sh`:
 
 ```bash
 EXPECTED_SHA256=96e9b87dfe3665aefde12a2c4decb835982803470d7f224b988d8f512db2a6c5

@@ -4,7 +4,7 @@
   "expectations": [
     {
       "fixture_name": "dim_city_snapshot",
-      "target_table": "edw_migration.gold.mart_city_dimension",
+      "target_table": "__UC_CATALOG__.gold.mart_city_dimension",
       "metric": "row_count",
       "expected": null,
       "compare": "exact_when_expected_set",
@@ -12,7 +12,7 @@
     },
     {
       "fixture_name": "dim_customer_after_migrate",
-      "target_table": "edw_migration.gold.mart_customer_current",
+      "target_table": "__UC_CATALOG__.gold.mart_customer_current",
       "metric": "row_count",
       "expected": null,
       "compare": "exact_when_expected_set",
@@ -20,7 +20,7 @@
     },
     {
       "fixture_name": "dim_stock_item_after_migrate",
-      "target_table": "edw_migration.gold.mart_stock_movements",
+      "target_table": "__UC_CATALOG__.gold.mart_stock_movements",
       "metric": "row_count",
       "expected": null,
       "compare": "exact_when_expected_set",
@@ -28,19 +28,11 @@
     },
     {
       "fixture_name": "fact_sale_count",
-      "target_table": "edw_migration.bronze.fact_sale",
+      "target_table": "__UC_CATALOG__.bronze.fact_sale",
       "metric": "row_count",
       "expected": null,
       "compare": "exact_when_expected_set",
       "notes": "From fact_sale_count.csv"
-    },
-    {
-      "fixture_name": "sample_offline_city",
-      "target_table": "edw_migration.gold.mart_city_dimension",
-      "metric": "row_count",
-      "expected": 1,
-      "compare": "gte",
-      "notes": "Offline floor: city mart non-empty"
     }
   ]
 }

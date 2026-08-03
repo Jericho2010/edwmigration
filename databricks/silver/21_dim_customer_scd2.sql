@@ -3,7 +3,7 @@
 -- Preserve WWI `Customer Key` as the DW surrogate used by Fact.Sale.
 -- Do NOT invent a join key with monotonically_increasing_id().
 
-CREATE OR REPLACE TABLE edw_migration.silver.dim_customer_scd2 AS
+CREATE OR REPLACE TABLE __UC_CATALOG__.silver.dim_customer_scd2 AS
 SELECT
   `Customer Key` AS customer_key,
   `WWI Customer ID` AS customer_id,
@@ -18,15 +18,15 @@ SELECT
     WHEN `Valid To` IS NULL OR CAST(`Valid To` AS DATE) = DATE '9999-12-31' THEN true
     ELSE false
   END AS is_current
-FROM edw_migration.bronze.dim_customer
+FROM __UC_CATALOG__.bronze.dim_customer
 WHERE `Valid From` <= current_timestamp();
 
-CREATE OR REPLACE VIEW edw_migration.silver.dim_customer_scd2_quarantine AS
+CREATE OR REPLACE VIEW __UC_CATALOG__.silver.dim_customer_scd2_quarantine AS
 SELECT *
-FROM edw_migration.bronze.dim_customer
+FROM __UC_CATALOG__.bronze.dim_customer
 WHERE `Valid From` > current_timestamp();
 
 SELECT 'silver_dim_customer_scd2_ok' AS check_name,
-       (SELECT COUNT(*) FROM edw_migration.silver.dim_customer_scd2) AS scd2_rows,
-       (SELECT COUNT(*) FROM edw_migration.silver.dim_customer_scd2 WHERE is_current) AS current_rows,
-       (SELECT COUNT(*) FROM edw_migration.silver.dim_customer_scd2_quarantine) AS quarantined_rows;
+       (SELECT COUNT(*) FROM __UC_CATALOG__.silver.dim_customer_scd2) AS scd2_rows,
+       (SELECT COUNT(*) FROM __UC_CATALOG__.silver.dim_customer_scd2 WHERE is_current) AS current_rows,
+       (SELECT COUNT(*) FROM __UC_CATALOG__.silver.dim_customer_scd2_quarantine) AS quarantined_rows;

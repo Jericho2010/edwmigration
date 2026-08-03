@@ -1,7 +1,9 @@
-# infra/azure/ — Azure SQL EDW provisioning
+# infra/azure/ — demo-pack Azure SQL provisioning
 
-Provision and tear down the free Azure SQL EDW used as the migration source.
-Full operator path: [docs/runbook.md](../../docs/runbook.md).
+Provisions and tears down the **optional** free Azure SQL WideWorldImportersDW
+source used by the guided demo. Not required for path B (existing Azure SQL).
+
+Operator guide: [docs/runbook.md](../../docs/runbook.md). Demo pack notes: [demo/wwi/README.md](../../demo/wwi/README.md).
 
 ## Files
 
@@ -9,36 +11,38 @@ Full operator path: [docs/runbook.md](../../docs/runbook.md).
 |---|---|
 | `bootstrap.sh` | RG, SQL server, free DB, firewall, bacpac import, warmup, proc/fixture export, Databricks secret scope |
 | `teardown.sh` | Deletes the resource group (idempotent) |
-| `.env.example` | Copy to repo-root `.env` (gitignored) |
+| `.env.example` | Template for repo-root `.env` (gitignored) |
 
-## Quickstart
+## Guided demo (preferred)
 
 ```bash
-cp infra/azure/.env.example .env
-$EDITOR .env
-set -a; . ./.env; set +a
+az login
+databricks auth login --host https://<workspace>
+# In Cursor: launch edw-demo-guide
+#   "Set up the EDW demo and walk me through the migration."
+```
 
-./infra/azure/bootstrap.sh --dry-run
-./infra/azure/bootstrap.sh             # ~10 min
+The guide runs `materialize_demo_env.sh` (writes `.env`) then `make bootstrap` for you.
 
-# After the demo:
-./infra/azure/teardown.sh
+## Scripted
+
+```bash
+./agents/tools/materialize_demo_env.sh   # or cp .env.example → .env and edit
+make bootstrap                           # ~10 min
+make teardown                            # when finished
 ```
 
 ## Free offer constraints
 
 - 100,000 vCore-seconds / month per subscription
 - 32 GB data + 32 GB backup per DB
-- Up to 10 free DBs per subscription
-- `AutoPause` on limit exhaustion (never charges beyond the allowance)
-- First free DB locks the region for all free DBs on the subscription
+- Up to 10 free DBs; first free DB locks the region
+- `AutoPause` on limit exhaustion
 
-See [docs/limits.md](../../docs/limits.md) for full details.
+See [docs/limits.md](../../docs/limits.md).
 
 ## Firewall warning
 
-`bootstrap.sh` creates an `AllowDatabricksDemo` rule with `0.0.0.0/0` so
-Databricks Free Edition (AWS-hosted) can reach the SQL server. This opens the
-server to the public internet. **Run `teardown.sh` after the demo.** See
-[docs/firewall.md](../../docs/firewall.md) for the risk and an optional 2h
-auto-delete safety net.
+`bootstrap.sh` creates `AllowDatabricksDemo` (`0.0.0.0/0`) so Databricks Free
+Edition can reach Azure SQL. **Tear down after the demo.** See
+[docs/firewall.md](../../docs/firewall.md).

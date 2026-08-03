@@ -5,21 +5,40 @@
   "converted_artifacts": [
     {
       "legacy_proc": "Integration.MigrateStagedStockItemData",
-      "target_path": "databricks/converted/30_mart_daily_sales.sql",
+      "target_path": "databricks/gold/31_mart_stock_movements.sql",
       "status": "final"
     },
     {
       "legacy_proc": "Integration.MigrateStagedCustomerData",
-      "target_path": "databricks/converted/32_mart_customer_current.sql",
+      "target_path": "databricks/gold/32_mart_customer_current.sql",
+      "status": "final"
+    },
+    {
+      "legacy_proc": "Integration.MigrateStagedCityData",
+      "target_path": "databricks/gold/33_mart_city_dimension.sql",
+      "status": "final"
+    },
+    {
+      "legacy_proc": "Integration.MigrateStagedSaleData",
+      "target_path": "databricks/silver/22_fact_sale.sql",
+      "status": "final"
+    },
+    {
+      "legacy_proc": "Integration.MigrateStagedStockHoldingData",
+      "target_path": "databricks/gold/35_mart_stock_holding.sql",
       "status": "final"
     }
   ],
   "attempt": 0,
   "summary": {
-    "backlog_total": 2,
-    "backlog_converted": 2,
-    "reconcile_passed": 2,
+    "backlog_total": 5,
+    "backlog_converted": 5,
+    "tables_total": 12,
+    "tables_landed": 12,
+    "procs_total": 5,
+    "procs_converted": 5,
+    "reconcile_passed": 12,
     "reconcile_failed": 0,
-    "agent_events_recorded": 12
+    "agent_events_recorded": 20
   }
 }

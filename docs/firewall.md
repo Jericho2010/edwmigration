@@ -1,7 +1,7 @@
 # Firewall: the `0.0.0.0/0` demo rule
 
-`infra/azure/bootstrap.sh` creates two firewall rules on the Azure SQL
-logical server:
+`infra/azure/bootstrap.sh` (guided demo / `make bootstrap`) creates two firewall
+rules on the Azure SQL logical server:
 
 1. **`AllowClientLoad`** — your current public IP only. Used by `SqlPackage`
    and `sqlcmd` from your machine.
@@ -32,39 +32,23 @@ acceptable for any database with real or sensitive data.
 
 ## Mitigations
 
-1. **Tear down when done.** `./infra/azure/teardown.sh` deletes the entire
-   resource group, including the firewall rule.
-2. **Use a strong admin password.** `.env.example` reminds you; do not use
-   a weak password.
-3. **Optional: auto-delete the rule after 2 hours.** Add this to `bootstrap.sh`
-   or run it manually:
-   ```bash
-   nohup bash -c 'sleep 7200 && az sql server firewall-rule delete \
-     --resource-group "$AZ_RG" --server "$AZ_SQL_SERVER" --name AllowDatabricksDemo' \
-     >/tmp/firewall_autodelete.log 2>&1 &
-   ```
-4. **Optional: restrict to Databricks egress IPs.** If you can determine the
-   current egress IPs for your Free Edition workspace (via a support ticket
-   or by observing connection source IPs in `sys.dm_exec_connections`), you
-   can replace `0.0.0.0/0` with a tighter CIDR. This is not portable for a
-   self-serve demo, so we default to `0.0.0.0/0`.
-
-## What to do if you forget to tear down
+1. **Tear down when done.** Ask `edw-demo-guide` to teardown, or run
+   `./infra/azure/teardown.sh` — deletes the entire resource group, including
+   the firewall rule.
+2. **Use a strong admin password.** `materialize_demo_env.sh` generates one;
+   do not weaken it.
+3. **Optional: auto-delete the rule after 2 hours.** Example:
 
 ```bash
-# Just delete the firewall rule (keep the DB if you want to re-run the demo):
 az sql server firewall-rule delete \
-  --resource-group "$AZ_RG" --server "$AZ_SQL_SERVER" --name AllowDatabricksDemo
-
-# Or delete everything:
-./infra/azure/teardown.sh
+  --resource-group "$AZ_RG" \
+  --server "$AZ_SQL_SERVER" \
+  --name AllowDatabricksDemo
 ```
 
-## Free Edition outbound restrictions
+## Path B (existing Azure SQL)
 
-Even with `0.0.0.0/0` on the Azure SQL side, Free Edition's own outbound
-network is restricted to a small allowlist. Azure SQL (`*.database.windows.net`)
-is on the allowlist, so Federation works. If you see
-`FAILED_JDBC.CONNECTION` errors that are not caused by a cold DB, they may
-be Free Edition outbound restrictions — check the current Free Edition
-docs for the allowlist.
+For a real customer database, do **not** open `0.0.0.0/0`. Use private link,
+VNet rules, or an allowlisted egress path appropriate to your Databricks tier.
+The engine only needs a reachable SQL Server endpoint and a login that can
+read base tables and export procedure definitions.

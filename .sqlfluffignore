@@ -1,8 +1,13 @@
 # Uses CREATE CONNECTION / CREATE FOREIGN CATALOG — not in sqlfluff's databricks grammar.
 databricks/uc/01_federation_setup.sql
-# Uses BEGIN ... EXIT HANDLER compound statements — not in the grammar.
+databricks/_rendered/uc/01_federation_setup.sql
+# Uses session variables / compound — grammar gaps.
 databricks/uc/02_federation_smoke.sql
-# Uses COLLATE UTF8_LCASE — not in the grammar.
+databricks/_rendered/uc/02_federation_smoke.sql
 databricks/silver/23_constraints_and_collation.sql
-# legacy/procs is vendored T-SQL (Microsoft sample), not Databricks SQL.
+databricks/_rendered/silver/23_constraints_and_collation.sql
+# Generated / vendored
+databricks/generated/
+databricks/_rendered/generated/
+databricks/bronze/10_land_all.sql
 legacy/
