@@ -41,6 +41,8 @@ flowchart LR
 | One-page command checklist | [Runbook](docs/runbook.md) |
 | Fix an error | [Troubleshooting](docs/troubleshooting.md) |
 
+**Recording hero proof / real Cursor shots?** Follow **[docs/media/storyboard.md](docs/media/storyboard.md)** then hand assets back for insert.
+
 ---
 
 ## The idea in plain English
