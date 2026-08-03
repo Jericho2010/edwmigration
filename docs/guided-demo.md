@@ -2,6 +2,8 @@
 
 **The recommended first experience.** About an hour the first time. Uses free Azure SQL + Databricks Free Edition sample data. An agent does the heavy lifting; you watch and confirm.
 
+**Verified:** Track A tooling and docs path checked against Databricks Free Edition workspace patterns as of **2026-08-03** (CI dual-render, `make print-urls` / Control Plane + Genie discovery). Your Gate counts still depend on a full bootstrap + migration on *your* tenant.
+
 ← [Getting started](getting-started.md) · [Using Cursor](cursor-ui.md) · [What you get](what-you-get.md) · Stuck? [Troubleshooting](troubleshooting.md)
 
 ```mermaid
