@@ -82,7 +82,7 @@ flowchart TD
 | [limits.md](limits.md) | Free tiers + scope |
 | [lakebridge.md](lakebridge.md) | Compete, don’t compose |
 | [demo-script.md](demo-script.md) | SE 15 / 30 / 45 min |
-| [media/](media/) | **[storyboard](media/storyboard.md)** + asciinema notes |
+| [media/](media/) | **[Capture storyboard](media/storyboard.md)** (screenshots + hero video) |
 
 
 ## Code-adjacent READMEs

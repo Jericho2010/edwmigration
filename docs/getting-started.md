@@ -41,7 +41,7 @@ flowchart TD
 
 This repo ships **specialized chat agents** with names like `edw-demo-guide` and `edw-coordinator`. Each one has instructions for one job (demo walkthrough, full migration run, convert one procedure, Gate, etc.).
 
-**How to use them:** see **[Using Cursor](cursor-ui.md)** (three illustrations), or:
+**How to use them:** see **[Using Cursor](cursor-ui.md)** (three screenshots), or:
 
 1. Open Agent / Chat in Cursor.  
 2. Pick **`edw-demo-guide`** (demo) or **`edw-coordinator`** (your DB).  

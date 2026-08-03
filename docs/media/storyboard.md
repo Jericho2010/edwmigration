@@ -2,138 +2,136 @@
 
 You need **two things**:
 
-1. **Three screenshots** of Cursor (replace the fake ones in the docs).
-2. **One short video** (Cursor → Databricks dashboard → Genie).
+1. **Three Cursor screenshots** (overwrite the stand-in images in the docs).
+2. **One short screen video**, then a **small GIF** for the README (GitHub does not play MP4 in the README usefully).
 
-When you’re done, put the files where this page says and tell the agent: *insert per storyboard*.
+When files are in place, tell the agent: *Insert per docs/media/storyboard.md*.
 
-Use **Track A** (guided demo). Real UI only — no mockups.
+Use **Track A**. Real UI only.
 
 ---
 
-## Do this today (checklist)
+## Do this today
 
-**First — setup (once)**
+### Setup (once)
 
-- [ ] Open this repo’s **root** in Cursor (you should see `README.md`, `Makefile`, `.cursor`).
-- [ ] Agent **`edw-demo-guide`** is available (`make sync-prompts` if not).
-- [ ] Logged in: `az login` and Databricks (or PAT in `.env`).
-- [ ] You can open Databricks in a browser (serverless warehouse exists).
-- [ ] Control Plane + Genie already work from a prior `make setup`.  
-  If not: finish [guided demo](../guided-demo.md) setup first, then come back.  
-  You do **not** need a perfect Gate pass to record.
+- [ ] Repo **root** open in Cursor (`README.md`, `Makefile`, `.cursor` visible).
+- [ ] **`edw-demo-guide`** available (`make sync-prompts` if missing).
+- [ ] `az login` + Databricks login (or PAT in `.env`).
+- [ ] Browser can open Databricks (serverless warehouse exists).
+- [ ] Control Plane + Genie already exist from a prior `make setup`.  
+  If not: finish [guided demo](../guided-demo.md) setup, **then** come back to record.  
+  Gate does **not** have to be green.
 
-**Then — screenshots (about 15 minutes)**
+### Screenshots (~15 min)
 
-- [ ] S1 → save as `docs/img/cursor_open_repo.png`
-- [ ] S2 → save as `docs/img/cursor_pick_agent.png`
-- [ ] S3 → save as `docs/img/cursor_kickoff.png`
+- [ ] S1 → `docs/img/cursor_open_repo.png`
+- [ ] S2 → `docs/img/cursor_pick_agent.png`
+- [ ] S3 → `docs/img/cursor_kickoff.png`
 
-**Then — video (about 20–40 minutes including cuts)**
+### Video (~20–40 min)
 
-- [ ] Record four short clips (or one continuous take — see below).
-- [ ] Export final as `docs/media/hero.mp4`
-- [ ] GIF is optional; skip it unless you want it. The agent can make one later.
+**Pick one method. Do not mix instructions.**
 
-**Then — hand off**
+- [ ] **Preferred:** one continuous recording (steps below).  
+- [ ] **Or:** four clips, then join them in any editor (iMovie, Clips, CapCut, etc.).
+- [ ] Export `docs/media/hero.mp4`
+- [ ] Make `docs/img/hero.gif` from that MP4 (required for README — see GIF step). Keep GIF under ~12 MB if you can.
 
-- [ ] Message the agent with the handoff block at the bottom of this page.
+### Hand off
+
+- [ ] Send the handoff block at the bottom.
 
 ---
 
 ## Screenshots
 
-**Rules for all three**
+**All three:** PNG, roughly widescreen, Cursor only, readable when small. No `.env`, tokens, or passwords.
 
-- PNG.
-- Roughly widescreen (e.g. 1920×1080).
-- Cursor window only.
-- Text readable when the image is shrunk on GitHub.
-- Don’t show `.env`, tokens, or passwords.
+### S1 — Repo root → `docs/img/cursor_open_repo.png`
 
-### S1 — Repo root
-
-**Save as:** `docs/img/cursor_open_repo.png`
-
-1. File → Open Folder → this repo’s root.
-2. Show the file tree.
-3. Make sure these are visible: `README.md`, `Makefile`, `.cursor`.
+1. File → Open Folder → this repo root.  
+2. Show the file tree.  
+3. Visible: `README.md`, `Makefile`, `.cursor`.  
 4. Screenshot.
 
-### S2 — Pick the agent
+### S2 — Agent selected → `docs/img/cursor_pick_agent.png`
 
-**Save as:** `docs/img/cursor_pick_agent.png`
+1. Open Agent / Chat.  
+2. Select **`edw-demo-guide`** so it is clearly the active agent.  
+3. Screenshot. (Cursor’s picker UI varies by version — selection must be obvious.)
 
-1. Open Agent / Chat.
-2. Select **`edw-demo-guide`** (it must be obviously selected).
-3. If you can also see `edw-coordinator` in the list, good.
-4. Screenshot.
+### S3 — Kickoff text → `docs/img/cursor_kickoff.png`
 
-### S3 — Kickoff line
-
-**Save as:** `docs/img/cursor_kickoff.png`
-
-1. Start a clean chat with `edw-demo-guide`.
-2. Paste exactly:
-
-   `Set up the EDW demo and walk me through the migration.`
-
-3. Screenshot with that text visible (before or as you send is fine).
-4. Don’t screenshot a huge failed log.
+1. Clean chat with `edw-demo-guide`.  
+2. Paste exactly: `Set up the EDW demo and walk me through the migration.`  
+3. Screenshot with that text visible.  
+4. For the **screenshot**, you can cancel/stop before a long run starts. The video section has its own rule for send vs cut.
 
 ---
 
 ## Video
 
-**Save as:** `docs/media/hero.mp4`  
-**Length:** about 35–50 seconds after edits. Silent is fine; captions help.
+**Files**
 
-### Easiest path: four short clips
+| File | Role |
+|---|---|
+| `docs/media/hero.mp4` | Full short video (for download / release / YouTube if large) |
+| `docs/img/hero.gif` | What the README will show |
 
-Record each, stop, start the next. Name them anything on your machine; finals matter more than raw names.
+**Length after edits:** ~35–50 seconds. Silent is fine.
 
-| Order | Record this | Stop when |
+### Preferred: one continuous take
+
+1. Start screen recorder (Cursor + browser on one screen or easy to switch).  
+2. Cursor: `edw-demo-guide` visible → paste kickoff → **send**.  
+3. Show tools starting for a few seconds, then **stop the agent / jump-cut**. Do **not** film bacpac, long bootstrap, or waiting.  
+4. Terminal or Cursor: run `make print-urls` and show Control Plane + Genie links on screen (~3–5 seconds).  
+5. Browser: open Control Plane → widgets visible.  
+6. Browser: Genie → ask **Did the last run ship?** → answer visible.  
+7. Stop recording. Trim to ~35–50s. Save as `docs/media/hero.mp4`.
+
+### Alternative: four clips, then join
+
+Record four separate files, then join **in this order** in any video editor:
+
+| # | Record | Stop when |
 |---|---|---|
-| 1 | Cursor: `edw-demo-guide` + paste/send the kickoff line | Message is sent / tools start |
-| 2 | Cursor or terminal: something that shows setup progressing or `make print-urls` output | URLs or “setup complete” visible |
-| 3 | Browser: Control Plane dashboard | Gate / inventory / migration widgets visible |
-| 4 | Browser: Genie — ask **Did the last run ship?** | Answer is on screen |
+| 1 | Cursor: paste + send kickoff | Tools just started |
+| 2 | Terminal: `make print-urls` | Both URLs visible |
+| 3 | Browser: Control Plane | Dashboard widgets visible |
+| 4 | Browser: Genie Q&A | Answer visible |
 
-Stitch 1→2→3→4 into `docs/media/hero.mp4`.  
-Jump-cut any long waits. Don’t sit through bacpac import on camera.
+Export the join as `docs/media/hero.mp4`.
 
-### If you prefer one continuous recording
+**How to join (pick what you have):** macOS iMovie / QuickTime append, Windows Clipchamp, phone CapCut, or `ffmpeg` if you already use it. The storyboard will not teach every editor.
 
-Same order on one timeline:
+### Gate not green
 
-1. Cursor + kickoff (send it).
-2. Brief tools activity (cut the boring middle).
-3. Switch to Control Plane.
-4. Switch to Genie question + answer.
-5. Stop.
+Still film Control Plane + Genie. A real blocked/not-shipped answer is fine.
 
-### If Gate isn’t green
+### Make the README GIF (required)
 
-Still film Control Plane and Genie. A real “not shipped / blocked” answer is better than faking a pass.
+GitHub README will not usefully autoplay your MP4. You need a GIF:
 
-### Recording settings (keep simple)
+```bash
+ffmpeg -i docs/media/hero.mp4 -vf "fps=12,scale=960:-1:flags=lanczos" -loop 0 docs/img/hero.gif
+```
 
-- 1080p if you can, 720p minimum.
-- MP4 (H.264).
-- Zoom the browser a bit so dashboard text is readable.
+No ffmpeg? Export a GIF from your editor, or ask the agent after you hand off the MP4.
 
-Skip YouTube, ffmpeg, and GIF for now unless you already know how.
+If `hero.mp4` is huge (>50 MB), keep the GIF in git; put the MP4 on a GitHub Release or unlisted YouTube and say so in handoff Notes.
 
 ---
 
 ## Privacy
 
-**Hide or crop:** tokens, passwords, connection strings, subscription IDs.  
-**Fine to show:** agent names, kickoff sentence, catalog name like `edw_migration`, demo/WWI-style answers.
+**Hide:** tokens, passwords, connection strings, subscription IDs.  
+**OK:** agent names, kickoff sentence, catalog name, demo answers.
 
 ---
 
-## When you’re done — send this
+## Handoff
 
 ```text
 CAPTURE COMPLETE
@@ -146,22 +144,32 @@ Files:
 - docs/img/cursor_pick_agent.png
 - docs/img/cursor_kickoff.png
 - docs/media/hero.mp4
+- docs/img/hero.gif          # or: agent please generate from MP4
 
 Notes:
 ```
 
-Then: *Insert these into README and cursor-ui per docs/media/storyboard.md*
+Then: *Insert per docs/media/storyboard.md*
 
 ---
 
-## For the person editing the repo (not you while recording)
+## For the editor (after handoff)
 
-1. Overwrite the three `docs/img/cursor_*.png` files.
-2. Add `docs/media/hero.mp4` (and `docs/img/hero.gif` only if someone makes one).
-3. Under README Status, add a short “See it” blurb linking the video/GIF.
-4. In `cursor-ui.md`, drop any “illustration / mock” wording.
-5. Set the Status date to the capture day.
-6. If `hero.mp4` is huge for git, put the video on a release or unlisted YouTube and keep a small GIF in-repo.
+1. Confirm the three PNGs overwritten.  
+2. Confirm `docs/img/hero.gif` exists (generate from MP4 if missing).  
+3. Under README Status, add:
+
+```markdown
+### See it
+
+![Track A hero](docs/img/hero.gif)
+
+*Track A · Cursor → Control Plane → Genie*  
+[Full video](docs/media/hero.mp4) <!-- or Release / YouTube URL if MP4 not in git -->
+```
+
+4. In `docs/cursor-ui.md` and `docs/getting-started.md`, remove “illustration / stand-in / fake” wording.  
+5. Set Status verification date to capture day.
 
 ---
 
