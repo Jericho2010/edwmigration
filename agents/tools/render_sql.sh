@@ -67,14 +67,17 @@ CREATE CONNECTION IF NOT EXISTS __CONNECTION_NAME__
 EOF
     ;;
   mysql)
-    cat >"$CONN_TMP" <<'EOF'
+    # SSL is required for MySQL federation. trustServerCertificate is set from
+    # SOURCE_TRUST_SERVER_CERTIFICATE (default true for Azure Flexible Server demos).
+    cat >"$CONN_TMP" <<EOF
 CREATE CONNECTION IF NOT EXISTS __CONNECTION_NAME__
   TYPE MYSQL
   OPTIONS (
     host '{{SOURCE_HOST}}',
     port '{{SOURCE_PORT}}',
     user '{{SOURCE_USER}}',
-    password secret('__SECRET_SCOPE__', '__PASSWORD_SECRET_KEY__')
+    password secret('__SECRET_SCOPE__', '__PASSWORD_SECRET_KEY__'),
+    trustServerCertificate '${SOURCE_TRUST_SERVER_CERTIFICATE}'
   );
 EOF
     ;;

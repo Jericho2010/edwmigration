@@ -118,11 +118,33 @@ jobs:
           sqlfluff lint databricks/_rendered/uc databricks/_rendered/silver databricks/_rendered/gold --nocolor || sqlfluff lint databricks/uc --nocolor
           SOURCE_TYPE=mysql SOURCE_HOST=example.mysql.database.azure.com SOURCE_PORT=3306 \
             SOURCE_DATABASE=appdb SOURCE_USER=demo SOURCE_PASSWORD=dummy \
-            FOREIGN_CATALOG=mysql_fed CONNECTION_NAME=azure_mysql_edw DATABRICKS_CATALOG=my_edw \
+            FOREIGN_CATALOG=wwi_dw_fed CONNECTION_NAME=azure_sql_edw DATABRICKS_CATALOG=my_edw \
             ./agents/tools/render_sql.sh
           grep -q "TYPE MYSQL" databricks/_rendered/uc/01_federation_setup.sql
           grep -q "example.mysql.database.azure.com" databricks/_rendered/uc/01_federation_setup.sql
+          grep -q "mysql_fed" databricks/_rendered/uc/01_federation_setup.sql
+          grep -q "azure_mysql_edw" databricks/_rendered/uc/01_federation_setup.sql
+          grep -q "trustServerCertificate" databricks/_rendered/uc/01_federation_setup.sql
           echo "dual-source render OK"
+
+      - name: Land source_system + context schema
+        run: |
+          python3 - <<'PY'
+          import json, sys, tempfile
+          from pathlib import Path
+          from jsonschema import Draft7Validator
+          sys.path.insert(0, "agents/tools")
+          from generate_from_inventory import emit_land
+          sql = emit_land(
+              [{"source_schema":"dbo","source_name":"T","landing_name":"dbo_t","skip":False}],
+              "c", "f", "mysql",
+          )
+          assert "'mysql' AS _source_system" in sql, sql
+          schema = json.load(open("agents/contracts/context.schema.json"))
+          doc = json.load(open("agents/samples/run/context.json"))
+          Draft7Validator(schema).validate(doc)
+          print("land + context schema OK")
+          PY
 
       - name: Sync prompts smoke
         run: |

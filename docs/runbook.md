@@ -26,9 +26,16 @@ make setup
 #   Migrate my Azure MySQL into catalog <DATABRICKS_CATALOG>.
 ```
 
-Free Edition: open the MySQL firewall (or public access) so the warehouse can reach the host — prefer lock-down for real data. Optional: `az mysql flexible-server firewall-rule ...` if you are logged into Azure and ask the agent.
+Free Edition: open the MySQL firewall (or public access) so the warehouse can reach the host — see [firewall.md](firewall.md). Prefer lock-down for real data.
 
-Tables always migrate. Routines export when the `mysql` CLI is installed; otherwise Assess notes the skip and Gate still ships on land + reconcile.
+```bash
+az mysql flexible-server firewall-rule create \
+  --resource-group <rg> --name <server> \
+  --rule-name AllowDatabricksDemo \
+  --start-ip-address 0.0.0.0 --end-ip-address 255.255.255.255
+```
+
+Tables always migrate. Routines export when the `mysql` CLI is installed; otherwise Assess notes the skip and Gate still ships on land + reconcile (`ensure_run_events.py`).
 
 ## Track B — Existing Azure SQL
 
@@ -47,9 +54,10 @@ Privileges: Databricks `CREATE CONNECTION` + `CREATE CATALOG` (or admin). Source
 |---|---|
 | `make materialize-demo` | Build `.env` from logins (Track A) |
 | `make bootstrap` | Free Azure SQL + WWI bacpac |
-| `make setup` | Secrets + federation + ops + deploy + genie (sqlserver or mysql) |
+| `make setup` | Secrets + federation + ops + deploy + genie + print URLs |
+| `make print-urls` | Control Plane dashboard + Genie room URLs |
 | `make deploy` / `make run` | Bundle deploy / job |
-| `make teardown` | Delete Azure RG (demo) |
+| `make teardown` | Delete Azure RG (demo pack — needs SqlPackage/az) |
 | `make sync-prompts` | Regenerate Cursor + Copilot agents |
 
 ## After discovery

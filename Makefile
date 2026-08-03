@@ -18,7 +18,7 @@ SOURCE_TYPE ?= sqlserver
 TOOLS_CORE := databricks jq curl python3
 TOOLS_AZURE := az sqlcmd SqlPackage
 
-.PHONY: check check-core check-azure check-source render bootstrap setup federation secrets deploy run demo teardown genie materialize-demo sync-prompts discover
+.PHONY: check check-core check-azure check-source render bootstrap setup federation secrets deploy run demo teardown genie materialize-demo sync-prompts discover print-urls
 
 check: check-source
 
@@ -31,23 +31,35 @@ check-core:
 		{ echo "DATABRICKS_HOST, DATABRICKS_WAREHOUSE_ID, DATABRICKS_CATALOG required in .env" >&2; exit 1; }
 	@echo "core prereqs OK"
 
+# SqlPackage/sqlcmd/az — demo bootstrap and bacpac only (not required for make setup).
 check-azure: check-core
 	@for t in $(TOOLS_AZURE); do \
-		command -v $$t >/dev/null 2>&1 || { echo "missing tool: $$t — see docs/prerequisites.md" >&2; exit 1; }; \
+		command -v $$t >/dev/null 2>&1 || { echo "missing tool: $$t — see docs/prerequisites.md (needed for bootstrap/demo only)" >&2; exit 1; }; \
 	done
-	@test -n "$(AZ_SUBSCRIPTION_ID)$(AZ_SQL_SERVER)$(SOURCE_HOST)" || \
-		{ echo "Azure source vars missing (AZ_SUBSCRIPTION_ID for bootstrap, or SOURCE_HOST / AZ_SQL_SERVER for setup)" >&2; exit 1; }
-	@echo "azure prereqs OK"
+	@test -n "$(AZ_SUBSCRIPTION_ID)$(AZ_SQL_SERVER)" || \
+		{ echo "AZ_SUBSCRIPTION_ID (and AZ_SQL_SERVER) required for bootstrap" >&2; exit 1; }
+	@echo "azure bootstrap prereqs OK"
 
-# SqlPackage/sqlcmd only required for sqlserver tool path / demo bootstrap — not mysql.
+# Connection fields only — no SqlPackage for either source type on setup.
 check-source: check-core
 	@st=$$(printf '%s' "$(SOURCE_TYPE)" | tr '[:upper:]' '[:lower:]'); \
 	if [ "$$st" = "mysql" ]; then \
-	  test -n "$(SOURCE_HOST)" -a -n "$(SOURCE_DATABASE)" -a -n "$(SOURCE_USER)" || \
-	    { echo "MySQL requires SOURCE_HOST, SOURCE_DATABASE, SOURCE_USER (and SOURCE_PASSWORD) in .env" >&2; exit 1; }; \
+	  test -n "$(SOURCE_HOST)" -a -n "$(SOURCE_DATABASE)" -a -n "$(SOURCE_USER)" -a -n "$(SOURCE_PASSWORD)" || \
+	    { echo "MySQL requires SOURCE_HOST, SOURCE_DATABASE, SOURCE_USER, SOURCE_PASSWORD in .env" >&2; exit 1; }; \
 	  echo "mysql source prereqs OK"; \
 	else \
-	  $(MAKE) check-azure; \
+	  host="$(SOURCE_HOST)"; \
+	  if [ -z "$$host" ] && [ -n "$(AZ_SQL_HOST)" ]; then host="$(AZ_SQL_HOST)"; fi; \
+	  if [ -z "$$host" ] && [ -n "$(AZ_SQL_SERVER)" ]; then host="$(AZ_SQL_SERVER).database.windows.net"; fi; \
+	  pw="$(SOURCE_PASSWORD)"; \
+	  if [ -z "$$pw" ]; then pw="$(AZ_SQL_PASSWORD)"; fi; \
+	  db="$(SOURCE_DATABASE)"; \
+	  if [ -z "$$db" ]; then db="$(AZ_SQL_DB)"; fi; \
+	  user="$(SOURCE_USER)"; \
+	  if [ -z "$$user" ]; then user="$(AZ_SQL_ADMIN)"; fi; \
+	  test -n "$$host" -a -n "$$db" -a -n "$$user" -a -n "$$pw" || \
+	    { echo "sqlserver requires SOURCE_HOST (or AZ_SQL_HOST/SERVER), SOURCE_DATABASE (or AZ_SQL_DB), SOURCE_USER (or AZ_SQL_ADMIN), SOURCE_PASSWORD (or AZ_SQL_PASSWORD)" >&2; exit 1; }; \
+	  echo "sqlserver source prereqs OK (SqlPackage not required for setup)"; \
 	fi
 
 materialize-demo: ## Build .env from az + databricks login (guided demo)
@@ -67,12 +79,13 @@ federation: secrets render ## UC federation + ops
 	./agents/tools/run_sql.sh --file databricks/_rendered/uc/03_ops_and_views.sql
 	./agents/tools/run_sql.sh --file databricks/_rendered/uc/02_federation_smoke.sql
 
-setup: check-source federation deploy genie ## Wire sink + dashboard + genie
+print-urls: check-core ## Print Control Plane dashboard + Genie URLs
+	./agents/tools/print_observability_urls.sh
+
+setup: check-source federation deploy genie print-urls ## Wire sink + dashboard + genie
 	@echo
 	@echo "Setup complete. Catalog=$(DATABRICKS_CATALOG) SOURCE_TYPE=$(SOURCE_TYPE)"
 	@echo "Next: launch edw-coordinator (or edw-demo-guide for the full walkthrough)."
-	@echo "Dashboard: [dev] EDW Migration Control Plane"
-	@echo "Genie: see URL from make genie above."
 
 deploy: render ## Bundle validate --strict + deploy
 	@test -n "$(DATABRICKS_WAREHOUSE_ID)" || { echo "DATABRICKS_WAREHOUSE_ID required" >&2; exit 1; }
@@ -87,8 +100,6 @@ run: ## Run medallion job (requires generated land SQL)
 demo: check-azure bootstrap setup ## Scripted demo path (non-interactive)
 	@echo
 	@echo "Demo infra ready. Open Cursor and launch edw-demo-guide or edw-coordinator."
-	@echo "Dashboard: [dev] EDW Migration Control Plane"
-	@echo "Genie: run make genie if URL not printed above."
 
 genie: check-core ## Create/update Genie control-plane space
 	./databricks/genie/create_genie_space.sh

@@ -12,7 +12,7 @@ Deterministic ship/no-ship. No prose. Return `migration_manifest` JSON only.
 1. Every inventoried **table** with `skip=false` exists as `${uc_catalog}.bronze.<landing_name>`.
 2. Every bronze-vs-source reconcile check for this run is `pass`.
 3. **Routines/procs:** If `inventory.routines_skipped_reason` is set **or** `procs_total` is 0 **or** backlog is empty, skip conversion requirements (table-only ship is allowed). Otherwise: every backlog item that is not skipped has `proc_conversion_map` row with status in `draft|review|final` and `target_path` exists on disk under `databricks/silver|gold/`.
-4. `ops.agent_events` includes events for coordinator, assess, convert, test, gate for this `run_id`. (If no convert work occurred, convert event may be a single “skipped/no backlog” note — still record an event.)
+4. `ops.agent_events` includes events for this `run_id` covering coordinator, assess, convert, test, gate. For table-only runs, `convert` with `event=skipped` (from `ensure_run_events.py`) satisfies the convert requirement.
 
 **Do not** require specific table/proc names. **Do not** require universal ≥10/≥5 (demo acceptance counts are checked outside Gate by the demo guide).
 

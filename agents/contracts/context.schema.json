@@ -11,9 +11,14 @@
       "type": "string",
       "pattern": "^[0-9a-fA-F-]{36}$"
     },
+    "source_type": {
+      "type": "string",
+      "enum": ["sqlserver", "mysql"],
+      "description": "Federation source dialect from SOURCE_TYPE in .env."
+    },
     "foreign_catalog": {
       "type": "string",
-      "description": "UC foreign catalog mirroring the Azure SQL database.",
+      "description": "UC foreign catalog mirroring the source database.",
       "minLength": 1
     },
     "uc_catalog": {
@@ -23,7 +28,7 @@
     },
     "source_database": {
       "type": "string",
-      "description": "Azure SQL database name."
+      "description": "Source database / schema name on the federated system."
     },
     "legacy_proc_schema": {
       "type": "string",
@@ -51,6 +56,10 @@
     "demo_mode": {
       "type": "boolean",
       "description": "True when launched from edw-demo-guide."
+    },
+    "routines_skipped_reason": {
+      "type": ["string", "null"],
+      "description": "Set when MySQL routines were not exported (e.g. mysql CLI missing)."
     }
   }
 }

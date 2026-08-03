@@ -1,5 +1,6 @@
 {
   "run_id": "00000000-0000-4000-8000-000000000001",
+  "source_type": "sqlserver",
   "foreign_catalog": "wwi_dw_fed",
   "uc_catalog": "edw_migration",
   "source_database": "WideWorldImportersDW",
@@ -12,5 +13,6 @@
   "databricks_host": "https://dbc-example.cloud.databricks.com",
   "max_retries": 2,
   "attempt": 0,
-  "demo_mode": true
+  "demo_mode": true,
+  "routines_skipped_reason": null
 }

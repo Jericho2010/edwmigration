@@ -4,6 +4,7 @@
 #
 # Sets: SOURCE_TYPE SOURCE_HOST SOURCE_PORT SOURCE_DATABASE SOURCE_USER SOURCE_PASSWORD
 #       FOREIGN_CATALOG CONNECTION_NAME PASSWORD_SECRET_KEY CONNECTION_TYPE
+#       SOURCE_SYSTEM SOURCE_TRUST_SERVER_CERTIFICATE
 
 : "${SOURCE_TYPE:=sqlserver}"
 SOURCE_TYPE="$(printf '%s' "$SOURCE_TYPE" | tr '[:upper:]' '[:lower:]')"
@@ -34,15 +35,27 @@ if [ "$SOURCE_TYPE" = "sqlserver" ]; then
   : "${FOREIGN_CATALOG:=wwi_dw_fed}"
   : "${CONNECTION_NAME:=azure_sql_edw}"
   CONNECTION_TYPE=SQLSERVER
-  # Prefer unified key; sqlserver also keeps azure-sql-password alias for bootstrap compat.
+  SOURCE_SYSTEM=azure_sql
   PASSWORD_SECRET_KEY="${PASSWORD_SECRET_KEY:-source-password}"
+  : "${SOURCE_TRUST_SERVER_CERTIFICATE:=false}"
 else
   : "${SOURCE_PORT:=3306}"
-  : "${FOREIGN_CATALOG:=mysql_fed}"
-  : "${CONNECTION_NAME:=azure_mysql_edw}"
+  # If switching from a prior demo .env, replace SQL Server demo names unless user
+  # explicitly set non-demo foreign/connection names.
+  case "${FOREIGN_CATALOG:-}" in
+    ''|wwi_dw_fed) FOREIGN_CATALOG=mysql_fed ;;
+  esac
+  case "${CONNECTION_NAME:-}" in
+    ''|azure_sql_edw) CONNECTION_NAME=azure_mysql_edw ;;
+  esac
   CONNECTION_TYPE=MYSQL
+  SOURCE_SYSTEM=mysql
   PASSWORD_SECRET_KEY="${PASSWORD_SECRET_KEY:-source-password}"
+  # Azure Flexible Server / demo Free Edition: SSL required; trust bypass avoids
+  # CA chain friction unless the user sets SOURCE_TRUST_SERVER_CERTIFICATE=false.
+  : "${SOURCE_TRUST_SERVER_CERTIFICATE:=true}"
 fi
 
 export SOURCE_TYPE SOURCE_HOST SOURCE_PORT SOURCE_DATABASE SOURCE_USER SOURCE_PASSWORD
 export FOREIGN_CATALOG CONNECTION_NAME CONNECTION_TYPE PASSWORD_SECRET_KEY
+export SOURCE_SYSTEM SOURCE_TRUST_SERVER_CERTIFICATE

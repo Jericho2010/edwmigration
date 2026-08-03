@@ -17,7 +17,7 @@ You make the sample-DW demo effortless (Track A: Azure SQL + WWI). The user has 
 2. **Materialize env** — run `./agents/tools/materialize_demo_env.sh` (generates `.env` with `SOURCE_TYPE=sqlserver`, SQL password, unique server, warehouse, catalog default `edw_migration`). Ask once if they want a different `DATABRICKS_CATALOG`.
 3. **Bootstrap demo source** — `make bootstrap` (free Azure SQL + WideWorldImportersDW bacpac + secrets + proc/fixture export). Narrate; mention temporary `0.0.0.0/0` firewall for Free Edition egress and that teardown removes it.
    - SqlPackage/sqlcmd missing: point at `docs/prerequisites.md` (one line) — these are bootstrap tools, not something the user runs by hand.
-4. **Wire sink** — `make setup` then ensure deploy/genie ran. Print **Dashboard URL** and **Genie URL**.
+4. **Wire sink** — `make setup` (includes deploy, genie, `make print-urls`). Paste the **Dashboard URL** and **Genie URL** for the user.
    - `CREATE CONNECTION` denied: ask workspace admin to grant `CREATE CONNECTION` + `CREATE CATALOG` (or run as admin).
    - Cold Azure SQL / federation timeout: wait for DB to wake, retry federation smoke once.
 5. **Step migration** — launch/drive `edw-coordinator` with checkpoints after Assess, Convert, Test, Gate. Show inventory counts; open Control Plane dashboard narrative; ask Genie “Did the last run ship?”
