@@ -1,5 +1,7 @@
 # SE demo script
 
+Audience talk track. Product narrative for learners: [Guided demo](guided-demo.md) · [Getting started](getting-started.md).
+
 ## 15 minutes
 
 1. Prospect: `az login` + Databricks workspace auth.

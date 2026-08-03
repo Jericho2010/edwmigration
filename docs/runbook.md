@@ -1,71 +1,63 @@
 # Runbook
 
-See also [agent-setup.md](agent-setup.md) for Cursor/Copilot agents and kickoff sentences.
+Short checklist for people who already know the story.  
+**New here?** Use [Getting started](getting-started.md) → [Guided demo](guided-demo.md) instead.
 
-## Track A — Guided demo (Azure SQL + WWI)
+---
 
-1. `az login` and `databricks auth login --host <workspace>` (or PAT).
-2. In Cursor, launch **`edw-demo-guide`**: *Set up the EDW demo and walk me through the migration.*
-3. Watch **[dev] EDW Migration Control Plane** and the Genie URL the guide prints.
-4. When finished: ask the guide to teardown, or `make teardown`.
+## Track A — Guided demo
 
-Scripted: `make materialize-demo && make demo`
+1. `az login` + `databricks auth login --host <workspace>`  
+2. Cursor → **`edw-demo-guide`** → *Set up the EDW demo and walk me through the migration.*  
+3. Open Control Plane + Genie URLs  
+4. Teardown: ask the guide, or `make teardown`  
+
+Scripted infra: `make materialize-demo && make demo`  
+
+Details: [guided-demo.md](guided-demo.md)
+
+---
 
 ## Track B — Azure MySQL
 
-You provide four connection fields + catalog (+ Databricks auth). Agents do the rest.
-
 ```bash
-cp infra/azure/.env.example .env
-# SOURCE_TYPE=mysql
-# SOURCE_HOST / SOURCE_PORT(3306) / SOURCE_DATABASE / SOURCE_USER / SOURCE_PASSWORD
-# DATABRICKS_HOST / token-or-profile / DATABRICKS_WAREHOUSE_ID / DATABRICKS_CATALOG
-# Optional: FOREIGN_CATALOG=mysql_fed CONNECTION_NAME=azure_mysql_edw
+cp infra/azure/.env.example .env   # SOURCE_TYPE=mysql + SOURCE_* + DATABRICKS_*
 make setup
-# Launch edw-coordinator:
-#   Migrate my Azure MySQL into catalog <DATABRICKS_CATALOG>.
+# edw-coordinator: Migrate my Azure MySQL into catalog <name>.
 ```
 
-Free Edition: open the MySQL firewall (or public access) so the warehouse can reach the host — see [firewall.md](firewall.md). Prefer lock-down for real data.
+Firewall note: [firewall.md](firewall.md) · Full page: [your-database.md](your-database.md)
 
-```bash
-az mysql flexible-server firewall-rule create \
-  --resource-group <rg> --name <server> \
-  --rule-name AllowDatabricksDemo \
-  --start-ip-address 0.0.0.0 --end-ip-address 255.255.255.255
-```
-
-Tables always migrate. Routines export when the `mysql` CLI is installed; otherwise Assess notes the skip and Gate still ships on land + reconcile (`ensure_run_events.py`).
+---
 
 ## Track B — Existing Azure SQL
 
 ```bash
-cp infra/azure/.env.example .env
-# SOURCE_TYPE=sqlserver (default) + SOURCE_* or AZ_SQL_* + DATABRICKS_*
+cp infra/azure/.env.example .env   # SOURCE_TYPE=sqlserver + SOURCE_* or AZ_SQL_*
 make setup
-# Launch edw-coordinator — Start an EDW migration run against my Azure SQL.
+# edw-coordinator: Start an EDW migration run against my Azure SQL.
 ```
 
-Privileges: Databricks `CREATE CONNECTION` + `CREATE CATALOG` (or admin). Source login that can read tables (and export procs/routines when you want Convert).
+SqlPackage **not** required for `make setup`.
 
-## Makefile
+---
+
+## Makefile (common)
 
 | Target | Purpose |
 |---|---|
-| `make materialize-demo` | Build `.env` from logins (Track A) |
-| `make bootstrap` | Free Azure SQL + WWI bacpac |
-| `make setup` | Secrets + federation + ops + deploy + genie + print URLs |
-| `make print-urls` | Control Plane dashboard + Genie room URLs |
+| `make materialize-demo` | Build `.env` from logins (A) |
+| `make bootstrap` | Free Azure SQL + WWI |
+| `make setup` | Secrets + federation + deploy + genie + URLs |
+| `make print-urls` | Dashboard + Genie links |
 | `make deploy` / `make run` | Bundle deploy / job |
-| `make teardown` | Delete Azure RG (demo pack — needs SqlPackage/az) |
+| `make teardown` | Delete demo Azure RG |
 | `make sync-prompts` | Regenerate Cursor + Copilot agents |
 
-## After discovery
-
-Coordinator runs `discover_inventory.py` + `generate_from_inventory.py`, then Convert (if any), then `make deploy && make run`, Test, Gate. If `tables_total > 200`, confirm before land.
+---
 
 ## Trust checklist
 
-1. Inventory written (`agents/out/<run_id>/inventory.json`)
-2. Bronze reconcile pass
-3. Gate `blockers` empty — print Dashboard + Genie URLs
+1. `agents/out/<run_id>/inventory.json`  
+2. Bronze reconcile pass  
+3. Gate blockers empty → `make print-urls`

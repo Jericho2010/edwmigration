@@ -1,41 +1,82 @@
 # Documentation
 
-Start here: [agent-setup.md](agent-setup.md), [runbook.md](runbook.md), or the root [README](../README.md).
+**New here?** Start at the root [README](../README.md), then:
 
-## Operator docs
+1. [Getting started](getting-started.md) — Cursor + logins  
+2. [What you get](what-you-get.md) — outcomes & diagrams  
+3. [Guided demo](guided-demo.md) — **recommended first run (Track A)**  
+4. [Your database](your-database.md) — Track B when ready  
+
+```mermaid
+flowchart TD
+  R[README] --> GS[Getting started]
+  GS --> WYG[What you get]
+  WYG --> GD[Guided demo]
+  GD --> YD[Your database]
+  GD --> TB[Troubleshooting]
+  YD --> TB
+```
+
+---
+
+## Jump by intent
+
+| I want to… | Page |
+|---|---|
+| Try the free demo tonight | [guided-demo.md](guided-demo.md) |
+| Launch the right Cursor agent | [agent-setup.md](agent-setup.md) |
+| Connect my Azure SQL / MySQL | [your-database.md](your-database.md) |
+| See a short command checklist | [runbook.md](runbook.md) |
+| Fix a failure | [troubleshooting.md](troubleshooting.md) |
+| Understand Free Edition limits | [limits.md](limits.md) |
+| Understand firewall / public access | [firewall.md](firewall.md) |
+| Compare to Lakebridge | [lakebridge.md](lakebridge.md) |
+| Read engine design | [architecture.md](architecture.md) |
+| Deliver an SE talk track | [demo-script.md](demo-script.md) |
+
+---
+
+## Learning path (narrative)
+
+| Step | Doc |
+|---|---|
+| Hook & overview | [README](../README.md) |
+| First setup | [getting-started.md](getting-started.md) |
+| Mental model | [what-you-get.md](what-you-get.md) |
+| First win | [guided-demo.md](guided-demo.md) |
+| Real source | [your-database.md](your-database.md) |
+| Depth | [architecture.md](architecture.md), [limits.md](limits.md) |
+
+---
+
+## Operator & reference
 
 | Doc | Purpose |
 |---|---|
-| [agent-setup.md](agent-setup.md) | Cursor/Copilot agents + kickoff sentences |
-| [prerequisites.md](prerequisites.md) | Tools, privileges, Azure + Databricks logins |
-| [runbook.md](runbook.md) | Track A demo + Track B MySQL/SQL |
-| [troubleshooting.md](troubleshooting.md) | Common failures and fixes |
-
-## Design docs
-
-| Doc | Purpose |
-|---|---|
-| [architecture.md](architecture.md) | Engine vs demo pack, discovery, observability |
-| [limits.md](limits.md) | Free Edition + Azure free SQL + engine scope |
-| [firewall.md](firewall.md) | Free Edition reachability for Azure SQL + MySQL |
+| [agent-setup.md](agent-setup.md) | Agents + kickoff sentences + Cursor how-to |
+| [prerequisites.md](prerequisites.md) | Tools and privileges |
+| [runbook.md](runbook.md) | Compact Track A / B checklist |
+| [troubleshooting.md](troubleshooting.md) | Symptom → fix |
+| [firewall.md](firewall.md) | Free Edition reachability |
 | [lakeflow_connect.md](lakeflow_connect.md) | Why Federation on Free Edition |
-| [lakebridge.md](lakebridge.md) | Compete on Azure SQL → UC (do not compose) |
 
-## Field enablement
+## Design & enablement
 
 | Doc | Purpose |
 |---|---|
-| [demo-script.md](demo-script.md) | SE talk track (15 / 30 / 45 min) |
-| [img/](img/) | Architecture diagrams + GIF notes |
-| [media/](media/) | Asciinema re-record script (Azure-backed) |
+| [architecture.md](architecture.md) | Engine vs demo pack |
+| [limits.md](limits.md) | Free tiers + scope |
+| [lakebridge.md](lakebridge.md) | Compete, don’t compose |
+| [demo-script.md](demo-script.md) | SE 15 / 30 / 45 min |
+| [img/](img/) | Diagram sources / GIFs |
+| [media/](media/) | Asciinema notes |
 
 ## Code-adjacent READMEs
 
 | Path | Purpose |
 |---|---|
-| [../agents/README.md](../agents/README.md) | Prompts, tools, Copilot adapter |
-| [../databricks/README.md](../databricks/README.md) | Medallion + DAB + Control Plane |
-| [../demo/wwi/README.md](../demo/wwi/README.md) | Sample DW demo pack |
-| [../infra/azure/README.md](../infra/azure/README.md) | Free Azure SQL bootstrap |
-| [../legacy/README.md](../legacy/README.md) | Bacpac, procs, fixtures |
-| [../CONTRIBUTING.md](../CONTRIBUTING.md) | How to extend engine vs demo pack |
+| [../agents/README.md](../agents/README.md) | Prompts & tools |
+| [../databricks/README.md](../databricks/README.md) | Medallion + dashboard |
+| [../demo/wwi/README.md](../demo/wwi/README.md) | Sample DW pack |
+| [../infra/azure/README.md](../infra/azure/README.md) | Azure bootstrap |
+| [../CONTRIBUTING.md](../CONTRIBUTING.md) | Extend engine vs demo |
