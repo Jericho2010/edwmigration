@@ -1,10 +1,8 @@
 # Using Cursor with this repo
 
-You do not need prior Cursor-agent experience. Follow these three steps, then paste a [kickoff sentence](agent-setup.md).
+Follow these three steps, then paste a [kickoff sentence](agent-setup.md).
 
-Images below are **stand-ins** until you overwrite them with real captures from [storyboard.md](media/storyboard.md).
-
-← [Getting started](getting-started.md) · [Agent setup](agent-setup.md)
+← [Getting started](getting-started.md) · [Agent setup](agent-setup.md) · [Capture storyboard](media/storyboard.md)
 
 ---
 
