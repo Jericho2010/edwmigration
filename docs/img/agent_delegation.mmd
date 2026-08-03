@@ -1,12 +1,16 @@
 flowchart TD
-  SE[SE_human] -->|kickoff| Coord[edw_coordinator]
-  Coord -->|delegates| Assess[edw_assess_readonly]
+  User[User] -->|az_login_plus_dbx_auth| Guide[edw_demo_guide]
+  Guide -->|or_direct| Coord[edw_coordinator]
+  Coord --> Discover[discover_inventory]
+  Discover --> Generate[generate_land_reconcile]
+  Generate --> Assess[edw_assess_readonly]
   Assess -->|backlog_JSON| Coord
-  Coord -->|delegates| Convert[edw_convert]
-  Convert -->|notebook_path| Coord
-  Coord -->|delegates| Test[edw_test_readonly]
+  Coord --> Convert[edw_convert]
+  Convert -->|silver_gold_SQL| Coord
+  Coord --> DeployRun[bundle_deploy_run]
+  DeployRun --> Test[edw_test_readonly]
   Test -->|reconcile_report| Coord
-  Coord -->|delegates| Gate[edw_gate_readonly]
+  Coord --> Gate[edw_gate_readonly]
   Gate -->|manifest_JSON| Coord
   Coord -->|fail_retries_left| Convert
-  Gate -->|migration_manifest| SE
+  Gate --> User

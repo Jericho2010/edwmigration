@@ -2,15 +2,15 @@
   "run_id": "00000000-0000-4000-8000-000000000001",
   "foreign_catalog": "wwi_dw_fed",
   "uc_catalog": "edw_migration",
-  "legacy_proc_schema": "Integration",
+  "source_database": "WideWorldImportersDW",
   "scoped_tables": [
-    "Fact.Sale",
-    "Fact.Stockholding",
-    "Dimension.Customer",
-    "Dimension.City",
-    "Dimension.StockItem"
+    "dim_customer",
+    "dim_city",
+    "dim_stock_item",
+    "fact_sale"
   ],
   "databricks_host": "https://dbc-example.cloud.databricks.com",
   "max_retries": 2,
-  "attempt": 0
+  "attempt": 0,
+  "demo_mode": true
 }

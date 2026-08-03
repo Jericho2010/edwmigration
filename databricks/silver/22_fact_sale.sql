@@ -4,7 +4,7 @@
 --   Customer Key  -> silver.dim_customer_scd2.customer_key
 --   Stock Item Key -> silver.dim_stock_item.stock_item_key
 
-CREATE OR REPLACE TABLE edw_migration.silver.fact_sale AS
+CREATE OR REPLACE TABLE __UC_CATALOG__.silver.fact_sale AS
 SELECT
   f.`Sale Key` AS sale_key,
   f.`Invoice Date Key` AS invoice_date_key,
@@ -17,13 +17,13 @@ SELECT
   f.`WWI Invoice ID` AS wwi_invoice_id,
   f.`WWI Customer ID` AS wwi_customer_id,
   f.`WWI Stock Item ID` AS wwi_stock_item_id
-FROM edw_migration.bronze.fact_sale f
-INNER JOIN edw_migration.silver.dim_customer_scd2 c
+FROM __UC_CATALOG__.bronze.fact_sale f
+INNER JOIN __UC_CATALOG__.silver.dim_customer_scd2 c
   ON f.`Customer Key` = c.customer_key
-INNER JOIN edw_migration.silver.dim_stock_item s
+INNER JOIN __UC_CATALOG__.silver.dim_stock_item s
   ON f.`Stock Item Key` = s.stock_item_key;
 
-CREATE OR REPLACE TABLE edw_migration.silver.fact_sale_orphan AS
+CREATE OR REPLACE TABLE __UC_CATALOG__.silver.fact_sale_orphan AS
 SELECT
   f.`Sale Key` AS sale_key,
   f.`Customer Key` AS customer_key,
@@ -33,13 +33,13 @@ SELECT
     WHEN c.customer_key IS NULL THEN 'customer_unmatched'
     ELSE 'stock_unmatched'
   END AS orphan_reason
-FROM edw_migration.bronze.fact_sale f
-LEFT JOIN edw_migration.silver.dim_customer_scd2 c
+FROM __UC_CATALOG__.bronze.fact_sale f
+LEFT JOIN __UC_CATALOG__.silver.dim_customer_scd2 c
   ON f.`Customer Key` = c.customer_key
-LEFT JOIN edw_migration.silver.dim_stock_item s
+LEFT JOIN __UC_CATALOG__.silver.dim_stock_item s
   ON f.`Stock Item Key` = s.stock_item_key
 WHERE c.customer_key IS NULL OR s.stock_item_key IS NULL;
 
 SELECT 'silver_fact_sale_ok' AS check_name,
-       (SELECT COUNT(*) FROM edw_migration.silver.fact_sale) AS matched_rows,
-       (SELECT COUNT(*) FROM edw_migration.silver.fact_sale_orphan) AS orphan_rows;
+       (SELECT COUNT(*) FROM __UC_CATALOG__.silver.fact_sale) AS matched_rows,
+       (SELECT COUNT(*) FROM __UC_CATALOG__.silver.fact_sale_orphan) AS orphan_rows;

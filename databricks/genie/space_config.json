@@ -1,159 +1,20 @@
 {
   "title": "EDW Migration Copilot",
-  "description": "Ask natural-language questions about the EDW migration run (agent events, backlog, conversions, reconcile results) and the migrated WideWorldImportersDW gold marts. Deployed by databricks/genie/create_genie_space.sh.",
+  "description": "Control-plane copilot for EDW migration runs: Gate status, inventory, backlog, reconcile, and agent timeline. Domain mart questions are added by the demo pack when gold tables exist.",
   "serialized_space": {
     "version": 2,
     "config": {
       "sample_questions": [
-        {
-          "id": "3d2f1a9011114e1a9a11000000000001",
-          "question": [
-            "Why did the last migration run fail the gate?"
-          ]
-        },
-        {
-          "id": "3d2f1a9011114e1a9a11000000000002",
-          "question": [
-            "Which legacy stored procedures have been converted, and where did the output land?"
-          ]
-        },
-        {
-          "id": "3d2f1a9011114e1a9a11000000000003",
-          "question": [
-            "How many events did each agent emit in the latest run?"
-          ]
-        },
-        {
-          "id": "3d2f1a9011114e1a9a11000000000004",
-          "question": [
-            "Top 10 stock items by gross revenue?"
-          ]
-        },
-        {
-          "id": "3d2f1a9011114e1a9a11000000000005",
-          "question": [
-            "How many current customers are there per country?"
-          ]
-        },
-        {
-          "id": "3d2f1a9011114e1a9a11000000000006",
-          "question": [
-            "What is the available stock by brand?"
-          ]
-        }
+        {"id": "q1", "question": ["Did the last migration run ship?"]},
+        {"id": "q2", "question": ["Why did the gate fail?"]},
+        {"id": "q3", "question": ["Which tables failed reconcile?"]},
+        {"id": "q4", "question": ["What is left to convert?"]},
+        {"id": "q5", "question": ["Show the agent timeline for the latest run"]}
       ]
     },
     "data_sources": {
-      "tables": [
-        {
-          "identifier": "edw_migration.gold.mart_city_dimension"
-        },
-        {
-          "identifier": "edw_migration.gold.mart_customer_current"
-        },
-        {
-          "identifier": "edw_migration.gold.mart_daily_internet_sales"
-        },
-        {
-          "identifier": "edw_migration.gold.mart_stock_movements"
-        },
-        {
-          "identifier": "edw_migration.ops.agent_events"
-        },
-        {
-          "identifier": "edw_migration.ops.migration_backlog"
-        },
-        {
-          "identifier": "edw_migration.ops.proc_conversion_map"
-        },
-        {
-          "identifier": "edw_migration.ops.reconcile_results"
-        }
-      ]
+      "tables": []
     },
-    "instructions": {
-      "text_instructions": [
-        {
-          "id": "3d2f1a9022224e1a9a11000000000001",
-          "content": [
-            "This space covers two domains of an EDW-to-Databricks migration demo. (1) Migration operations: the ops schema records one agent-driven migration run \u2014 edw_migration.ops.agent_events (hook telemetry), ops.migration_backlog (procs to migrate), ops.proc_conversion_map (converted procs), ops.reconcile_results (correctness checks). (2) Migrated analytics: the gold schema holds WideWorldImportersDW marts produced by the medallion pipeline.\n\nVocabulary: a 'run' is one migration run identified by run_id. The 'gate' is the deterministic ship/no-ship decision at the end of a run. A 'blocker' is a condition that fails the gate: a reconcile check with result = 'fail', or a backlog proc with no converted artifact. 'Convert' means translating a legacy Integration.* T-SQL stored procedure into a Databricks SQL file (target_path, usually under databricks/converted/).\n\nops.agent_events.agent is one of: coordinator, assess, convert, test, gate. event holds Cursor hook names such as subagentStart, subagentStop, afterFileEdit, afterShellExecution, afterMCPExecution. When a question does not name a run, use the most recent run (the run_id with the greatest ts).\n\nRoute analytics questions to the right gold mart: revenue/profit/sales trends -> edw_migration.gold.mart_daily_internet_sales (grain: sale_date x stock item; measures quantity_sold, gross_revenue, profit, transaction_count). Customers -> gold.mart_customer_current (current SCD2 records only; joins to gold.mart_city_dimension on city_id for geography). Inventory -> gold.mart_stock_movements (quantity_on_hand, quantity_allocated, quantity_available per stock item with brand and size)."
-          ]
-        }
-      ],
-      "example_question_sqls": [
-        {
-          "id": "3d2f1a9033334e1a9a11000000000001",
-          "question": [
-            "Why did the last migration run fail the gate?"
-          ],
-          "sql": [
-            "SELECT check_id, table_name, expected, actual, delta FROM edw_migration.ops.reconcile_results WHERE result = 'fail' ORDER BY ts DESC LIMIT 20"
-          ],
-          "usage_guidance": [
-            "Failed reconcile checks are the gate blockers. Pair with proc_conversion_map gaps (backlog procs with no draft/review/final row) for the full blocker list."
-          ]
-        },
-        {
-          "id": "3d2f1a9033334e1a9a11000000000002",
-          "question": [
-            "Which legacy stored procedures have been converted, and where did the output land?"
-          ],
-          "sql": [
-            "SELECT legacy_proc, target_path, status, updated_at FROM edw_migration.ops.proc_conversion_map ORDER BY legacy_proc"
-          ],
-          "usage_guidance": [
-            "status is draft, review, or final. Compare against ops.migration_backlog for procs still pending."
-          ]
-        },
-        {
-          "id": "3d2f1a9033334e1a9a11000000000003",
-          "question": [
-            "How many events did each agent emit in the latest run?"
-          ],
-          "sql": [
-            "SELECT agent, COUNT(*) AS events FROM edw_migration.ops.agent_events WHERE run_id = (SELECT run_id FROM edw_migration.ops.agent_events ORDER BY ts DESC LIMIT 1) GROUP BY agent ORDER BY events DESC"
-          ],
-          "usage_guidance": [
-            "A complete run shows events from coordinator, assess, convert, test, and gate; a missing agent means the run did not finish."
-          ]
-        },
-        {
-          "id": "3d2f1a9033334e1a9a11000000000004",
-          "question": [
-            "Top 10 stock items by gross revenue?"
-          ],
-          "sql": [
-            "SELECT stock_item_name, SUM(gross_revenue) AS gross_revenue, SUM(profit) AS profit, SUM(quantity_sold) AS quantity_sold FROM edw_migration.gold.mart_daily_internet_sales GROUP BY stock_item_name ORDER BY gross_revenue DESC LIMIT 10"
-          ],
-          "usage_guidance": [
-            "Add a sale_date filter for time-boxed questions."
-          ]
-        },
-        {
-          "id": "3d2f1a9033334e1a9a11000000000005",
-          "question": [
-            "How many current customers are there per country?"
-          ],
-          "sql": [
-            "SELECT country, COUNT(*) AS customers FROM edw_migration.gold.mart_customer_current GROUP BY country ORDER BY customers DESC"
-          ],
-          "usage_guidance": [
-            "mart_customer_current holds only current SCD2 records; state_province and city_name are available for finer geography."
-          ]
-        },
-        {
-          "id": "3d2f1a9033334e1a9a11000000000006",
-          "question": [
-            "What is the available stock by brand?"
-          ],
-          "sql": [
-            "SELECT brand, SUM(quantity_on_hand) AS on_hand, SUM(quantity_allocated) AS allocated, SUM(quantity_available) AS available FROM edw_migration.gold.mart_stock_movements GROUP BY brand ORDER BY available DESC"
-          ],
-          "usage_guidance": [
-            "quantity_available = on hand minus allocated; rows with NULL brand are unbranded items."
-          ]
-        }
-      ]
-    }
+    "instructions": "You are the EDW Migration Copilot. Prefer ops.migration_manifest_current, ops.migration_inventory, ops.migration_backlog, ops.proc_conversion_map, ops.reconcile_results, and ops.agent_events for control-plane questions. Show precise counts. If unsure, say so and suggest which ops table to check."
   }
 }

@@ -6,7 +6,6 @@ set -euo pipefail
 RUN_ID="${1:?usage: _flush_events.sh <run_id>}"
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 BUF_FILE="${REPO_ROOT}/agents/out/${RUN_ID}/events.buf.jsonl"
-UC_TABLE="edw_migration.ops.agent_events"
 RUN_SQL="${REPO_ROOT}/agents/tools/run_sql.sh"
 
 if [ ! -s "$BUF_FILE" ]; then
@@ -19,6 +18,9 @@ if [ -f "${REPO_ROOT}/.env" ]; then
   . "${REPO_ROOT}/.env" || true
   set +a
 fi
+
+UC_CATALOG="${DATABRICKS_CATALOG:-edw_migration}"
+UC_TABLE="${UC_CATALOG}.ops.agent_events"
 
 if ! command -v python3 >/dev/null 2>&1; then
   echo "[_flush_events] python3 required; skipping flush." >&2

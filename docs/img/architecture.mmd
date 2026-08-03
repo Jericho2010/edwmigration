@@ -1,22 +1,33 @@
 flowchart LR
-  subgraph azure [Free Azure SQL EDW]
-    Bacpac[WWI_DW_bacpac]
-    FreeDB[Azure_SQL_free_DB]
-    Bacpac -->|SqlPackage| FreeDB
+  subgraph azure [Azure_SQL_source]
+    DemoPack[Optional_WWI_demo_pack]
+    FreeDB[Azure_SQL_database]
+    DemoPack -.-> FreeDB
   end
-  subgraph dbx [Databricks Free Edition]
-    Fed[wwi_dw_fed]
+  subgraph dbx [Databricks_UC]
+    Fed[Foreign_catalog]
+    Inv[ops_migration_inventory]
     Bronze[bronze]
     Silver[silver]
     Gold[gold]
-    Ops[ops_agent_events]
+    Ops[ops_control_plane]
     FreeDB --> Fed
-    Fed -->|CTAS| Bronze
+    Fed --> Inv
+    Inv -->|generated_CTAS| Bronze
     Bronze --> Silver
     Silver --> Gold
+    Gold --> Ops
   end
-  subgraph cursor [Cursor]
+  subgraph agents [Agents]
+    Guide[edw_demo_guide]
     Coord[edw_coordinator]
-    Coord -.-> dbx
+    Guide --> Coord
+    Coord --> Assess[assess]
+    Coord --> Convert[convert]
+    Coord --> Test[test]
+    Coord --> Gate[gate]
   end
-  azure -.federation.-> dbx
+  Guide -.-> azure
+  Coord -.-> dbx
+  Ops --> Dash[Control_Plane_dashboard]
+  Ops --> Genie[Genie_copilot]

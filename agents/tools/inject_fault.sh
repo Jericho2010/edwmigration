@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # inject_fault.sh — fault injection for the self-healing demo arc.
 #
-# Perturbs one row in edw_migration.ops.fixture_expectations so the next
+# Perturbs one row in ${DATABRICKS_CATALOG}.ops.fixture_expectations so the next
 # reconcile (Test stage) fails, the Gate blocks the run, and the retry hook
 # fires. Revert restores the original expectation and the loop closes green.
 #
@@ -24,12 +24,18 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+if [ -f "${REPO_ROOT}/.env" ]; then
+  set -a
+  # shellcheck disable=SC1091
+  . "${REPO_ROOT}/.env" || true
+  set +a
+fi
 RUN_SQL="${SCRIPT_DIR}/run_sql.sh"
 STATE_FILE="${REPO_ROOT}/agents/out/.inject_fault.state.json"
-TABLE="edw_migration.ops.fixture_expectations"
+TABLE="${DATABRICKS_CATALOG:-edw_migration}.ops.fixture_expectations"
 MARKER="[INJECTED-FAULT]"
 
-FIXTURE="sample_offline_city"
+FIXTURE="fact_sale_count"
 DELTA="1000000"
 MODE="inject"
 

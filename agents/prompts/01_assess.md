@@ -1,68 +1,29 @@
-# 01_assess.md — Assess subagent prompt
+# 01_assess.md — Assess (readonly)
 
-You are the **Assess** stage of an EDW-to-Databricks migration run. You are
-`readonly`: you may read files and run read-only SQL, but you may NOT write
-files or run state-changing SQL. You return structured JSON in your final
-message; the coordinator writes the artifacts on your behalf.
-
-## Your job
-
-Inventory the source EDW and produce a migration backlog: one item per
-legacy stored procedure that needs to be converted to Databricks.
+Inventory the connected Azure SQL source and produce a migration backlog. Return JSON only; coordinator writes files/`ops`.
 
 ## Inputs
 
-- `agents/out/<run_id>/context.json` — the run context (foreign_catalog,
-  uc_catalog, legacy_proc_schema, scoped_tables).
-- The foreign catalog `wwi_dw_fed` (read-only mirror of Azure SQL).
-- `legacy/procs/*.sql` — the T-SQL source of each proc (exported by
-  `legacy/procs/export_proc_source.sh`).
+- `agents/out/<run_id>/context.json`
+- `agents/out/<run_id>/inventory.json` (base tables + procs already discovered)
+- Proc sources under `agents/out/<run_id>/procs/*.sql` and/or `legacy/procs/*.sql`
 
 ## Process
 
-1. **List the procs** in the `Integration` schema (and helpers in
-   `Configuration` / `Application`). Read each `legacy/procs/<proc>.sql`.
+1. Read inventory. **Tables only** are in scope for land (views already excluded).
+2. For each proc in inventory with `skip=false`, read its SQL source and classify:
+   - `get` — returns a result set
+   - `migrate` — mutates/loads dimension or fact tables
+   - `other` — helper; may set `skip` with reason if not worth converting
+3. Propose `target_layer` (`silver`|`gold`) and `target_path` under `databricks/silver/` or `databricks/gold/` using numeric prefixes (20–29 silver, 30–39 gold).
+4. Fill reads/writes/priority/risk_flags from the T-SQL.
+5. Do **not** invent procs or tables absent from inventory.
 
-2. **Classify each proc**:
-   - `get` — returns a result set (takes `@LastCutoff` / `@NewCutoff`).
-     Examples: `Integration.GetStockItemUpdates`, `Integration.GetCustomerUpdates`,
-     `Integration.GetCityUpdates`.
-   - `migrate` — INSERT/UPDATE into a `Dimension.*` table, no result set.
-     Examples: `Integration.MigrateStagedStockItemData`,
-     `Integration.MigrateStagedCustomerData`.
-   - `other` — helper proc (e.g. `Configuration.PopulateDateDimensionForYear`).
-
-3. **For each proc, identify**:
-   - `reads` — source tables it reads from (comma-separated).
-   - `writes` — target tables it writes to (empty for `get`).
-   - `target_layer` — `silver` if it conforms a dimension; `gold` if it
-     produces a mart; `n/a` for `other`.
-   - `target_path` — repo-relative path of the converted notebook
-     (e.g. `databricks/gold/30_mart_daily_sales.sql`). Match the existing
-     gold/silver file naming if a target already exists.
-   - `priority` — `high` for facts and core dims; `medium` for secondary
-     dims; `low` for helpers.
-   - `risk_flags` — comma-separated tags: `mutates_db` (for `migrate`),
-     `scd2` (if the proc maintains history), `windowed` (if it uses
-     `@LastCutoff`/`@NewCutoff`), `aggregation` (if it rolls up).
-
-4. **Validate against scoped_tables.** Flag any proc that reads/writes a
-   table outside the scoped set with a `out_of_scope` risk flag.
-
-## Outputs (return as JSON in your final message)
-
-Return a single JSON object with two keys:
+## Output JSON
 
 ```json
 {
-  "migration_backlog": [ ... ],   // array per agents/contracts/migration_backlog.schema.json
-  "assess_summary": "..."         // markdown string: high-level findings, risks, counts
+  "migration_backlog": [ /* agents/contracts/migration_backlog.schema.json items */ ],
+  "assess_summary": "markdown findings"
 }
 ```
-
-The coordinator will:
-- Write `migration_backlog` to `agents/out/<run_id>/migration_backlog.json`.
-- Write `assess_summary` to `agents/out/<run_id>/assess_summary.md`.
-- Insert each backlog item into `edw_migration.ops.migration_backlog`.
-
-Do NOT write any files. Do NOT insert into any table. Just return the JSON.

@@ -2,53 +2,55 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://edw-migration.demo/agents/contracts/context.schema.json",
   "title": "Agent run context",
-  "description": "Shared input for every stage subagent in a migration run. Written by the coordinator at kickoff.",
+  "description": "Shared input for every stage. Written by the coordinator at kickoff from .env + discovery.",
   "type": "object",
-  "required": ["run_id", "foreign_catalog", "uc_catalog", "legacy_proc_schema", "scoped_tables", "databricks_host", "max_retries"],
+  "required": ["run_id", "foreign_catalog", "uc_catalog", "databricks_host", "max_retries"],
   "additionalProperties": false,
   "properties": {
     "run_id": {
       "type": "string",
-      "description": "UUID for this migration run. All artifacts land in agents/out/<run_id>/.",
       "pattern": "^[0-9a-fA-F-]{36}$"
     },
     "foreign_catalog": {
       "type": "string",
-      "description": "UC foreign catalog name (read-only mirror of Azure SQL).",
-      "const": "wwi_dw_fed"
+      "description": "UC foreign catalog mirroring the Azure SQL database.",
+      "minLength": 1
     },
     "uc_catalog": {
       "type": "string",
-      "description": "UC managed catalog for bronze/silver/gold/ops.",
-      "const": "edw_migration"
+      "description": "User-chosen managed UC catalog for bronze/silver/gold/ops.",
+      "minLength": 1
+    },
+    "source_database": {
+      "type": "string",
+      "description": "Azure SQL database name."
     },
     "legacy_proc_schema": {
       "type": "string",
-      "description": "Schema in the source EDW containing the procs to migrate.",
-      "const": "Integration"
+      "description": "Optional hint; discovery enumerates all user proc schemas."
     },
     "scoped_tables": {
       "type": "array",
-      "description": "Source tables in scope for the migration (schema.table).",
-      "items": { "type": "string" },
-      "minItems": 1
+      "description": "Discovered landing names (filled after inventory).",
+      "items": { "type": "string" }
     },
     "databricks_host": {
       "type": "string",
-      "description": "Databricks Free Edition workspace URL.",
       "format": "uri"
     },
     "max_retries": {
       "type": "integer",
-      "description": "Max retry attempts for a failed gate decision. Read by on_subagent_stop.sh.",
       "minimum": 0,
       "maximum": 5
     },
     "attempt": {
       "type": "integer",
-      "description": "Current attempt number (0 = first pass). Incremented on each retry.",
       "minimum": 0,
       "default": 0
+    },
+    "demo_mode": {
+      "type": "boolean",
+      "description": "True when launched from edw-demo-guide."
     }
   }
 }

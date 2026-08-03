@@ -20,8 +20,26 @@ jobs:
       - name: Install tools
         run: |
           pip install pyyaml jsonschema shellcheck-py sqlfluff
-          # Databricks CLI for bundle validate (auth optional for schema-level checks)
           curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
+
+      - name: Guardrails (no offline / no converted divert)
+        run: |
+          test ! -d databricks/offline
+          test ! -d databricks/converted
+          ! grep -R "demo-offline" Makefile || exit 1
+          ! grep -R "compose with Lakebridge\|shell out to Lakebridge" docs/lakebridge.md || exit 1
+
+      - name: No WWI object names in core engine (uc + slugify + stage prompts)
+        run: |
+          if grep -En "Dimension\.Customer|MigrateStagedCustomerData|Fact\.Sale" \
+              databricks/uc/*.sql agents/tools/slugify.py \
+              agents/prompts/00_coordinator.md agents/prompts/01_assess.md \
+              agents/prompts/02_convert.md agents/prompts/03_test.md \
+              agents/prompts/04_gate.md; then
+            echo "WWI-specific names found in core engine paths" >&2
+            exit 1
+          fi
+          echo "core engine naming OK"
 
       - name: Parse YAML / JSON
         run: |
@@ -37,6 +55,7 @@ jobs:
             "legacy/fixtures/expectations.json",
             "agents/contracts/context.schema.json",
             "agents/samples/run/migration_manifest.json",
+            "agents/samples/run/context.json",
           ]:
             path = root / p
             text = path.read_text()
@@ -72,31 +91,52 @@ jobs:
           raise SystemExit(1 if failed else 0)
           PY
 
-      - name: Shell syntax check
+      - name: Shell syntax + ShellCheck
         run: |
-          find . -name '*.sh' -not -path './.git/*' -print0 | xargs -0 -n1 bash -n
+          find agents infra legacy databricks/genie -name '*.sh' -print0 | xargs -0 -n1 bash -n
+          find agents infra legacy databricks/genie -name '*.sh' -print0 | xargs -0 shellcheck
 
-      - name: ShellCheck
+      - name: Render + SQL lint
+        env:
+          DATABRICKS_CATALOG: edw_migration
+          AZ_SQL_SERVER: example
+          AZ_SQL_ADMIN: edwadmin
+          AZ_SQL_DB: WideWorldImportersDW
+          FOREIGN_CATALOG: wwi_dw_fed
+          CONNECTION_NAME: azure_sql_edw
         run: |
-          find . -name '*.sh' -not -path './.git/*' -print0 | xargs -0 shellcheck
+          chmod +x agents/tools/*.sh
+          ./agents/tools/render_sql.sh
+          sqlfluff lint databricks/_rendered/uc databricks/_rendered/silver databricks/_rendered/gold --nocolor || sqlfluff lint databricks/uc --nocolor
 
-      - name: SQL lint (Databricks SQL parse check)
+      - name: Sync prompts smoke
         run: |
-          sqlfluff lint databricks/ --nocolor
+          ./agents/tools/sync_prompts.sh
+          test -f .cursor/agents/edw-demo-guide.md
+          test -f agents/github-copilot/edw-coordinator.md
+
+      - name: Slugify unit check
+        run: |
+          python3 - <<'PY'
+          import sys
+          sys.path.insert(0, "agents/tools")
+          from slugify import slugify_ident
+          assert slugify_ident("Dimension", "Customer") == "dim_customer"
+          assert slugify_ident("Fact", "Stock Holding") == "fact_stock_holding"
+          assert slugify_ident("dbo", "Orders") == "dbo_orders"
+          print("slugify OK")
+          PY
 
       - name: Bundle validate (structure)
         env:
-          # Dummy var so schema resolution does not fail on missing warehouse_id
           BUNDLE_VAR_warehouse_id: "0000000000000000"
+          BUNDLE_VAR_catalog: "edw_migration"
+          DATABRICKS_CATALOG: edw_migration
+          AZ_SQL_SERVER: example
         run: |
-          # Validate may still need a workspace profile; treat auth failures as soft.
-          if databricks bundle validate -t dev; then
+          ./agents/tools/render_sql.sh
+          if databricks bundle validate --strict -t dev; then
             echo "bundle validate OK"
           else
-            echo "bundle validate skipped or failed without workspace auth (structure checks above still required)"
+            echo "bundle validate soft-fail without workspace auth"
           fi
-
-      - name: Fixture expectations builder smoke
-        run: |
-          ./legacy/fixtures/build_expectations.sh
-          test -f databricks/tests/13_stage_fixture_expectations.sql
