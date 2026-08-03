@@ -2,6 +2,8 @@
 
 Portable prompts + contracts. Cursor and GitHub Copilot adapters are generated.
 
+**Human onboarding:** [docs/getting-started.md](../docs/getting-started.md) · [docs/agent-setup.md](../docs/agent-setup.md)
+
 ```bash
 ./agents/tools/sync_prompts.sh
 ```

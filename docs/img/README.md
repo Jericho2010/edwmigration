@@ -2,12 +2,12 @@
 
 ## Architecture diagrams
 
-Mermaid sources and rendered PNGs for enablement docs.
+Mermaid sources and rendered PNGs for enablement docs. Narrative docs also embed live Mermaid (GitHub renders them).
 
 | File | Used in | Description |
 |---|---|---|
-| `architecture.mmd` / `.png` | README, [architecture.md](../architecture.md) | Azure SQL → Federation → medallion → agents |
-| `agent_delegation.mmd` / `.png` | [architecture.md](../architecture.md), [agents/README](../../agents/README.md) | Demo guide / Coordinator → Assess → Convert → Test → Gate |
+| `architecture.mmd` / `.png` | [architecture.md](../architecture.md), [what-you-get.md](../what-you-get.md) | Source → Federation → medallion → agents |
+| `agent_delegation.mmd` / `.png` | [architecture.md](../architecture.md), [agents/README](../../agents/README.md) | Demo guide / Coordinator → stages |
 
 ```bash
 # Re-render PNGs (requires Node / @mermaid-js/mermaid-cli)

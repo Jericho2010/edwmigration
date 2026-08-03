@@ -1,39 +1,67 @@
 # Prerequisites
 
-Install only what your track needs. Agents / Makefile tell you the one missing tool.
+Install **only what your path needs**. If something is missing, the agent or Makefile names the one tool.
 
-| Tool | When required | Verify |
-|---|---|---|
-| Databricks CLI | Always | `databricks --version` (0.281+) |
-| python3 | Always | `python3 --version` (3.10+) |
-| jq, curl | Always | `jq --version` |
-| Cursor (or GitHub Copilot) | Agent UX | repo opens with agents |
-| Azure CLI | Track A bootstrap; optional MySQL firewall | `az account show` |
-| SqlPackage + sqlcmd | **Track A bootstrap / proc export only** — **not** `make setup` | `SqlPackage /version` |
-| mysql client | MySQL **routine** export only (tables work without it) | `mysql --version` |
+← [Getting started](getting-started.md)
+
+---
+
+## By path
+
+### Always
+
+| Tool | Verify |
+|---|---|
+| [Cursor](https://cursor.com) (or GitHub Copilot) | Repo opens; agents visible |
+| Databricks CLI 0.281+ | `databricks --version` |
+| python3 3.10+ | `python3 --version` |
+| jq, curl | `jq --version` |
+
+### Track A — Guided demo
+
+| Tool | Why |
+|---|---|
+| Azure CLI | Bootstrap free SQL |
+| SqlPackage + sqlcmd | Bacpac + proc export — **agent runs these**, you don’t memorize them |
+
+### Track B — Your database
+
+| Tool | Why |
+|---|---|
+| *(core tools only for `make setup`)* | SqlPackage **not** required |
+| Azure CLI | Optional — MySQL/SQL firewall help |
+| mysql client | Optional — MySQL **routine** export (tables still migrate without it) |
+
+---
 
 ## Databricks privileges
 
-- `CREATE CONNECTION` on the metastore (or admin)
-- `CREATE CATALOG` on the metastore
-- Secret scopes + Statement Execution on a **serverless** SQL warehouse
+- `CREATE CONNECTION` on the metastore (or admin)  
+- `CREATE CATALOG` on the metastore  
+- Secret scopes + Statement Execution on a **serverless** SQL warehouse  
 
-## Track A logins
+---
+
+## Logins
+
+**Track A**
 
 ```bash
 az login
 databricks auth login --host https://<your-workspace>.cloud.databricks.com
 ```
 
-## Track B MySQL
+**Track B**
 
 ```bash
 databricks auth login --host https://<your-workspace>.cloud.databricks.com
-# optional: az login — firewall help only
+# optional: az login
 ```
 
-`.env`: `SOURCE_TYPE=mysql` + `SOURCE_HOST` / `SOURCE_PORT` / `SOURCE_DATABASE` / `SOURCE_USER` / `SOURCE_PASSWORD` + Databricks sink. See `infra/azure/.env.example`.
+Env template: [`infra/azure/.env.example`](../infra/azure/.env.example)
 
-## Track B existing Azure SQL
+---
 
-Same Databricks login. `.env`: `SOURCE_TYPE=sqlserver` (or omit) + `SOURCE_*` **or** `AZ_SQL_*`. **SqlPackage is not required for `make setup`.**
+## Next
+
+→ [Guided demo](guided-demo.md) · [Your database](your-database.md) · [Troubleshooting](troubleshooting.md)

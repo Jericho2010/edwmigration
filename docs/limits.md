@@ -1,6 +1,8 @@
 # Limitations
 
-Designed for free tiers where possible. Constraints shape the engine and the guided demo.
+Designed for free tiers where possible. Read this after your first [guided demo](guided-demo.md) — not before.
+
+Constraints shape the engine and the demo.
 
 ## Databricks Free Edition
 
