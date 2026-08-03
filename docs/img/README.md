@@ -29,9 +29,10 @@ All Mermaid diagrams in this repo share one palette (navy / teal / Azure blue / 
 | [agent_delegation.mmd](agent_delegation.mmd) | Guide / Coordinator stage flow |
 | [enterprise_sod.mmd](enterprise_sod.mmd) | Segregation of duties swimlanes |
 | [demo_vs_enterprise.mmd](demo_vs_enterprise.mmd) | Demo anti-pattern vs enterprise controls |
-| [cursor_open_repo.png](cursor_open_repo.png) | UI guide: open repo root |
-| [cursor_pick_agent.png](cursor_pick_agent.png) | UI guide: pick agent |
-| [cursor_kickoff.png](cursor_kickoff.png) | UI guide: paste kickoff |
+| [cursor_open_repo.png](cursor_open_repo.png) | Cursor: open repo root (replace via [storyboard](../media/storyboard.md)) |
+| [cursor_pick_agent.png](cursor_pick_agent.png) | Cursor: pick agent |
+| [cursor_kickoff.png](cursor_kickoff.png) | Cursor: paste kickoff |
+| `hero.gif` | README hero (create after recording — see storyboard) |
 
 ```bash
 # Optional PNG export (Node)
