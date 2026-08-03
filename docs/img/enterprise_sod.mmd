@@ -1,0 +1,40 @@
+%% Enterprise segregation of duties — swimlanes
+%%{init: {"theme":"base","themeVariables":{"primaryColor":"#E8F1F8","primaryTextColor":"#0B3D5C","primaryBorderColor":"#0B3D5C","lineColor":"#5B7A8C","secondaryColor":"#E6F4F1","tertiaryColor":"#F7F3EA","background":"#FFFFFF","mainBkg":"#E8F1F8","clusterBkg":"#F7FAFC","clusterBorder":"#5B7A8C","titleColor":"#0B3D5C","edgeLabelBackground":"#FFFFFF"}}}%%
+flowchart TB
+  subgraph platform ["1 · Platform / UC admin"]
+    P1["Provision CONNECTION + catalog"]
+    P2["Network + secret scopes"]
+    P3["Grants: least privilege"]
+  end
+  subgraph engineer ["2 · Migration engineer"]
+    E1["Discover + Convert in DEV"]
+    E2["Open PR for silver/gold"]
+  end
+  subgraph owner ["3 · Data owner / approver"]
+    O1["Approve backlog scope"]
+    O2["Sign Gate criteria"]
+  end
+  subgraph ci ["4 · CI / Ops SP"]
+    C1["Deploy to test / prod"]
+    C2["Run job + Gate as SP"]
+  end
+  subgraph security ["5 · Security"]
+    S1["Audit agent_events + CI"]
+    S2["No laptop PAT in prod"]
+  end
+
+  P1 --> P2 --> P3 --> E1
+  E1 --> E2 --> O1 --> O2 --> C1 --> C2 --> S1
+  S2 -.-> C2
+
+  classDef platform fill:#0078D4,stroke:#005A9E,color:#fff
+  classDef engineer fill:#1B7A6E,stroke:#145A51,color:#fff
+  classDef owner fill:#C47B2D,stroke:#8F5A1F,color:#fff
+  classDef ci fill:#5B4B8A,stroke:#3F3460,color:#fff
+  classDef security fill:#B33A3A,stroke:#8A2A2A,color:#fff
+
+  class P1,P2,P3 platform
+  class E1,E2 engineer
+  class O1,O2 owner
+  class C1,C2 ci
+  class S1,S2 security

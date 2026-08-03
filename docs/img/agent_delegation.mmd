@@ -1,16 +1,27 @@
+%%{init: {"theme":"base","themeVariables":{"primaryColor":"#E8F1F8","primaryTextColor":"#0B3D5C","primaryBorderColor":"#0B3D5C","lineColor":"#5B7A8C","secondaryColor":"#E6F4F1","tertiaryColor":"#F7F3EA","background":"#FFFFFF","mainBkg":"#E8F1F8","clusterBkg":"#F7FAFC","clusterBorder":"#5B7A8C","titleColor":"#0B3D5C","edgeLabelBackground":"#FFFFFF"}}}%%
 flowchart TD
-  User[User] -->|az_login_plus_dbx_auth| Guide[edw_demo_guide]
-  Guide -->|or_direct| Coord[edw_coordinator]
-  Coord --> Discover[discover_inventory]
-  Discover --> Generate[generate_land_reconcile]
-  Generate --> Assess[edw_assess_readonly]
-  Assess -->|backlog_JSON| Coord
-  Coord --> Convert[edw_convert]
-  Convert -->|silver_gold_SQL| Coord
-  Coord --> DeployRun[bundle_deploy_run]
-  DeployRun --> Test[edw_test_readonly]
-  Test -->|reconcile_report| Coord
-  Coord --> Gate[edw_gate_readonly]
-  Gate -->|manifest_JSON| Coord
-  Coord -->|fail_retries_left| Convert
+  User["You"] -->|"az login + Databricks auth"| Guide["edw-demo-guide"]
+  Guide -->|"or direct"| Coord["edw-coordinator"]
+  Coord --> Discover["Discover inventory"]
+  Discover --> Generate["Generate land + reconcile"]
+  Generate --> Assess["edw-assess (readonly)"]
+  Assess -->|"backlog JSON"| Coord
+  Coord --> Convert["edw-convert"]
+  Convert -->|"silver / gold SQL"| Coord
+  Coord --> DeployRun["Bundle deploy + run"]
+  DeployRun --> Test["edw-test (readonly)"]
+  Test -->|"reconcile report"| Coord
+  Coord --> Gate["edw-gate (readonly)"]
+  Gate -->|"manifest JSON"| Coord
+  Coord -->|"fail + retries left"| Convert
   Gate --> User
+
+  classDef user fill:#0B3D5C,stroke:#082C43,color:#fff
+  classDef agent fill:#1B7A6E,stroke:#145A51,color:#fff
+  classDef readonly fill:#6B7C8F,stroke:#4A5663,color:#fff
+  classDef work fill:#C47B2D,stroke:#8F5A1F,color:#fff
+
+  class User user
+  class Guide,Coord,Convert agent
+  class Assess,Test,Gate readonly
+  class Discover,Generate,DeployRun work

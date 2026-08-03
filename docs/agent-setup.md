@@ -2,7 +2,7 @@
 
 How this repo’s Cursor (and Copilot) agents work — including **how to launch one** if you’ve never done that before.
 
-← [Getting started](getting-started.md) · Kickoffs also live in [guided-demo](guided-demo.md) / [your-database](your-database.md)
+← [Getting started](getting-started.md) · **[Using Cursor (pictures)](cursor-ui.md)** · Kickoffs also in [guided-demo](guided-demo.md) / [your-database](your-database.md)
 
 ---
 
@@ -18,22 +18,28 @@ How this repo’s Cursor (and Copilot) agents work — including **how to launch
 
 ## How to launch an agent in Cursor
 
+Prefer the illustrated guide: **[cursor-ui.md](cursor-ui.md)**.
+
 Exact UI labels move between Cursor versions; the idea is stable:
 
 1. Open **Chat** or **Agent** mode.  
 2. Select / mention the agent by name (example: `edw-demo-guide`).  
-   - Agents are defined under [`.cursor/agents/`](../.cursor/agents/) after sync.  
 3. Paste the kickoff sentence for your track.  
-4. Allow tool / terminal use when prompted so the agent can run `make` and repo scripts.  
+4. Allow tool / terminal use when prompted.  
 5. When it pauses (counts, >200 tables, teardown), answer in plain language.
 
 **You are not expected to run SqlPackage or write SQL by hand** on the guided path — the agent orchestrates that.
 
 ```mermaid
+%%{init: {"theme":"base","themeVariables":{"primaryColor":"#E8F1F8","primaryTextColor":"#0B3D5C","primaryBorderColor":"#0B3D5C","lineColor":"#5B7A8C","secondaryColor":"#E6F4F1","tertiaryColor":"#F7F3EA","background":"#FFFFFF","mainBkg":"#E8F1F8","clusterBkg":"#F7FAFC","clusterBorder":"#5B7A8C","titleColor":"#0B3D5C","edgeLabelBackground":"#FFFFFF"}}}%%
 flowchart LR
   Open[Open repo root] --> Pick[Pick agent]
   Pick --> Paste[Paste kickoff]
   Paste --> Watch[Watch tools + URLs]
+  classDef user fill:#0B3D5C,stroke:#082C43,color:#fff
+  classDef agent fill:#1B7A6E,stroke:#145A51,color:#fff
+  class Open,Paste user
+  class Pick,Watch agent
 ```
 
 ---

@@ -25,3 +25,5 @@ Something broke? Find the symptom, apply the one-line fix, re-run the agent step
 | Genie create fails | Ops tables must exist (`make setup`); warehouse ID set |
 
 Offline seed mode was removed — use the [guided demo](guided-demo.md) or [your database](your-database.md).
+
+Production-shaped controls (SoD, OAuth, private network): [enterprise.md](enterprise.md).

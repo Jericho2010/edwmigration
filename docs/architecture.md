@@ -1,7 +1,7 @@
 # Architecture
 
 Deep dive for after your first successful run.  
-Start with [What you get](what-you-get.md) if you want the plain-English version first.
+Start with [What you get](what-you-get.md) for plain English; [Enterprise](enterprise.md) for SoD / prod.
 
 ---
 
@@ -11,6 +11,7 @@ Start with [What you get](what-you-get.md) if you want the plain-English version
 - **Demo pack** (`demo/wwi`, `infra/azure`, `legacy/*`): optional WideWorldImporters sample for [Track A](guided-demo.md). Gate never requires WWI object names.
 
 ```mermaid
+%%{init: {"theme":"base","themeVariables":{"primaryColor":"#E8F1F8","primaryTextColor":"#0B3D5C","primaryBorderColor":"#0B3D5C","lineColor":"#5B7A8C","secondaryColor":"#E6F4F1","tertiaryColor":"#F7F3EA","background":"#FFFFFF","mainBkg":"#E8F1F8","clusterBkg":"#F7FAFC","clusterBorder":"#5B7A8C","titleColor":"#0B3D5C","edgeLabelBackground":"#FFFFFF"}}}%%
 flowchart LR
   subgraph engine [Engine]
     ST[SOURCE_TYPE] --> Fed[Federation]
@@ -24,7 +25,17 @@ flowchart LR
   end
   WWI -.-> Fed
   Gate --> Obs[Dashboard + Genie]
+  classDef agent fill:#1B7A6E,stroke:#145A51,color:#fff
+  classDef azureC fill:#0078D4,stroke:#005A9E,color:#fff
+  classDef bronze fill:#C47B2D,stroke:#8F5A1F,color:#fff
+  classDef ops fill:#5B4B8A,stroke:#3F3460,color:#fff
+  class ST,Fed,Disc,Conv agent
+  class WWI azureC
+  class Land bronze
+  class Gate,Obs ops
 ```
+
+Full colored system diagram: [`img/architecture.mmd`](img/architecture.mmd)
 
 ---
 
@@ -53,7 +64,7 @@ Hooks → `ops.agent_events`. Control Plane dashboard (`dataset_catalog` / `ops`
 
 ## Auth
 
-PAT supported now. OAuth (`databricks auth login`) is the enterprise target state.
+PAT supported now for demos. OAuth (`databricks auth login`) + service principal for jobs is the **enterprise** target — [enterprise.md](enterprise.md).
 
 ---
 
@@ -65,4 +76,4 @@ Serverless warehouse only; Federation not Lakeflow Connect; job concurrency ≤5
 
 ## Related
 
-- [Guided demo](guided-demo.md) · [Your database](your-database.md) · [Agents](../agents/README.md) · [Diagrams](img/README.md)
+- [Guided demo](guided-demo.md) · [Your database](your-database.md) · [Enterprise](enterprise.md) · [Glossary](glossary.md) · [Agents](../agents/README.md) · [Diagrams](img/README.md)
