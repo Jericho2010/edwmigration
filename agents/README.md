@@ -24,7 +24,9 @@ Portable prompts + contracts. Cursor and GitHub Copilot adapters are generated.
 | `materialize_demo_env.sh` | Build `.env` from logins |
 | `render_sql.sh` | Catalog/federation render (`SOURCE_TYPE`) → `_rendered/` |
 | `resolve_source_env.sh` | Map `SOURCE_*` / `AZ_SQL_*` |
-| `upsert_source_secret.sh` | Put `source-password` ( + sqlserver alias) |
+| `print_observability_urls.sh` | Control Plane + Genie URLs |
+| `record_agent_event.sh` | Insert ops.agent_events row |
+| `ensure_run_events.py` | Table-only convert/skipped events for Gate |
 | `discover_inventory.py` | Base tables + procs/routines (`SOURCE_TYPE`) |
 | `generate_from_inventory.py` | Land + reconcile SQL |
 | `run_sql.sh` | Statement Execution API |

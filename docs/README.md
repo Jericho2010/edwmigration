@@ -17,7 +17,7 @@ Start here: [agent-setup.md](agent-setup.md), [runbook.md](runbook.md), or the r
 |---|---|
 | [architecture.md](architecture.md) | Engine vs demo pack, discovery, observability |
 | [limits.md](limits.md) | Free Edition + Azure free SQL + engine scope |
-| [firewall.md](firewall.md) | Why `0.0.0.0/0` on the demo SQL server |
+| [firewall.md](firewall.md) | Free Edition reachability for Azure SQL + MySQL |
 | [lakeflow_connect.md](lakeflow_connect.md) | Why Federation on Free Edition |
 | [lakebridge.md](lakebridge.md) | Compete on Azure SQL → UC (do not compose) |
 
