@@ -41,7 +41,7 @@ flowchart LR
 | One-page command checklist | [Runbook](docs/runbook.md) |
 | Fix an error | [Troubleshooting](docs/troubleshooting.md) |
 
-**Recording hero proof / real Cursor shots?** Follow **[docs/media/storyboard.md](docs/media/storyboard.md)** (screenshots + MP4 + README GIF), then ask to insert.
+**Recording screenshots / hero video?** [docs/media/storyboard.md](docs/media/storyboard.md)
 
 ---
 
