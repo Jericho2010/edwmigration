@@ -1,237 +1,171 @@
-# Capture storyboard — hero video + real Cursor screenshots
+# How to capture screenshots and the hero video
 
-Use this sheet to record assets once. Drop files into the paths below; an agent (or human) can then **replace mocks**, wire the README hero, and trim copy without re-thinking the narrative.
+You need **two things**:
 
-**Goal of the package**
+1. **Three screenshots** of Cursor (replace the fake ones in the docs).
+2. **One short video** (Cursor → Databricks dashboard → Genie).
 
-1. **Three real Cursor screenshots** → replace illustrative art in [`docs/cursor-ui.md`](../cursor-ui.md) / [`docs/img/cursor_*.png`](../img/).  
-2. **One hero video** (and optional GIF) → README “proof” strip under the Status line.
+When you’re done, put the files where this page says and tell the agent: *insert per storyboard*.
 
-**Do not invent UI.** Capture your real Cursor + Databricks Free Edition session on **Track A**.
+Use **Track A** (guided demo). Real UI only — no mockups.
 
 ---
 
-## Before you start (15–20 min)
+## Do this today (checklist)
 
-| # | Prep | Done? |
+**First — setup (once)**
+
+- [ ] Open this repo’s **root** in Cursor (you should see `README.md`, `Makefile`, `.cursor`).
+- [ ] Agent **`edw-demo-guide`** is available (`make sync-prompts` if not).
+- [ ] Logged in: `az login` and Databricks (or PAT in `.env`).
+- [ ] You can open Databricks in a browser (serverless warehouse exists).
+- [ ] Control Plane + Genie already work from a prior `make setup`.  
+  If not: finish [guided demo](../guided-demo.md) setup first, then come back.  
+  You do **not** need a perfect Gate pass to record.
+
+**Then — screenshots (about 15 minutes)**
+
+- [ ] S1 → save as `docs/img/cursor_open_repo.png`
+- [ ] S2 → save as `docs/img/cursor_pick_agent.png`
+- [ ] S3 → save as `docs/img/cursor_kickoff.png`
+
+**Then — video (about 20–40 minutes including cuts)**
+
+- [ ] Record four short clips (or one continuous take — see below).
+- [ ] Export final as `docs/media/hero.mp4`
+- [ ] GIF is optional; skip it unless you want it. The agent can make one later.
+
+**Then — hand off**
+
+- [ ] Message the agent with the handoff block at the bottom of this page.
+
+---
+
+## Screenshots
+
+**Rules for all three**
+
+- PNG.
+- Roughly widescreen (e.g. 1920×1080).
+- Cursor window only.
+- Text readable when the image is shrunk on GitHub.
+- Don’t show `.env`, tokens, or passwords.
+
+### S1 — Repo root
+
+**Save as:** `docs/img/cursor_open_repo.png`
+
+1. File → Open Folder → this repo’s root.
+2. Show the file tree.
+3. Make sure these are visible: `README.md`, `Makefile`, `.cursor`.
+4. Screenshot.
+
+### S2 — Pick the agent
+
+**Save as:** `docs/img/cursor_pick_agent.png`
+
+1. Open Agent / Chat.
+2. Select **`edw-demo-guide`** (it must be obviously selected).
+3. If you can also see `edw-coordinator` in the list, good.
+4. Screenshot.
+
+### S3 — Kickoff line
+
+**Save as:** `docs/img/cursor_kickoff.png`
+
+1. Start a clean chat with `edw-demo-guide`.
+2. Paste exactly:
+
+   `Set up the EDW demo and walk me through the migration.`
+
+3. Screenshot with that text visible (before or as you send is fine).
+4. Don’t screenshot a huge failed log.
+
+---
+
+## Video
+
+**Save as:** `docs/media/hero.mp4`  
+**Length:** about 35–50 seconds after edits. Silent is fine; captions help.
+
+### Easiest path: four short clips
+
+Record each, stop, start the next. Name them anything on your machine; finals matter more than raw names.
+
+| Order | Record this | Stop when |
 |---|---|---|
-| P1 | Repo open at **git root** in Cursor (`README.md`, `.cursor/` visible) | ☐ |
-| P2 | `make sync-prompts` if agents missing; confirm `edw-demo-guide` appears | ☐ |
-| P3 | `az login` + `databricks auth login` (or PAT in `.env`) | ☐ |
-| P4 | Serverless warehouse exists; you can open Databricks UI in a browser | ☐ |
-| P5 | Prefer a **clean** desktop: hide bookmarks bar noise, bump UI zoom to 110–125% | ☐ |
-| P6 | Redaction plan: blur subscription IDs, PATs, full account emails if needed | ☐ |
-| P7 | Create drop folder on your machine: `~/edw-capture-YYYYMMDD/` | ☐ |
+| 1 | Cursor: `edw-demo-guide` + paste/send the kickoff line | Message is sent / tools start |
+| 2 | Cursor or terminal: something that shows setup progressing or `make print-urls` output | URLs or “setup complete” visible |
+| 3 | Browser: Control Plane dashboard | Gate / inventory / migration widgets visible |
+| 4 | Browser: Genie — ask **Did the last run ship?** | Answer is on screen |
 
-**Recommended capture day:** run Track A far enough that Control Plane + Genie already exist (`make setup` / prior demo). Full bacpac import is optional for the *hero* cut if URLs already work — but a Gate-pass ending is stronger if you have time.
+Stitch 1→2→3→4 into `docs/media/hero.mp4`.  
+Jump-cut any long waits. Don’t sit through bacpac import on camera.
 
----
+### If you prefer one continuous recording
 
-## Part A — Screenshots (Cursor UI)
+Same order on one timeline:
 
-Replace these exact filenames (keep names so docs links stay valid):
+1. Cursor + kickoff (send it).
+2. Brief tools activity (cut the boring middle).
+3. Switch to Control Plane.
+4. Switch to Genie question + answer.
+5. Stop.
 
-| Shot | Filename to overwrite | Used in |
-|---|---|---|
-| S1 | `docs/img/cursor_open_repo.png` | [cursor-ui.md](../cursor-ui.md) §1, getting-started |
-| S2 | `docs/img/cursor_pick_agent.png` | [cursor-ui.md](../cursor-ui.md) §2 |
-| S3 | `docs/img/cursor_kickoff.png` | [cursor-ui.md](../cursor-ui.md) §3 |
+### If Gate isn’t green
 
-### Specs (all three)
+Still film Control Plane and Genie. A real “not shipped / blocked” answer is better than faking a pass.
 
-- **Format:** PNG  
-- **Aspect:** ~16:9 (e.g. 1920×1080 or 1600×900)  
-- **Content:** Cursor window only (or lightly cropped). No second monitor junk.  
-- **Text must be readable** at ~800px wide on GitHub.  
-- Optional: also save uncropped masters as `docs/img/_masters/cursor_S1_raw.png` etc. (gitignored if huge — or keep local only).
+### Recording settings (keep simple)
 
-### Shot S1 — Open repo root
+- 1080p if you can, 720p minimum.
+- MP4 (H.264).
+- Zoom the browser a bit so dashboard text is readable.
 
-| | |
-|---|---|
-| **Beat** | Prove the folder is the repo root |
-| **Frame** | Cursor with **Explorer / file tree** visible |
-| **Must show** | `README.md`, `Makefile`, `.cursor/` (expanded enough to see `agents` if possible) |
-| **Nice** | Editor tab on `README.md` or empty welcome — not a random nested subfolder |
-| **Avoid** | Secrets in open `.env`; terminal dumping passwords |
-| **How** | File → Open Folder → repo root → screenshot |
-
-### Shot S2 — Pick agent
-
-| | |
-|---|---|
-| **Beat** | Prove custom agents load |
-| **Frame** | Agent / Chat panel with agent list or selector |
-| **Must show** | **`edw-demo-guide`** selected or clearly highlighted |
-| **Nice** | `edw-coordinator` visible in the list |
-| **Avoid** | Unrelated agent selected; empty list |
-| **How** | Open Agent mode → open agent picker → select `edw-demo-guide` → screenshot |
-
-### Shot S3 — Kickoff sentence
-
-| | |
-|---|---|
-| **Beat** | Prove the one-sentence start |
-| **Frame** | Composer / chat input with text pasted (not yet fully finished run) |
-| **Must show** | Exact text: `Set up the EDW demo and walk me through the migration.` |
-| **Nice** | Agent name `edw-demo-guide` visible above; “run tools” / terminal permission affordance if shown |
-| **Avoid** | Mid-failure stack traces; huge wall of prior chat |
-| **How** | New chat with demo-guide → paste kickoff → screenshot **before** or right as you send |
-
-### Screenshot handoff checklist
-
-Drop into the repo (or a zip for the agent):
-
-```text
-docs/img/cursor_open_repo.png      # S1 final
-docs/img/cursor_pick_agent.png     # S2 final
-docs/img/cursor_kickoff.png        # S3 final
-```
-
-Optional note file: `docs/media/CAPTURE_NOTES.md` with Cursor version + OS + date.
+Skip YouTube, ffmpeg, and GIF for now unless you already know how.
 
 ---
 
-## Part B — Hero video (storyboard)
+## Privacy
 
-**Primary deliverable:** `docs/media/hero.mp4` (or `.webm`)  
-**Optional for README inline:** `docs/img/hero.gif` (15–25s, &lt;8–12 MB if possible)
-
-**Length target:** **35–50 seconds** (cuttable to 25s for GIF).  
-**Audio:** optional voiceover; if silent, on-screen captions help.
-
-### Sequence (record in one take or stitch)
-
-| Time (approx) | Scene | Where | Action | On-screen focus / caption |
-|---|---|---|---|---|
-| **0:00–0:05** | Title beat | Cursor | Static or slow zoom on repo + agent name | Caption: *EDW → Databricks with an agent* |
-| **0:05–0:12** | Kickoff | Cursor | Paste + send: *Set up the EDW demo…* | Show `edw-demo-guide` + sentence |
-| **0:12–0:22** | Agent working | Cursor | Allow tools; scroll lightly as `make setup` / federation runs | Caption: *Agent wires catalog + Federation* — **skip long waits** (cut jump) |
-| **0:22–0:32** | Control Plane | Browser Databricks | Open dashboard from `make print-urls` / Dashboards | Caption: *Control Plane* — Gate / inventory widgets visible |
-| **0:32–0:42** | Genie | Browser Genie room | Ask: **Did the last run ship?** Show answer | Caption: *Genie: Did the last run ship?* |
-| **0:42–0:50** | Close | Either | Brief return to Cursor or Gate summary counts | Caption: *Demo-ready · tear down when done* |
-
-### If Gate isn’t green yet
-
-Still record Control Plane + Genie. Prefer Genie answering about run status / blockers over a fake pass. Honesty &gt; fake ship.
-
-### If bootstrap is too slow for one sitting
-
-| Segment | Record separately | Stitch order |
-|---|---|---|
-| A | Cursor kickoff + tools starting | 1 |
-| B | Jump cut to “Setup complete” + print-urls in terminal | 2 |
-| C | Browser Control Plane | 3 |
-| D | Browser Genie Q&A | 4 |
-
-Name clips:
-
-```text
-docs/media/_raw/01_cursor_kickoff.mp4
-docs/media/_raw/02_terminal_urls.mp4
-docs/media/_raw/03_control_plane.mp4
-docs/media/_raw/04_genie.mp4
-```
-
-(`_raw/` can stay local / gitignored — only finals need to be committed.)
-
-### Video export specs
-
-| Setting | Prefer |
-|---|---|
-| Resolution | 1920×1080 (or 1280×720 min) |
-| Codec | H.264 MP4 |
-| Frame rate | 30 fps |
-| Cursor highlight | On (macOS/Windows built-in or Loom) |
-| Browser zoom | 110–125% so Gate/Genie text reads on GIF |
-
-### Optional GIF path
-
-From the final MP4 (you or agent later):
-
-```bash
-# Example — adjust fps/width to keep size sane
-ffmpeg -i docs/media/hero.mp4 -vf "fps=12,scale=960:-1:flags=lanczos" -loop 0 docs/img/hero.gif
-```
+**Hide or crop:** tokens, passwords, connection strings, subscription IDs.  
+**Fine to show:** agent names, kickoff sentence, catalog name like `edw_migration`, demo/WWI-style answers.
 
 ---
 
-## Part C — What goes on the README (for the editor later)
-
-After assets land, the insert plan is:
-
-1. Replace `docs/img/cursor_*.png` (no markdown path changes).  
-2. Add under README **Status** block something like:
-
-```markdown
-### See it
-
-[![Hero demo](docs/img/hero.gif)](docs/media/hero.mp4)
-
-*35s · Track A · Cursor → Control Plane → Genie*
-```
-
-3. Link “full video” to `docs/media/hero.mp4` **or** unlisted YouTube if MP4 is too large for git (&gt;50–100MB → use release asset / YouTube, keep GIF in repo).  
-4. Remove or demote illustrative language in `cursor-ui.md` (“illustration” → real UI).  
-5. Bump Status date to capture day.
-
----
-
-## Part D — Privacy / redaction
-
-| Redact or crop | OK to show |
-|---|---|
-| `DATABRICKS_TOKEN`, passwords, connection strings | Catalog name like `edw_migration` |
-| Full email if uncomfortable | Agent names, kickoff sentence |
-| Subscription GUID in Azure portal | Databricks host *hostname* only if you’re fine with it |
-| Customer data in Genie answers | Sample WWI / demo ops answers |
-
----
-
-## Part E — Handoff to agent (“ready to edit and insert”)
-
-When finished, send (or commit) this message shape:
+## When you’re done — send this
 
 ```text
 CAPTURE COMPLETE
-Date: YYYY-MM-DD
-Cursor version: …
-Databricks: Free Edition
-Track A Gate green: yes/no
+Date:
+Cursor version:
+Gate green: yes/no
 
-Files ready:
+Files:
 - docs/img/cursor_open_repo.png
 - docs/img/cursor_pick_agent.png
 - docs/img/cursor_kickoff.png
-- docs/media/hero.mp4   (and/or docs/img/hero.gif)
-- (optional) docs/media/_raw/...
+- docs/media/hero.mp4
 
-Notes for editor:
-- …
+Notes:
 ```
 
-Then ask: *Insert capture assets into README + cursor-ui per docs/media/storyboard.md*
+Then: *Insert these into README and cursor-ui per docs/media/storyboard.md*
 
 ---
 
-## Quick day-of run sheet (print this)
+## For the person editing the repo (not you while recording)
 
-1. ☐ Prep P1–P7  
-2. ☐ S1 open root → save `cursor_open_repo.png`  
-3. ☐ S2 pick `edw-demo-guide` → `cursor_pick_agent.png`  
-4. ☐ S3 paste kickoff → `cursor_kickoff.png`  
-5. ☐ Start screen recorder  
-6. ☐ 0:00 title → kickoff → tools (jump cut waits)  
-7. ☐ Browser Control Plane  
-8. ☐ Genie: *Did the last run ship?*  
-9. ☐ End card / teardown mention  
-10. ☐ Export `hero.mp4` (+ optional `hero.gif`)  
-11. ☐ Handoff checklist  
+1. Overwrite the three `docs/img/cursor_*.png` files.
+2. Add `docs/media/hero.mp4` (and `docs/img/hero.gif` only if someone makes one).
+3. Under README Status, add a short “See it” blurb linking the video/GIF.
+4. In `cursor-ui.md`, drop any “illustration / mock” wording.
+5. Set the Status date to the capture day.
+6. If `hero.mp4` is huge for git, put the video on a release or unlisted YouTube and keep a small GIF in-repo.
 
 ---
 
 ## Related
 
-- [Guided demo](../guided-demo.md) — definition of done  
-- [Using Cursor](../cursor-ui.md) — where screenshots land  
-- [record_demo.sh](record_demo.sh) — terminal-only asciinema alternative (optional companion, not a substitute for UI hero)
+- [Guided demo](../guided-demo.md)
+- [Using Cursor](../cursor-ui.md)
