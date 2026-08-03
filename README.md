@@ -1,8 +1,12 @@
 # EDW → Databricks Migration
 
+[![Validate](https://github.com/Jericho2010/edwmigration/actions/workflows/validate.yml/badge.svg)](https://github.com/Jericho2010/edwmigration/actions/workflows/validate.yml)
+
 **Watch an agent migrate a warehouse into Databricks — while you watch a Control Plane and ask Genie if the run shipped.**
 
 You do not need to be a migration expert. You do not hand-write medallion SQL. You open this repo in Cursor, log in, say one sentence, and follow along.
+
+**Status:** Demo-ready (Track A guided path) for **Databricks Free Edition** + Azure SQL free offer. Docs, CI, dual-source render, and workspace observability URLs verified **2026-08-03**. Gate acceptance (≥10 tables / ≥5 procs) depends on your warehouse privileges and free-tier quotas — see [guided demo](docs/guided-demo.md) definition of done. Track B (MySQL / existing SQL) is supported in-engine; run it against your own source when ready.
 
 ```mermaid
 %%{init: {"theme":"base","themeVariables":{"primaryColor":"#E8F1F8","primaryTextColor":"#0B3D5C","primaryBorderColor":"#0B3D5C","lineColor":"#5B7A8C","secondaryColor":"#E6F4F1","tertiaryColor":"#F7F3EA","background":"#FFFFFF","mainBkg":"#E8F1F8","clusterBkg":"#F7FAFC","clusterBorder":"#5B7A8C","titleColor":"#0B3D5C","edgeLabelBackground":"#FFFFFF"}}}%%
