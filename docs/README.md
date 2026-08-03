@@ -1,13 +1,14 @@
 # Documentation
 
-Start here: [runbook.md](runbook.md) (guided demo) or the root [README](../README.md).
+Start here: [agent-setup.md](agent-setup.md), [runbook.md](runbook.md), or the root [README](../README.md).
 
 ## Operator docs
 
 | Doc | Purpose |
 |---|---|
+| [agent-setup.md](agent-setup.md) | Cursor/Copilot agents + kickoff sentences |
 | [prerequisites.md](prerequisites.md) | Tools, privileges, Azure + Databricks logins |
-| [runbook.md](runbook.md) | Guided demo + self-serve Azure SQL path |
+| [runbook.md](runbook.md) | Track A demo + Track B MySQL/SQL |
 | [troubleshooting.md](troubleshooting.md) | Common failures and fixes |
 
 ## Design docs

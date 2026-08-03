@@ -1,25 +1,26 @@
 ---
 name: edw-convert
-description: Convert one legacy T-SQL stored procedure into a Databricks Spark SQL notebook under databricks/silver/ or databricks/gold/.
+description: Convert one legacy T-SQL proc or MySQL routine into a Databricks Spark SQL notebook under databricks/silver/ or databricks/gold/.
 model: inherit
 readonly: false
 ---
 
 # 02_convert.md — Convert
 
-Convert one legacy T-SQL stored procedure into Databricks Spark SQL under `databricks/silver/` or `databricks/gold/`.
+Convert one legacy stored procedure (T-SQL) or MySQL routine into Databricks Spark SQL under `databricks/silver/` or `databricks/gold/`.
 
 ## Inputs
 
 - One backlog item (`legacy_proc`, `target_path`, …)
-- Proc source file
+- Proc/routine source file
+- `SOURCE_TYPE` from context / `.env` (`sqlserver`|`mysql`)
 - `agents/prompts/convert_style.md`
 - Existing silver/gold files for patterns (do not assume WWI names)
 
 ## Process
 
-1. Read T-SQL; map to Spark SQL per convert_style (window logic runs on **landed Delta**, not pushed to Azure SQL).
-2. Write/overwrite `target_path` with a complete notebook (header, SQL, smoke `SELECT`).
+1. Read source SQL; map to Spark SQL per convert_style for the dialect (`tsql` or `mysql`). Window logic runs on **landed Delta**, not pushed to the federated source.
+2. Write/overwrite `target_path` with a complete notebook (header including `Source dialect`, SQL, smoke `SELECT`).
 3. Use `${uc_catalog}` / `__UC_CATALOG__` three-part names consistent with repo templates (`__UC_CATALOG__.silver|gold.*`).
 4. Return mapping notes JSON:
 

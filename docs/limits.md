@@ -5,7 +5,7 @@ Designed for free tiers where possible. Constraints shape the engine and the gui
 ## Databricks Free Edition
 
 - **Serverless compute only.** No classic clusters → Lakehouse Federation, not Lakeflow Connect ([lakeflow_connect.md](lakeflow_connect.md)).
-- **Restricted outbound internet.** Azure SQL (`*.database.windows.net`) is typically reachable; arbitrary hosts may not be. Federation failures: check firewall ([firewall.md](firewall.md)).
+- **Restricted outbound internet.** Azure SQL (`*.database.windows.net`) and Azure MySQL Flexible Server hosts are typically reachable when firewalls allow Databricks egress; arbitrary hosts may not be. Federation failures: check firewall ([firewall.md](firewall.md)).
 - **Max 5 concurrent job tasks.** The medallion job must keep peak concurrency ≤ 5.
 - **No classic SQL warehouses.** `DATABRICKS_WAREHOUSE_ID` must be serverless.
 - **CLI:** dashboard `dataset_catalog` needs Databricks CLI ≥ 0.281.0 (0.292+ preferred).
@@ -20,19 +20,20 @@ Designed for free tiers where possible. Constraints shape the engine and the gui
 
 ## Engine scope (by design)
 
-- **Source:** Azure SQL / SQL Server Federation only (for now).
+- **Source:** `SOURCE_TYPE=sqlserver` (Azure SQL) or `mysql` (Azure Database for MySQL Flexible Server / any reachable MySQL).
 - **Land objects:** base **tables** only (not views).
-- **Full-auto discovery:** all visible base tables + user procs. If `tables_total > 200`, the coordinator warns and asks for confirm before land.
+- **Full-auto discovery:** all visible base tables + procs/routines when export tools exist. If `tables_total > 200`, the coordinator warns and asks for confirm before land.
 - **Batch full-refresh** bronze land (`CREATE OR REPLACE TABLE AS SELECT`). No CDC/streaming in v1.
 - **Auth:** PAT supported now; OAuth (`databricks auth login`) is the enterprise target state.
 
 ## Out of scope
 
-- Multi-cloud source connectors in the engine (CONNECTION types beyond SQLSERVER)
+- Other Federation source types beyond SQLSERVER + MYSQL in this change
 - Lakeflow Connect / classic clusters
 - Lakebridge invocation (comparison only — [lakebridge.md](lakebridge.md))
 - Offline / seeded-source mode (removed)
 - Production SLAs, multi-region DR, cost optimization
+- Private Link on Free Edition (document firewall; do not pretend private networking)
 
 ## Extending
 

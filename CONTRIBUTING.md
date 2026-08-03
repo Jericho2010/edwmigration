@@ -23,7 +23,8 @@ Edit `agents/prompts/`, then:
 ```bash
 # local
 ./agents/tools/sync_prompts.sh
-DATABRICKS_CATALOG=edw_migration AZ_SQL_SERVER=example ./agents/tools/render_sql.sh
+SOURCE_TYPE=sqlserver DATABRICKS_CATALOG=edw_migration AZ_SQL_SERVER=example ./agents/tools/render_sql.sh
+SOURCE_TYPE=mysql SOURCE_HOST=h SOURCE_DATABASE=d SOURCE_USER=u SOURCE_PASSWORD=x DATABRICKS_CATALOG=c ./agents/tools/render_sql.sh
 ```
 
 CI runs contract validation, render, and guardrails (no offline mode, no Lakebridge compose).

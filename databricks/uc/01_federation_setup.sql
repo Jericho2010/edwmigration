@@ -2,10 +2,11 @@
 -- Generic UC + Lakehouse Federation bootstrap (no per-table coupling).
 -- Placeholders filled by agents/tools/render_sql.sh:
 --   __UC_CATALOG__  __FOREIGN_CATALOG__  __CONNECTION_NAME__  __SECRET_SCOPE__
---   {{AZ_SQL_HOST}}  {{AZ_SQL_ADMIN}}  {{AZ_SQL_DB}}
+--   __CONNECTION_TYPE__  __PASSWORD_SECRET_KEY__
+--   {{SOURCE_HOST}}  {{SOURCE_PORT}}  {{SOURCE_USER}}  {{SOURCE_DATABASE}}
 --
 -- Requires: CREATE CONNECTION + CREATE CATALOG (or metastore admin).
--- Password: secret('__SECRET_SCOPE__', 'azure-sql-password').
+-- Password: secret('__SECRET_SCOPE__', '__PASSWORD_SECRET_KEY__').
 
 CREATE CATALOG IF NOT EXISTS __UC_CATALOG__
   COMMENT 'EDW migration managed catalog: source_fed/bronze/silver/gold/ops';
@@ -21,19 +22,11 @@ CREATE SCHEMA IF NOT EXISTS __UC_CATALOG__.gold
 CREATE SCHEMA IF NOT EXISTS __UC_CATALOG__.ops
   COMMENT 'Inventory, backlog, reconcile, agent_events';
 
-CREATE CONNECTION IF NOT EXISTS __CONNECTION_NAME__
-  TYPE SQLSERVER
-  OPTIONS (
-    host '{{AZ_SQL_HOST}}',
-    port '1433',
-    user '{{AZ_SQL_ADMIN}}',
-    password secret('__SECRET_SCOPE__', 'azure-sql-password'),
-    trustServerCertificate 'false'
-  );
+-- __FEDERATION_CONNECTION_BLOCK__ (injected by render_sql.sh for SQLSERVER vs MYSQL)
 
 CREATE FOREIGN CATALOG IF NOT EXISTS __FOREIGN_CATALOG__
   USING CONNECTION __CONNECTION_NAME__
-  OPTIONS (database '{{AZ_SQL_DB}}');
+  OPTIONS (database '{{SOURCE_DATABASE}}');
 
 GRANT USE CATALOG ON CATALOG __UC_CATALOG__ TO `account users`;
 GRANT USE SCHEMA ON SCHEMA __UC_CATALOG__.source_fed TO `account users`;
