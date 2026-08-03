@@ -1,6 +1,8 @@
 # SE demo script
 
-Audience talk track. Product narrative for learners: [Guided demo](guided-demo.md) · [Getting started](getting-started.md).
+Audience talk track. Product narrative: [Guided demo](guided-demo.md) · [Getting started](getting-started.md) · [Using Cursor](cursor-ui.md).
+
+For platform buyers after the wow: open [Enterprise](enterprise.md) (SoD / no public FW).
 
 ## 15 minutes
 

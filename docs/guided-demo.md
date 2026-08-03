@@ -2,14 +2,21 @@
 
 **The recommended first experience.** About an hour the first time. Uses free Azure SQL + Databricks Free Edition sample data. An agent does the heavy lifting; you watch and confirm.
 
-← [Getting started](getting-started.md) · [What you get](what-you-get.md) · Stuck? [Troubleshooting](troubleshooting.md)
+← [Getting started](getting-started.md) · [Using Cursor](cursor-ui.md) · [What you get](what-you-get.md) · Stuck? [Troubleshooting](troubleshooting.md)
 
 ```mermaid
+%%{init: {"theme":"base","themeVariables":{"primaryColor":"#E8F1F8","primaryTextColor":"#0B3D5C","primaryBorderColor":"#0B3D5C","lineColor":"#5B7A8C","secondaryColor":"#E6F4F1","tertiaryColor":"#F7F3EA","background":"#FFFFFF","mainBkg":"#E8F1F8","clusterBkg":"#F7FAFC","clusterBorder":"#5B7A8C","titleColor":"#0B3D5C","edgeLabelBackground":"#FFFFFF"}}}%%
 flowchart LR
   L[Log in] --> G[Launch edw-demo-guide]
   G --> S[Say the kickoff sentence]
   S --> W[Watch Dashboard + Genie]
   W --> T[Teardown when done]
+  classDef user fill:#0B3D5C,stroke:#082C43,color:#fff
+  classDef agent fill:#1B7A6E,stroke:#145A51,color:#fff
+  classDef ops fill:#5B4B8A,stroke:#3F3460,color:#fff
+  class L,S user
+  class G agent
+  class W,T ops
 ```
 
 ---
@@ -50,6 +57,7 @@ You need:
 6. When finished: ask the guide to tear down, or run `make teardown`.
 
 ```mermaid
+%%{init: {"theme":"base","themeVariables":{"primaryColor":"#E8F1F8","primaryTextColor":"#0B3D5C","primaryBorderColor":"#0B3D5C","lineColor":"#5B7A8C","secondaryColor":"#E6F4F1","tertiaryColor":"#F7F3EA","background":"#FFFFFF","mainBkg":"#E8F1F8","clusterBkg":"#F7FAFC","clusterBorder":"#5B7A8C","titleColor":"#0B3D5C","edgeLabelBackground":"#FFFFFF"}}}%%
 sequenceDiagram
   participant You
   participant Guide as edw-demo-guide
@@ -62,6 +70,18 @@ sequenceDiagram
   Guide-->>You: URLs + counts
   You->>Guide: Teardown please
 ```
+
+---
+
+## Definition of done (Track A)
+
+You can stop and celebrate when **all** of these are true:
+
+1. Control Plane and Genie URLs open (`make print-urls`)  
+2. Genie can answer *Did the last run ship?*  
+3. Gate summary shows ship (empty blockers)  
+4. Counts: **≥10** bronze tables and **≥5** converted procs *(counts only)*  
+5. You tore down Azure resources (`make teardown`) **or** consciously kept them for a follow-up  
 
 ---
 
@@ -101,5 +121,6 @@ More: **[troubleshooting.md](troubleshooting.md)**
 ## After the demo
 
 - Curious how layers work → [What you get](what-you-get.md) / [Architecture](architecture.md)  
-- Ready for real data → **[Your database](your-database.md)**  
+- Ready for a sandbox DB → **[Your database](your-database.md)**  
+- Platform / security / prod → **[Enterprise](enterprise.md)**  
 - Power-user checklist → [Runbook](runbook.md)

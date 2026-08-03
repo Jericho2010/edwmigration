@@ -1,33 +1,48 @@
+%%{init: {"theme":"base","themeVariables":{"primaryColor":"#E8F1F8","primaryTextColor":"#0B3D5C","primaryBorderColor":"#0B3D5C","lineColor":"#5B7A8C","secondaryColor":"#E6F4F1","tertiaryColor":"#F7F3EA","background":"#FFFFFF","mainBkg":"#E8F1F8","clusterBkg":"#F7FAFC","clusterBorder":"#5B7A8C","titleColor":"#0B3D5C","edgeLabelBackground":"#FFFFFF"}}}%%
 flowchart LR
-  subgraph azure [Azure_SQL_source]
-    DemoPack[Optional_WWI_demo_pack]
-    FreeDB[Azure_SQL_database]
+  subgraph azure ["Azure SQL source"]
+    DemoPack["Optional WWI demo pack"]
+    FreeDB["Azure SQL database"]
     DemoPack -.-> FreeDB
   end
-  subgraph dbx [Databricks_UC]
-    Fed[Foreign_catalog]
-    Inv[ops_migration_inventory]
-    Bronze[bronze]
-    Silver[silver]
-    Gold[gold]
-    Ops[ops_control_plane]
+  subgraph dbx ["Databricks Unity Catalog"]
+    Fed["Foreign catalog"]
+    Inv["ops.migration_inventory"]
+    Bronze["bronze"]
+    Silver["silver"]
+    Gold["gold"]
+    Ops["ops control plane"]
     FreeDB --> Fed
     Fed --> Inv
-    Inv -->|generated_CTAS| Bronze
+    Inv -->|"generated CTAS"| Bronze
     Bronze --> Silver
     Silver --> Gold
     Gold --> Ops
   end
-  subgraph agents [Agents]
-    Guide[edw_demo_guide]
-    Coord[edw_coordinator]
+  subgraph agents ["Agents"]
+    Guide["edw-demo-guide"]
+    Coord["edw-coordinator"]
     Guide --> Coord
-    Coord --> Assess[assess]
-    Coord --> Convert[convert]
-    Coord --> Test[test]
-    Coord --> Gate[gate]
+    Coord --> Assess["assess"]
+    Coord --> Convert["convert"]
+    Coord --> Test["test"]
+    Coord --> Gate["gate"]
   end
   Guide -.-> azure
   Coord -.-> dbx
-  Ops --> Dash[Control_Plane_dashboard]
-  Ops --> Genie[Genie_copilot]
+  Ops --> Dash["Control Plane"]
+  Ops --> Genie["Genie"]
+
+  classDef agent fill:#1B7A6E,stroke:#145A51,color:#fff
+  classDef azureC fill:#0078D4,stroke:#005A9E,color:#fff
+  classDef bronze fill:#C47B2D,stroke:#8F5A1F,color:#fff
+  classDef silver fill:#6B7C8F,stroke:#4A5663,color:#fff
+  classDef gold fill:#B8860B,stroke:#8A6508,color:#fff
+  classDef ops fill:#5B4B8A,stroke:#3F3460,color:#fff
+
+  class Guide,Coord,Assess,Convert,Test,Gate agent
+  class FreeDB,DemoPack,Fed azureC
+  class Bronze bronze
+  class Silver silver
+  class Gold gold
+  class Ops,Inv,Dash,Genie ops

@@ -1,0 +1,26 @@
+%% Demo vs Enterprise comparison
+%%{init: {"theme":"base","themeVariables":{"primaryColor":"#E8F1F8","primaryTextColor":"#0B3D5C","primaryBorderColor":"#0B3D5C","lineColor":"#5B7A8C","secondaryColor":"#E6F4F1","tertiaryColor":"#F7F3EA","background":"#FFFFFF","mainBkg":"#E8F1F8","clusterBkg":"#F7FAFC","clusterBorder":"#5B7A8C","titleColor":"#0B3D5C","edgeLabelBackground":"#FFFFFF"}}}%%
+flowchart LR
+  subgraph demo ["Demo / learning"]
+    D1["One person + agent"]
+    D2["PAT or personal login"]
+    D3["Public firewall 0.0.0.0/0"]
+    D4["Laptop make setup"]
+    D5["Agent self-Gates"]
+    D1 --> D2 --> D3 --> D4 --> D5
+  end
+  subgraph ent ["Enterprise"]
+    E1["Split roles SoD"]
+    E2["OAuth + job SP"]
+    E3["Private Link / allowlist"]
+    E4["CI deploy + envs"]
+    E5["Human + policy Gate"]
+    E1 --> E2 --> E3 --> E4 --> E5
+  end
+
+  classDef danger fill:#B33A3A,stroke:#8A2A2A,color:#fff
+  classDef ok fill:#1B7A6E,stroke:#145A51,color:#fff
+  classDef warn fill:#C47B2D,stroke:#8F5A1F,color:#fff
+
+  class D1,D2,D3,D4,D5 danger
+  class E1,E2,E3,E4,E5 ok

@@ -2,19 +2,28 @@
 
 **New here?** Start at the root [README](../README.md), then:
 
-1. [Getting started](getting-started.md) — Cursor + logins  
-2. [What you get](what-you-get.md) — outcomes & diagrams  
-3. [Guided demo](guided-demo.md) — **recommended first run (Track A)**  
-4. [Your database](your-database.md) — Track B when ready  
+1. [Using Cursor](cursor-ui.md) — three pictures  
+2. [Getting started](getting-started.md) — logins + path  
+3. [What you get](what-you-get.md) — outcomes & diagrams  
+4. [Guided demo](guided-demo.md) — **recommended first run (Track A)**  
+5. [Your database](your-database.md) or [Enterprise](enterprise.md)  
 
 ```mermaid
+%%{init: {"theme":"base","themeVariables":{"primaryColor":"#E8F1F8","primaryTextColor":"#0B3D5C","primaryBorderColor":"#0B3D5C","lineColor":"#5B7A8C","secondaryColor":"#E6F4F1","tertiaryColor":"#F7F3EA","background":"#FFFFFF","mainBkg":"#E8F1F8","clusterBkg":"#F7FAFC","clusterBorder":"#5B7A8C","titleColor":"#0B3D5C","edgeLabelBackground":"#FFFFFF"}}}%%
 flowchart TD
-  R[README] --> GS[Getting started]
+  R[README] --> CU[Using Cursor]
+  CU --> GS[Getting started]
   GS --> WYG[What you get]
   WYG --> GD[Guided demo]
   GD --> YD[Your database]
+  GD --> ENT[Enterprise]
   GD --> TB[Troubleshooting]
-  YD --> TB
+  classDef user fill:#0B3D5C,stroke:#082C43,color:#fff
+  classDef agent fill:#1B7A6E,stroke:#145A51,color:#fff
+  classDef ops fill:#5B4B8A,stroke:#3F3460,color:#fff
+  class R,CU,GS user
+  class WYG,GD,YD agent
+  class ENT,TB ops
 ```
 
 ---
@@ -23,28 +32,31 @@ flowchart TD
 
 | I want to… | Page |
 |---|---|
+| See how to click in Cursor | [cursor-ui.md](cursor-ui.md) |
 | Try the free demo tonight | [guided-demo.md](guided-demo.md) |
-| Launch the right Cursor agent | [agent-setup.md](agent-setup.md) |
+| Launch the right agent | [agent-setup.md](agent-setup.md) |
 | Connect my Azure SQL / MySQL | [your-database.md](your-database.md) |
-| See a short command checklist | [runbook.md](runbook.md) |
+| Enterprise / SoD / prod controls | [enterprise.md](enterprise.md) |
+| Look up a word | [glossary.md](glossary.md) |
+| Short command checklist | [runbook.md](runbook.md) |
 | Fix a failure | [troubleshooting.md](troubleshooting.md) |
-| Understand Free Edition limits | [limits.md](limits.md) |
-| Understand firewall / public access | [firewall.md](firewall.md) |
-| Compare to Lakebridge | [lakebridge.md](lakebridge.md) |
-| Read engine design | [architecture.md](architecture.md) |
-| Deliver an SE talk track | [demo-script.md](demo-script.md) |
+| Diagram theme + PNG sources | [img/README.md](img/README.md) |
+| Engine design | [architecture.md](architecture.md) |
+| SE talk track | [demo-script.md](demo-script.md) |
 
 ---
 
-## Learning path (narrative)
+## Learning path
 
 | Step | Doc |
 |---|---|
-| Hook & overview | [README](../README.md) |
-| First setup | [getting-started.md](getting-started.md) |
+| Hook | [README](../README.md) |
+| Cursor UI | [cursor-ui.md](cursor-ui.md) |
+| Setup | [getting-started.md](getting-started.md) |
 | Mental model | [what-you-get.md](what-you-get.md) |
 | First win | [guided-demo.md](guided-demo.md) |
 | Real source | [your-database.md](your-database.md) |
+| Real org | [enterprise.md](enterprise.md) |
 | Depth | [architecture.md](architecture.md), [limits.md](limits.md) |
 
 ---
@@ -53,23 +65,24 @@ flowchart TD
 
 | Doc | Purpose |
 |---|---|
-| [agent-setup.md](agent-setup.md) | Agents + kickoff sentences + Cursor how-to |
+| [agent-setup.md](agent-setup.md) | Agents + kickoffs |
 | [prerequisites.md](prerequisites.md) | Tools and privileges |
-| [runbook.md](runbook.md) | Compact Track A / B checklist |
+| [runbook.md](runbook.md) | Compact checklist |
 | [troubleshooting.md](troubleshooting.md) | Symptom → fix |
 | [firewall.md](firewall.md) | Free Edition reachability |
 | [lakeflow_connect.md](lakeflow_connect.md) | Why Federation on Free Edition |
+| [glossary.md](glossary.md) | Terms |
 
 ## Design & enablement
 
 | Doc | Purpose |
 |---|---|
 | [architecture.md](architecture.md) | Engine vs demo pack |
+| [enterprise.md](enterprise.md) | SoD and production controls |
 | [limits.md](limits.md) | Free tiers + scope |
 | [lakebridge.md](lakebridge.md) | Compete, don’t compose |
 | [demo-script.md](demo-script.md) | SE 15 / 30 / 45 min |
-| [img/](img/) | Diagram sources / GIFs |
-| [media/](media/) | Asciinema notes |
+| [img/](img/) | Themed Mermaid sources + Cursor UI art |
 
 ## Code-adjacent READMEs
 

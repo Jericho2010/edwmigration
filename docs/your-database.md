@@ -4,14 +4,21 @@ Use this after you’ve done the [guided demo](guided-demo.md), or when you alre
 
 Same destination as Track A: a user-named Unity Catalog catalog, bronze land, Gate, Control Plane, Genie. You bring connection fields; **`edw-coordinator`** does the rest.
 
-← [Getting started](getting-started.md) · [Guided demo](guided-demo.md) · [Troubleshooting](troubleshooting.md)
+← [Getting started](getting-started.md) · [Guided demo](guided-demo.md) · [Enterprise](enterprise.md) · [Troubleshooting](troubleshooting.md)
 
 ```mermaid
+%%{init: {"theme":"base","themeVariables":{"primaryColor":"#E8F1F8","primaryTextColor":"#0B3D5C","primaryBorderColor":"#0B3D5C","lineColor":"#5B7A8C","secondaryColor":"#E6F4F1","tertiaryColor":"#F7F3EA","background":"#FFFFFF","mainBkg":"#E8F1F8","clusterBkg":"#F7FAFC","clusterBorder":"#5B7A8C","titleColor":"#0B3D5C","edgeLabelBackground":"#FFFFFF"}}}%%
 flowchart TD
   Auth[Databricks login] --> Env[.env with SOURCE_* + catalog]
   Env --> Setup[make setup]
   Setup --> Agent[edw-coordinator kickoff]
   Agent --> Out[bronze + Gate + URLs]
+  classDef user fill:#0B3D5C,stroke:#082C43,color:#fff
+  classDef agent fill:#1B7A6E,stroke:#145A51,color:#fff
+  classDef ops fill:#5B4B8A,stroke:#3F3460,color:#fff
+  class Auth,Env user
+  class Setup,Agent agent
+  class Out ops
 ```
 
 ---
@@ -133,4 +140,5 @@ Trust checklist: inventory → bronze reconcile pass → Gate blockers empty.
 
 - Errors → [Troubleshooting](troubleshooting.md)  
 - Short commands → [Runbook](runbook.md)  
+- Production controls → [Enterprise](enterprise.md)  
 - How discovery/land work → [Architecture](architecture.md)

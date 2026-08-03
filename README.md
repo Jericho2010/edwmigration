@@ -5,13 +5,20 @@
 You do not need to be a migration expert. You do not hand-write medallion SQL. You open this repo in Cursor, log in, say one sentence, and follow along.
 
 ```mermaid
+%%{init: {"theme":"base","themeVariables":{"primaryColor":"#E8F1F8","primaryTextColor":"#0B3D5C","primaryBorderColor":"#0B3D5C","lineColor":"#5B7A8C","secondaryColor":"#E6F4F1","tertiaryColor":"#F7F3EA","background":"#FFFFFF","mainBkg":"#E8F1F8","clusterBkg":"#F7FAFC","clusterBorder":"#5B7A8C","titleColor":"#0B3D5C","edgeLabelBackground":"#FFFFFF"}}}%%
 flowchart LR
   You[You] --> Login[Log in]
-  Login --> Say[One sentence to an agent]
+  Login --> Say[One sentence]
   Say --> Agents[Repo agents]
   Agents --> Cat[Your UC catalog]
   Agents --> Dash[Control Plane]
   Agents --> Genie[Genie]
+  classDef user fill:#0B3D5C,stroke:#082C43,color:#fff
+  classDef agent fill:#1B7A6E,stroke:#145A51,color:#fff
+  classDef ops fill:#5B4B8A,stroke:#3F3460,color:#fff
+  class You,Login,Say user
+  class Agents agent
+  class Cat,Dash,Genie ops
 ```
 
 ---
@@ -20,19 +27,21 @@ flowchart LR
 
 | I want to… | Go here |
 |---|---|
+| See Cursor in three pictures | [Using Cursor](docs/cursor-ui.md) |
 | Understand what I’ll get | [What you get](docs/what-you-get.md) |
-| Set up Cursor for this repo | [Getting started](docs/getting-started.md) |
+| Set up for the first time | [Getting started](docs/getting-started.md) |
 | **Try the free guided demo tonight** | [Guided demo (Track A)](docs/guided-demo.md) |
 | Point at my own Azure SQL / MySQL | [Your database (Track B)](docs/your-database.md) |
-| See a one-page command checklist | [Runbook](docs/runbook.md) |
+| Plan for real orgs / SoD | [Enterprise](docs/enterprise.md) |
+| Look up a term | [Glossary](docs/glossary.md) |
+| One-page command checklist | [Runbook](docs/runbook.md) |
 | Fix an error | [Troubleshooting](docs/troubleshooting.md) |
-| See how the engine works | [Architecture](docs/architecture.md) |
 
 ---
 
 ## The idea in plain English
 
-Traditional warehouses often live in **Azure SQL** (or **MySQL**) with tables and stored procedures. Databricks wants that data in a **Unity Catalog** catalog — organized layers (bronze → silver → gold) you can govern, job, and ask questions about.
+Traditional warehouses often live in **Azure SQL** (or **MySQL**) with tables and stored procedures. Databricks wants that data in a **Unity Catalog** catalog — organized layers (bronze → silver → gold) you can govern, job, and ask questions about. ([Glossary](docs/glossary.md) if a word is new.)
 
 This repo’s agents:
 
@@ -44,6 +53,7 @@ This repo’s agents:
 6. **Show** progress on a dashboard and a Genie room  
 
 ```mermaid
+%%{init: {"theme":"base","themeVariables":{"primaryColor":"#E8F1F8","primaryTextColor":"#0B3D5C","primaryBorderColor":"#0B3D5C","lineColor":"#5B7A8C","secondaryColor":"#E6F4F1","tertiaryColor":"#F7F3EA","background":"#FFFFFF","mainBkg":"#E8F1F8","clusterBkg":"#F7FAFC","clusterBorder":"#5B7A8C","titleColor":"#0B3D5C","edgeLabelBackground":"#FFFFFF"}}}%%
 sequenceDiagram
   participant You
   participant Agent as Cursor agent
@@ -61,15 +71,26 @@ sequenceDiagram
 
 **Track A** builds a free sample warehouse (WideWorldImporters on Azure SQL free offer), wires it into **your** Databricks Free Edition catalog, and walks the migration with you.
 
-1. Install basics → see [Getting started](docs/getting-started.md)  
+1. [Getting started](docs/getting-started.md) + [Using Cursor](docs/cursor-ui.md)  
 2. `az login` and `databricks auth login --host <your-workspace-url>`  
-3. In Cursor, launch **`edw-demo-guide`** and say:
+3. Launch **`edw-demo-guide`** and say:
 
    > Set up the EDW demo and walk me through the migration.
 
-Full hand-holding: **[Guided demo](docs/guided-demo.md)** · Tools list: **[Prerequisites](docs/prerequisites.md)**
+Full hand-holding: **[Guided demo](docs/guided-demo.md)** · Tools: **[Prerequisites](docs/prerequisites.md)**
 
-When you’re done: ask the guide to tear down (or `make teardown`) so the free Azure resources disappear.
+When you’re done: ask the guide to tear down (or `make teardown`).
+
+---
+
+## Who are you? (after the demo smile)
+
+| Persona | Next |
+|---|---|
+| **Learning / SE / first try** | Stay on [Guided demo](docs/guided-demo.md); then [What you get](docs/what-you-get.md) |
+| **Have a sandbox DB** | [Your database](docs/your-database.md) |
+| **Platform / security / prod** | **[Enterprise](docs/enterprise.md)** — SoD, OAuth, private network, CI |
+| **Extending the engine** | [Architecture](docs/architecture.md) · [CONTRIBUTING](CONTRIBUTING.md) |
 
 ---
 
@@ -79,13 +100,15 @@ Same simplicity — you bring logins and connection fields; agents do the rest.
 
 → **[Your database (Track B)](docs/your-database.md)** — Azure MySQL or existing Azure SQL.
 
+For production-shaped controls (not Free Edition public firewall), read **[Enterprise](docs/enterprise.md)** first.
+
 ---
 
 ## What “done” looks like
 
 - Tables in `${DATABRICKS_CATALOG}.bronze.*`  
-- A **Control Plane** dashboard and a **Genie** room (`make print-urls`)  
-- A Gate result: ship with empty blockers (demo also aims for ≥10 tables / ≥5 procs as **counts**)  
+- **Control Plane** + **Genie** URLs (`make print-urls`)  
+- Gate ship with empty blockers (demo also aims for ≥10 tables / ≥5 procs as **counts**)  
 
 More: **[What you get](docs/what-you-get.md)**
 
@@ -108,15 +131,14 @@ No object lists. No Lakebridge. No hand-written landing SQL.
 
 | Path | For |
 |---|---|
-| [docs/getting-started.md](docs/getting-started.md) | First open: Cursor + logins |
+| [docs/cursor-ui.md](docs/cursor-ui.md) | Three-step Cursor visuals |
+| [docs/getting-started.md](docs/getting-started.md) | First open + logins |
 | [docs/what-you-get.md](docs/what-you-get.md) | Outcomes & diagrams |
-| [docs/guided-demo.md](docs/guided-demo.md) | Track A step-by-step |
-| [docs/your-database.md](docs/your-database.md) | Track B MySQL / SQL |
-| [docs/agent-setup.md](docs/agent-setup.md) | Agents & kickoff sentences |
-| [docs/runbook.md](docs/runbook.md) | Short operator checklist |
-| [docs/troubleshooting.md](docs/troubleshooting.md) | When something breaks |
-| [docs/architecture.md](docs/architecture.md) | Engine deep dive |
-| [docs/README.md](docs/README.md) | Full documentation index |
+| [docs/guided-demo.md](docs/guided-demo.md) | Track A |
+| [docs/your-database.md](docs/your-database.md) | Track B |
+| [docs/enterprise.md](docs/enterprise.md) | SoD & production controls |
+| [docs/glossary.md](docs/glossary.md) | Terms |
+| [docs/README.md](docs/README.md) | Full index |
 
 ---
 

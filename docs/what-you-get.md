@@ -2,7 +2,7 @@
 
 Plain-English picture of the outcome — before you run anything.
 
-← [Getting started](getting-started.md) · Next: [Guided demo](guided-demo.md)
+← [Getting started](getting-started.md) · [Glossary](glossary.md) · Next: [Guided demo](guided-demo.md)
 
 ---
 
@@ -18,6 +18,7 @@ You choose a name (`DATABRICKS_CATALOG`, for example `edw_migration`). Inside it
 | `ops` | Inventory, backlog, reconcile, Gate summary, agent events |
 
 ```mermaid
+%%{init: {"theme":"base","themeVariables":{"primaryColor":"#E8F1F8","primaryTextColor":"#0B3D5C","primaryBorderColor":"#0B3D5C","lineColor":"#5B7A8C","secondaryColor":"#E6F4F1","tertiaryColor":"#F7F3EA","background":"#FFFFFF","mainBkg":"#E8F1F8","clusterBkg":"#F7FAFC","clusterBorder":"#5B7A8C","titleColor":"#0B3D5C","edgeLabelBackground":"#FFFFFF"}}}%%
 flowchart TB
   subgraph Source["Your source DB"]
     T[Base tables]
@@ -26,13 +27,26 @@ flowchart TB
   subgraph UC["Unity Catalog: your catalog"]
     SF[source_fed]
     BR[bronze]
-    SG[silver / gold]
+    SV[silver]
+    GD[gold]
     OPS[ops]
   end
   T -->|Federation + land| SF --> BR
-  P -->|Convert when available| SG
+  P -->|Convert when available| SV --> GD
   BR --> OPS
-  SG --> OPS
+  GD --> OPS
+  classDef azureC fill:#0078D4,stroke:#005A9E,color:#fff
+  classDef bronze fill:#C47B2D,stroke:#8F5A1F,color:#fff
+  classDef silver fill:#6B7C8F,stroke:#4A5663,color:#fff
+  classDef gold fill:#B8860B,stroke:#8A6508,color:#fff
+  classDef ops fill:#5B4B8A,stroke:#3F3460,color:#fff
+  classDef muted fill:#E8F1F8,stroke:#5B7A8C,color:#0B3D5C
+  class T,P azureC
+  class SF muted
+  class BR bronze
+  class SV silver
+  class GD gold
+  class OPS ops
 ```
 
 **Landed objects are base tables only** (not views). Discovery finds everything visible after connect — you do not paste a table list.
@@ -42,13 +56,20 @@ flowchart TB
 ## The migration sequence
 
 ```mermaid
+%%{init: {"theme":"base","themeVariables":{"primaryColor":"#E8F1F8","primaryTextColor":"#0B3D5C","primaryBorderColor":"#0B3D5C","lineColor":"#5B7A8C","secondaryColor":"#E6F4F1","tertiaryColor":"#F7F3EA","background":"#FFFFFF","mainBkg":"#E8F1F8","clusterBkg":"#F7FAFC","clusterBorder":"#5B7A8C","titleColor":"#0B3D5C","edgeLabelBackground":"#FFFFFF"}}}%%
 flowchart LR
   D[Discover] --> L[Land bronze]
   L --> C[Convert]
   C --> J[Job run]
-  J --> T[Test / reconcile]
+  J --> T[Test]
   T --> G[Gate]
   G --> O[Dashboard + Genie]
+  classDef work fill:#C47B2D,stroke:#8F5A1F,color:#fff
+  classDef agent fill:#1B7A6E,stroke:#145A51,color:#fff
+  classDef ops fill:#5B4B8A,stroke:#3F3460,color:#fff
+  class D,L,J work
+  class C,T agent
+  class G,O ops
 ```
 
 | Stage | What it means |
@@ -60,9 +81,8 @@ flowchart LR
 | **Gate** | Ship / no-ship from inventory + reconcile + conversions |
 | **Observe** | Control Plane dashboard + Genie Q&A |
 
-Agents: `edw-demo-guide` (walkthrough) or `edw-coordinator` (full run), with helpers `edw-assess`, `edw-convert`, `edw-test`, `edw-gate`.
-
 ```mermaid
+%%{init: {"theme":"base","themeVariables":{"primaryColor":"#E8F1F8","primaryTextColor":"#0B3D5C","primaryBorderColor":"#0B3D5C","lineColor":"#5B7A8C","secondaryColor":"#E6F4F1","tertiaryColor":"#F7F3EA","background":"#FFFFFF","mainBkg":"#E8F1F8","clusterBkg":"#F7FAFC","clusterBorder":"#5B7A8C","titleColor":"#0B3D5C","edgeLabelBackground":"#FFFFFF"}}}%%
 flowchart TB
   Guide[edw-demo-guide]
   Coord[edw-coordinator]
@@ -71,22 +91,24 @@ flowchart TB
   Coord --> Convert[edw-convert]
   Coord --> Test[edw-test]
   Coord --> Gate[edw-gate]
+  classDef agent fill:#1B7A6E,stroke:#145A51,color:#fff
+  classDef readonly fill:#6B7C8F,stroke:#4A5663,color:#fff
+  class Guide,Coord,Convert agent
+  class Assess,Test,Gate readonly
 ```
+
+Also: [`img/agent_delegation.mmd`](img/agent_delegation.mmd) · [`img/architecture.mmd`](img/architecture.mmd)
 
 ---
 
 ## Control Plane + Genie
 
-After setup, run (or let the agent run) `make print-urls`:
+After setup: `make print-urls`
 
-- **Control Plane** — Gate, timeline, backlog, reconcile (AI/BI dashboard)  
-- **Genie** — ask things like *Did the last run ship?* / *Why did the gate fail?*  
+- **Control Plane** — Gate, timeline, backlog, reconcile  
+- **Genie** — *Did the last run ship?* / *Why did the gate fail?*  
 
-These are how you *see* the black box. Trust checklist:
-
-1. Inventory exists for the run  
-2. Bronze reconcile passes  
-3. Gate blockers empty  
+Trust checklist: inventory → bronze reconcile pass → Gate blockers empty.
 
 ---
 
@@ -99,10 +121,10 @@ These are how you *see* the black box. Trust checklist:
 | Cost (typical) | $0 with Free Edition + teardown | Your existing DB + Free Edition sink |
 | Outcome | Same catalog shape + dashboard + Genie | Same |
 
+Production-shaped controls: **[Enterprise](enterprise.md)**.
+
 ---
 
 ## Next
 
-→ **[Guided demo](guided-demo.md)** — try it  
-→ **[Your database](your-database.md)** — when you’re ready for real data  
-→ **[Architecture](architecture.md)** — engine detail
+→ **[Guided demo](guided-demo.md)** · **[Your database](your-database.md)** · **[Enterprise](enterprise.md)** · **[Architecture](architecture.md)**
