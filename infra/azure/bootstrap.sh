@@ -195,9 +195,10 @@ if [ "$DRY_RUN" -eq 0 ]; then
   # Idempotent: try create, ignore "already exists"
   databricks secrets create-scope "$DATABRICKS_SECRET_SCOPE" 2>/dev/null \
     || echo "  scope already exists; continuing."
-  # Store the SQL password for the federation connection
+  # Store the SQL password for the federation connection (unified + legacy alias).
+  printf '%s' "$AZ_SQL_PASSWORD" | databricks secrets put-secret "$DATABRICKS_SECRET_SCOPE" source-password --string-from-stdin
   printf '%s' "$AZ_SQL_PASSWORD" | databricks secrets put-secret "$DATABRICKS_SECRET_SCOPE" azure-sql-password --string-from-stdin
-  echo "  stored secret 'azure-sql-password' in scope '${DATABRICKS_SECRET_SCOPE}'."
+  echo "  stored secrets 'source-password' + 'azure-sql-password' in scope '${DATABRICKS_SECRET_SCOPE}'."
 else
   echo "  (dry-run) databricks secrets create-scope + put-secret"
 fi

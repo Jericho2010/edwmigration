@@ -41,6 +41,15 @@ jobs:
           fi
           echo "core engine naming OK"
 
+      - name: Core prompts branch on SOURCE_TYPE (not SQLSERVER-only forever)
+        run: |
+          grep -q "SOURCE_TYPE" agents/prompts/00_coordinator.md
+          grep -q "mysql" agents/prompts/00_coordinator.md
+          grep -q "mysql" agents/prompts/convert_style.md
+          grep -q "routines_skipped_reason" agents/prompts/04_gate.md
+          grep -qE "TYPE MYSQL|SOURCE_TYPE" agents/tools/render_sql.sh
+          echo "SOURCE_TYPE dual-track guards OK"
+
       - name: Parse YAML / JSON
         run: |
           python3 - <<'PY'
@@ -96,18 +105,24 @@ jobs:
           find agents infra legacy databricks/genie -name '*.sh' -print0 | xargs -0 -n1 bash -n
           find agents infra legacy databricks/genie -name '*.sh' -print0 | xargs -0 shellcheck
 
-      - name: Render + SQL lint
+      - name: Render + SQL lint (sqlserver + mysql)
         env:
           DATABRICKS_CATALOG: edw_migration
-          AZ_SQL_SERVER: example
-          AZ_SQL_ADMIN: edwadmin
-          AZ_SQL_DB: WideWorldImportersDW
-          FOREIGN_CATALOG: wwi_dw_fed
-          CONNECTION_NAME: azure_sql_edw
         run: |
           chmod +x agents/tools/*.sh
-          ./agents/tools/render_sql.sh
+          SOURCE_TYPE=sqlserver AZ_SQL_SERVER=example AZ_SQL_ADMIN=edwadmin AZ_SQL_DB=WideWorldImportersDW \
+            FOREIGN_CATALOG=wwi_dw_fed CONNECTION_NAME=azure_sql_edw \
+            ./agents/tools/render_sql.sh
+          grep -q "TYPE SQLSERVER" databricks/_rendered/uc/01_federation_setup.sql
+          grep -q "source-password" databricks/_rendered/uc/01_federation_setup.sql
           sqlfluff lint databricks/_rendered/uc databricks/_rendered/silver databricks/_rendered/gold --nocolor || sqlfluff lint databricks/uc --nocolor
+          SOURCE_TYPE=mysql SOURCE_HOST=example.mysql.database.azure.com SOURCE_PORT=3306 \
+            SOURCE_DATABASE=appdb SOURCE_USER=demo SOURCE_PASSWORD=dummy \
+            FOREIGN_CATALOG=mysql_fed CONNECTION_NAME=azure_mysql_edw DATABRICKS_CATALOG=my_edw \
+            ./agents/tools/render_sql.sh
+          grep -q "TYPE MYSQL" databricks/_rendered/uc/01_federation_setup.sql
+          grep -q "example.mysql.database.azure.com" databricks/_rendered/uc/01_federation_setup.sql
+          echo "dual-source render OK"
 
       - name: Sync prompts smoke
         run: |
@@ -132,7 +147,10 @@ jobs:
           BUNDLE_VAR_warehouse_id: "0000000000000000"
           BUNDLE_VAR_catalog: "edw_migration"
           DATABRICKS_CATALOG: edw_migration
+          SOURCE_TYPE: sqlserver
           AZ_SQL_SERVER: example
+          AZ_SQL_ADMIN: edwadmin
+          AZ_SQL_DB: WideWorldImportersDW
         run: |
           ./agents/tools/render_sql.sh
           if databricks bundle validate --strict -t dev; then
