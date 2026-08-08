@@ -58,7 +58,7 @@ flowchart TD
 
 If agents are missing: `make sync-prompts`, then reload the window.
 
-**GitHub Copilot users:** open [`edw-start.md`](../agents/github-copilot/edw-start.md) · [`.github/copilot-instructions.md`](../.github/copilot-instructions.md).
+**GitHub Copilot / CLIs:** [CLI setup](cli-setup.md) · [`edw-start.md`](../agents/github-copilot/edw-start.md) · [`.github/copilot-instructions.md`](../.github/copilot-instructions.md).
 
 ---
 

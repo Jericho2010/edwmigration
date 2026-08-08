@@ -33,6 +33,7 @@ flowchart TD
 | I want to… | Page |
 |---|---|
 | See how to click in Cursor | [cursor-ui.md](cursor-ui.md) |
+| Cursor CLI or Copilot CLI | [cli-setup.md](cli-setup.md) |
 | Try the free demo tonight | [guided-demo.md](guided-demo.md) |
 | Launch the right agent | [agent-setup.md](agent-setup.md) |
 | Connect my Azure SQL / MySQL | [your-database.md](your-database.md) |
@@ -67,6 +68,7 @@ flowchart TD
 | Doc | Purpose |
 |---|---|
 | [agent-setup.md](agent-setup.md) | `start` menu + agents + kickoffs |
+| [cli-setup.md](cli-setup.md) | Cursor CLI + GitHub Copilot CLI |
 | [prerequisites.md](prerequisites.md) | Tools and privileges |
 | [runbook.md](runbook.md) | Compact checklist |
 | [troubleshooting.md](troubleshooting.md) | Symptom → fix |

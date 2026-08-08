@@ -21,6 +21,7 @@ Pipeline detail (convert waves, merge, retries): [agent_delegation.png](docs/img
 | I want to… | Go here |
 |---|---|
 | See Cursor in three pictures | [Using Cursor](docs/cursor-ui.md) |
+| Use **Cursor CLI** or **Copilot CLI** | [CLI setup](docs/cli-setup.md) |
 | Understand what I’ll get | [What you get](docs/what-you-get.md) |
 | Set up for the first time | [Getting started](docs/getting-started.md) |
 | **Try the free guided demo tonight** | [Guided demo (Track A)](docs/guided-demo.md) |
@@ -130,6 +131,7 @@ No object lists. No Lakebridge. No hand-written landing SQL.
 | Path | For |
 |---|---|
 | [docs/cursor-ui.md](docs/cursor-ui.md) | Three-step Cursor visuals |
+| [docs/cli-setup.md](docs/cli-setup.md) | Cursor CLI + Copilot CLI |
 | [docs/getting-started.md](docs/getting-started.md) | First open + `start` menu |
 | [docs/what-you-get.md](docs/what-you-get.md) | Outcomes & diagrams |
 | [docs/guided-demo.md](docs/guided-demo.md) | Track A |

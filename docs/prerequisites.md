@@ -12,7 +12,7 @@
 
 | Tool | Verify (when asked) |
 |---|---|
-| [Cursor](https://cursor.com) (or GitHub Copilot) | Repo opens; agents visible |
+| [Cursor](https://cursor.com) IDE, [Cursor CLI](cli-setup.md), or [Copilot CLI](cli-setup.md) | Repo root open; agents / instructions visible |
 | Databricks CLI 0.281+ | `databricks --version` |
 | python3 3.10+ | `python3 --version` |
 | jq, curl | `jq --version` |

@@ -2,7 +2,7 @@
 
 Follow these three steps: open the root, type **`start`**, pick a number.
 
-← [Getting started](getting-started.md) · [Agent setup](agent-setup.md) · [Capture storyboard](media/storyboard.md)
+← [Getting started](getting-started.md) · [Agent setup](agent-setup.md) · [CLI setup](cli-setup.md) · [Capture storyboard](media/storyboard.md)
 
 ---
 
