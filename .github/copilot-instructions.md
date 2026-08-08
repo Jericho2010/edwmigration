@@ -6,6 +6,8 @@ This repo migrates Azure SQL or Azure MySQL → a user-named Databricks Unity Ca
 
 Open the repo root so instructions under `agents/github-copilot/` apply. See `docs/agent-setup.md`.
 
+**CLI:** Cursor CLI (`agent`) and Copilot CLI (`copilot`) — see `docs/cli-setup.md`. Same `start` menu; do not bootstrap until the user chooses 1–3.
+
 ## Front door
 
 If the user says `start`, `menu`, or `help`, follow `agents/github-copilot/edw-start.md`: run `./agents/tools/start_status.sh`, print the phrase menu, wait for a choice. Do not bootstrap until they pick 1–3.

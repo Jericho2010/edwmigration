@@ -96,6 +96,8 @@ make sync-prompts
 Same stage bodies: [`agents/github-copilot/`](../agents/github-copilot/)  
 Workspace hints: [`.github/copilot-instructions.md`](../.github/copilot-instructions.md)
 
+**Terminal?** Cursor CLI (`agent`) and Copilot CLI (`copilot`) — setup + what’s different: **[cli-setup.md](cli-setup.md)**.
+
 ---
 
 ## Track logins (when asked)
