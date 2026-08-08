@@ -14,7 +14,7 @@ For platform buyers after the wow: open [Enterprise](enterprise.md) (SoD / no pu
 
 ## 30–45 minutes
 
-Add: open inventory counts after Assess; show a converted silver/gold notebook; inject fault (`inject_fault.sh`) → Gate blocks → revert → green; teardown.
+Add: open inventory counts after Assess; after a Convert wave, show two `agents/out/<run_id>/convert/*.json` files plus Control Plane agent events; open a converted silver/gold notebook; inject fault (`inject_fault.sh`) → Gate blocks → revert → green; teardown.
 
 ## Takeaways
 

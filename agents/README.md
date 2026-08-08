@@ -12,10 +12,10 @@ Portable prompts + contracts. Cursor and GitHub Copilot adapters are generated.
 
 | Agent | Role |
 |---|---|
-| `edw-demo-guide` | Guided demo after az + Databricks login |
-| `edw-coordinator` | Track B: Azure SQL or MySQL → discover → convert → gate |
-| `edw-assess` | Backlog from inventory (empty OK if routines skipped) |
-| `edw-convert` | T-SQL / MySQL routine → silver/gold SQL |
+| `edw-demo-guide` | Guided demo; runs Track A preflight then bootstrap + migration |
+| `edw-coordinator` | Track B: Azure SQL or MySQL → discover → parallel convert fan-out → gate |
+| `edw-assess` | Backlog from inventory (empty OK if routines skipped); unique `target_path`s |
+| `edw-convert` | One T-SQL / MySQL routine → silver/gold SQL + `convert/<item_id>.json` |
 | `edw-test` | Generated reconcile |
 | `edw-gate` | Ship/no-ship |
 
@@ -23,6 +23,10 @@ Portable prompts + contracts. Cursor and GitHub Copilot adapters are generated.
 
 | Tool | Purpose |
 |---|---|
+| `repo_root.sh` | Resolve checkout root (Makefile + `.cursor` + `agents/tools`) |
+| `preflight_track_a.sh` | Track A smoke: tools, auth, warehouse, SqlPackage/sqlcmd |
+| `check_land_ready.sh` | Fail if bronze land SQL is missing/placeholder (`make run`) |
+| `smoke_path_guards.sh` | CI/local path-coupling + merge smoke |
 | `materialize_demo_env.sh` | Build `.env` from logins |
 | `render_sql.sh` | Catalog/federation render (`SOURCE_TYPE`) → `_rendered/` |
 | `resolve_source_env.sh` | Map `SOURCE_*` / `AZ_SQL_*` |
@@ -31,6 +35,8 @@ Portable prompts + contracts. Cursor and GitHub Copilot adapters are generated.
 | `ensure_run_events.py` | Table-only convert/skipped events for Gate |
 | `discover_inventory.py` | Base tables + procs/routines (`SOURCE_TYPE`) |
 | `generate_from_inventory.py` | Land + reconcile SQL |
+| `validate_backlog_paths.py` | Unique silver/gold `target_path`s before Convert fan-out |
+| `merge_convert_results.py` | Merge `convert/*.json` → backlog + `ops.proc_conversion_map` |
 | `run_sql.sh` | Statement Execution API |
 | `sync_prompts.sh` | Cursor + Copilot |
 

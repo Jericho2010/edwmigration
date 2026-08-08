@@ -4,7 +4,8 @@
 # and attempt/loop_count under max_retries.
 set -euo pipefail
 
-REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+HOOK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$("${HOOK_DIR}/_repo_root.sh")"
 if [ -f "${REPO_ROOT}/.env" ]; then
   set -a
   # shellcheck disable=SC1091
@@ -13,10 +14,10 @@ if [ -f "${REPO_ROOT}/.env" ]; then
 fi
 
 PAYLOAD="$(cat || true)"
-RUN_ID="$("${REPO_ROOT}/.cursor/hooks/_resolve_run_id.sh" "$REPO_ROOT")"
-AGENT="$("${REPO_ROOT}/.cursor/hooks/_map_agent.sh" "$PAYLOAD")"
+RUN_ID="$("${HOOK_DIR}/_resolve_run_id.sh" "$REPO_ROOT")"
+AGENT="$("${HOOK_DIR}/_map_agent.sh" "$PAYLOAD")"
 
-"${REPO_ROOT}/.cursor/hooks/_flush_events.sh" "$RUN_ID" || true
+"${HOOK_DIR}/_flush_events.sh" "$RUN_ID" || true
 
 eval "$(python3 - "$PAYLOAD" <<'PY'
 import json, sys, shlex

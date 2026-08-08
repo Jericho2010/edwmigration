@@ -14,7 +14,10 @@ Short definitions for terms used in this repo. ← [Getting started](getting-sta
 | **`ops`** | Control tables: inventory, backlog, reconcile, Gate, agent events. |
 | **Discover** | Auto-list base tables (+ procs/routines when tools allow). |
 | **Land** | `CREATE OR REPLACE` bronze tables from the federated source. |
-| **Convert** | Turn a stored procedure / routine into Spark SQL under `databricks/silver\|gold`. |
+| **Convert** | Turn one stored procedure / routine into Spark SQL under `databricks/silver\|gold`, plus a result JSON for merge. |
+| **Fan-out** | Coordinator launches up to **5** `edw-convert` agents in parallel per wave (unique `target_path`s). |
+| **run_id** | UUID for one migration run; artifacts live under `agents/out/<run_id>/`. |
+| **convert_summary** | Merged Convert counts (`converted` / `blocked`) after a wave — `agents/out/<run_id>/convert_summary.json`. |
 | **Reconcile / Test** | Compare bronze row counts to source; write pass/fail. |
 | **Gate** | Deterministic ship / no-ship decision from inventory + reconcile + conversions. |
 | **Control Plane** | AI/BI dashboard over `ops.*` for the migration run. |

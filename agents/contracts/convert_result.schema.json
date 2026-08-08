@@ -1,0 +1,40 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://edw-migration.demo/agents/contracts/convert_result.schema.json",
+  "title": "Convert result",
+  "description": "Per-item output of one edw-convert worker. Written to agents/out/<run_id>/convert/<item_id>.json for parallel fan-out merge.",
+  "type": "object",
+  "required": ["item_id", "legacy_proc", "target_path", "status", "notes", "patterns_used"],
+  "additionalProperties": false,
+  "properties": {
+    "item_id": {
+      "type": "string",
+      "description": "Backlog item_id this convert covers (e.g. 'item-001').",
+      "minLength": 1
+    },
+    "legacy_proc": {
+      "type": "string",
+      "description": "Fully-qualified proc/routine name.",
+      "minLength": 1
+    },
+    "target_path": {
+      "type": "string",
+      "description": "Repo-relative notebook path under databricks/silver/ or databricks/gold/.",
+      "pattern": "^databricks/(silver|gold)/[^/]+\\.sql$"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["draft", "review", "final", "blocked"],
+      "description": "Conversion outcome. blocked requires a stub notebook with -- TODO."
+    },
+    "notes": {
+      "type": "string",
+      "description": "Mapping notes or blocker reason."
+    },
+    "patterns_used": {
+      "type": "array",
+      "description": "Convert style patterns applied (e.g. snapshot, scd2).",
+      "items": { "type": "string" }
+    }
+  }
+}

@@ -83,8 +83,11 @@ jobs:
           pairs = [
             ("agents/contracts/context.schema.json", "agents/samples/run/context.json"),
             ("agents/contracts/migration_backlog.schema.json", "agents/samples/run/migration_backlog.json"),
+            ("agents/contracts/migration_backlog.schema.json", "agents/samples/run/migration_backlog.empty.json"),
             ("agents/contracts/migration_manifest.schema.json", "agents/samples/run/migration_manifest.json"),
             ("agents/contracts/reconcile_report.schema.json", "agents/samples/run/reconcile_report.json"),
+            ("agents/contracts/convert_result.schema.json", "agents/samples/run/convert/item-001.json"),
+            ("agents/contracts/convert_result.schema.json", "agents/samples/run/convert/item-002.json"),
           ]
           failed = False
           for schema_path, doc_path in pairs:
@@ -98,6 +101,49 @@ jobs:
               if not errors:
                   print(f"OK   {doc_path}")
           raise SystemExit(1 if failed else 0)
+          PY
+
+      - name: Path coupling smoke guards
+        run: |
+          chmod +x agents/tools/*.sh .cursor/hooks/*.sh
+          ./agents/tools/smoke_path_guards.sh
+
+      - name: Convert fan-out helpers
+        run: |
+          python3 agents/tools/validate_backlog_paths.py --backlog agents/samples/run/migration_backlog.json
+          python3 - <<'PY'
+          import json, shutil, subprocess, uuid
+          from pathlib import Path
+          run_id = str(uuid.uuid4())
+          run = Path(f"agents/out/{run_id}")
+          (run / "convert").mkdir(parents=True)
+          backlog = json.loads(Path("agents/samples/run/migration_backlog.json").read_text())
+          for item in backlog:
+              item["status"] = "pending"
+          (run / "migration_backlog.json").write_text(json.dumps(backlog, indent=2))
+          shutil.copy("agents/samples/run/convert/item-001.json", run / "convert" / "item-001.json")
+          shutil.copy("agents/samples/run/convert/item-002.json", run / "convert" / "item-002.json")
+          r = subprocess.run(
+              ["python3", "agents/tools/merge_convert_results.py", "--run-id", run_id, "--skip-ops"],
+              capture_output=True, text=True,
+          )
+          assert r.returncode == 0, r.stderr + r.stdout
+          summary = json.loads((run / "convert_summary.json").read_text())
+          assert summary["converted"] == 2 and summary["blocked"] == 0, summary
+          # collision must fail validate
+          bad = [
+              {"item_id": "a", "target_path": "databricks/gold/30_x.sql", "status": "pending", "target_layer": "gold"},
+              {"item_id": "b", "target_path": "databricks/gold/30_x.sql", "status": "pending", "target_layer": "gold"},
+          ]
+          bad_path = run / "bad_backlog.json"
+          bad_path.write_text(json.dumps(bad))
+          r = subprocess.run(
+              ["python3", "agents/tools/validate_backlog_paths.py", "--backlog", str(bad_path)],
+              capture_output=True, text=True,
+          )
+          assert r.returncode == 1, r.stdout
+          shutil.rmtree(run)
+          print("convert fan-out helpers OK")
           PY
 
       - name: Shell syntax + ShellCheck

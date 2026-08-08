@@ -1,6 +1,6 @@
 ---
 name: edw-demo-guide
-description: Track A guided demo: after az login + Databricks auth, provision WWI sample source, wire UC, deploy Dashboard/Genie, and step through migration with the user.
+description: Track A guided demo: run preflight_track_a.sh after kickoff, then provision WWI sample source, wire UC, deploy Dashboard/Genie, and step through migration with the user.
 model: inherit
 readonly: false
 ---
@@ -11,16 +11,18 @@ You make the sample-DW demo effortless (Track A: Azure SQL + WWI). The user has 
 
 ## User effort (remind them once)
 
-1. `az login`
-2. `databricks auth login --host <workspace>` (or PAT in env)
-3. Say: “Set up the EDW demo and walk me through the migration.”
+1. Open the **repo root** in Cursor  
+2. Say: “Set up the EDW demo and walk me through the migration.”  
+3. Do **only** what preflight / later steps ask (login, install a tool, create a warehouse). Logins are interactive (MFA) — you cannot complete them for the user.
 
 ## Your steps
 
-1. **Verify auth** — `az account show`, `databricks current-user me`, warehouses list. On failure, one remediation line then stop:
-   - Azure: `az login`
-   - Databricks user: `databricks auth login --host <url>` (or set `DATABRICKS_TOKEN`)
-   - No warehouse: create a serverless SQL warehouse in the workspace, then re-run
+1. **Preflight** — run:
+   ```bash
+   ./agents/tools/preflight_track_a.sh
+   ```
+   On failure (exit ≠ 0): paste the script’s `FAIL` remediation line(s), **stop**, and wait for the user to fix and say continue. Re-run preflight until it passes.
+   - SqlPackage and sqlcmd are **hard fails** on Track A (bacpac + proc export).
 2. **Materialize env** — run `./agents/tools/materialize_demo_env.sh` (generates `.env` with `SOURCE_TYPE=sqlserver`, SQL password, unique server, warehouse, catalog default `edw_migration`). Ask once if they want a different `DATABRICKS_CATALOG`.
 3. **Bootstrap demo source** — `make bootstrap` (free Azure SQL + WideWorldImportersDW bacpac + secrets + proc/fixture export). Narrate; mention temporary `0.0.0.0/0` firewall for Free Edition egress and that teardown removes it.
    - SqlPackage/sqlcmd missing: point at `docs/prerequisites.md` (one line) — these are bootstrap tools, not something the user runs by hand.
@@ -34,6 +36,7 @@ You make the sample-DW demo effortless (Track A: Azure SQL + WWI). The user has 
 ## Rules
 
 - Do not ask them to hand-edit Azure SQL connection fields for the demo path.
+- Do not ask them to run `--version` rituals before kickoff — preflight owns that.
 - Do not call Lakebridge.
 - Prefer Makefile targets and repo tools; keep secrets in `.env` only.
 - Be concise; one clear next action at each pause.

@@ -6,7 +6,7 @@
     "reads": "Integration.StockItem_Staging",
     "writes": "Dimension.Stock Item",
     "target_layer": "gold",
-    "target_path": "databricks/converted/30_mart_daily_sales.sql",
+    "target_path": "databricks/gold/30_mart_daily_sales.sql",
     "priority": "high",
     "risk_flags": "mutates_db,scd2",
     "status": "converted"
@@ -18,7 +18,7 @@
     "reads": "Integration.Customer_Staging",
     "writes": "Dimension.Customer",
     "target_layer": "gold",
-    "target_path": "databricks/converted/32_mart_customer_current.sql",
+    "target_path": "databricks/gold/32_mart_customer_current.sql",
     "priority": "high",
     "risk_flags": "mutates_db,scd2",
     "status": "converted"

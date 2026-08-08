@@ -7,7 +7,7 @@ Start with [What you get](what-you-get.md) for plain English; [Enterprise](enter
 
 ## Engine vs demo pack
 
-- **Engine:** `SOURCE_TYPE` (`sqlserver`|`mysql`) → Lakehouse Federation → discover base tables (+ procs/routines) → generate bronze land/reconcile → agent Convert → job → Gate → Dashboard/Genie.  
+- **Engine:** `SOURCE_TYPE` (`sqlserver`|`mysql`) → Lakehouse Federation → discover base tables (+ procs/routines) → generate bronze land/reconcile → **parallel Convert fan-out** → job → Test → Gate → Dashboard/Genie.  
 - **Demo pack** (`demo/wwi`, `infra/azure`, `legacy/*`): optional WideWorldImporters sample for [Track A](guided-demo.md). Gate never requires WWI object names.
 
 ```mermaid
@@ -17,8 +17,10 @@ flowchart LR
     ST[SOURCE_TYPE] --> Fed[Federation]
     Fed --> Disc[Discover]
     Disc --> Land[Land bronze]
-    Land --> Conv[Convert]
-    Conv --> Gate[Gate]
+    Land --> Conv[Convert fan-out]
+    Conv --> Job[Job run]
+    Job --> Test[Test]
+    Test --> Gate[Gate]
   end
   subgraph demo [Demo pack optional]
     WWI[WWI bacpac]
@@ -29,13 +31,17 @@ flowchart LR
   classDef azureC fill:#0078D4,stroke:#005A9E,color:#fff
   classDef bronze fill:#C47B2D,stroke:#8F5A1F,color:#fff
   classDef ops fill:#5B4B8A,stroke:#3F3460,color:#fff
-  class ST,Fed,Disc,Conv agent
+  class ST,Fed,Disc,Conv,Test agent
   class WWI azureC
-  class Land bronze
+  class Land,Job bronze
   class Gate,Obs ops
 ```
 
-Full colored system diagram: [`img/architecture.mmd`](img/architecture.mmd)
+**Convert fan-out:** after Assess, `validate_backlog_paths.py` → waves of ≤5 `edw-convert` agents → `merge_convert_results.py` → then deploy/run. Shared memory is `agents/out/<run_id>/` (see [artifacts map](what-you-get.md#run-artifacts-map)).
+
+**Convert vs job tasks:** Gate checks notebooks on disk + `ops.proc_conversion_map`. The medallion DAB job runs the **checked-in** silver/gold task set in `databricks/jobs/edw_migration_medallion.yml` — new convert paths are not auto-wired into job tasks until that YAML is extended. See [limits.md](limits.md).
+
+Full colored system diagram: [`img/architecture.mmd`](img/architecture.mmd) · Delegation: [`img/agent_delegation.mmd`](img/agent_delegation.mmd)
 
 ---
 

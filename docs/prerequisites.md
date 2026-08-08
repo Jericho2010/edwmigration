@@ -1,8 +1,8 @@
 # Prerequisites
 
-Install **only what your path needs**. If something is missing, the agent or Makefile names the one tool.
+**Reference matrix** — install what the agent (or Makefile) names when something is missing. You do **not** need to run a version checklist before the kickoff sentence; Track A preflight (`./agents/tools/preflight_track_a.sh`) owns that smoke test.
 
-← [Getting started](getting-started.md)
+← [Getting started](getting-started.md) · [Guided demo](guided-demo.md)
 
 ---
 
@@ -10,7 +10,7 @@ Install **only what your path needs**. If something is missing, the agent or Mak
 
 ### Always
 
-| Tool | Verify |
+| Tool | Verify (when asked) |
 |---|---|
 | [Cursor](https://cursor.com) (or GitHub Copilot) | Repo opens; agents visible |
 | Databricks CLI 0.281+ | `databricks --version` |
@@ -40,11 +40,13 @@ Install **only what your path needs**. If something is missing, the agent or Mak
 - `CREATE CATALOG` on the metastore  
 - Secret scopes + Statement Execution on a **serverless** SQL warehouse  
 
+The guide detects a missing warehouse in preflight; UC privilege denials usually appear at `make setup`.
+
 ---
 
-## Logins
+## Logins (when the agent asks)
 
-**Track A**
+**Track A** (interactive — MFA is yours):
 
 ```bash
 az login

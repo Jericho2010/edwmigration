@@ -12,7 +12,7 @@ How this repo’s Cursor (and Copilot) agents work — including **how to launch
 2. Confirm these agents exist:  
    `edw-demo-guide`, `edw-coordinator`, `edw-assess`, `edw-convert`, `edw-test`, `edw-gate`  
 3. If missing or you edited prompts: `make sync-prompts`, then reload Cursor.  
-4. Log in for your path ([getting-started](getting-started.md)), then paste a kickoff sentence below.
+4. Paste a kickoff sentence below — Track A **`edw-demo-guide`** runs `preflight_track_a.sh` and asks for login/install only if needed.
 
 ---
 
@@ -26,20 +26,21 @@ Exact UI labels move between Cursor versions; the idea is stable:
 2. Select / mention the agent by name (example: `edw-demo-guide`).  
 3. Paste the kickoff sentence for your track.  
 4. Allow tool / terminal use when prompted.  
-5. When it pauses (counts, >200 tables, teardown), answer in plain language.
+5. When it pauses (preflight remediation, counts, >200 tables, teardown), answer in plain language — then say **continue**.
 
-**You are not expected to run SqlPackage or write SQL by hand** on the guided path — the agent orchestrates that.
+**You are not expected to run SqlPackage or write SQL by hand** on the guided path — the agent orchestrates that. Track A tool/auth smoke is owned by `./agents/tools/preflight_track_a.sh`.
 
 ```mermaid
 %%{init: {"theme":"base","themeVariables":{"primaryColor":"#E8F1F8","primaryTextColor":"#0B3D5C","primaryBorderColor":"#0B3D5C","lineColor":"#5B7A8C","secondaryColor":"#E6F4F1","tertiaryColor":"#F7F3EA","background":"#FFFFFF","mainBkg":"#E8F1F8","clusterBkg":"#F7FAFC","clusterBorder":"#5B7A8C","titleColor":"#0B3D5C","edgeLabelBackground":"#FFFFFF"}}}%%
 flowchart LR
   Open[Open repo root] --> Pick[Pick agent]
   Pick --> Paste[Paste kickoff]
-  Paste --> Watch[Watch tools + URLs]
+  Paste --> Pre[Agent preflight]
+  Pre --> Watch[Watch tools + URLs]
   classDef user fill:#0B3D5C,stroke:#082C43,color:#fff
   classDef agent fill:#1B7A6E,stroke:#145A51,color:#fff
   class Open,Paste user
-  class Pick,Watch agent
+  class Pick,Pre,Watch agent
 ```
 
 ---
@@ -59,9 +60,11 @@ flowchart LR
 | You | Agent / Makefile |
 |---|---|
 | Open repo + pick agent | Load prompts / hooks |
-| Logins | Verify auth; write / update `.env` |
-| One kickoff sentence | Federation → discover → land → convert → job → Gate |
-| Watch Control Plane + Genie | Print Dashboard + Genie URLs (`make print-urls`) |
+| One kickoff sentence | Preflight (Track A) → write `.env` → migrate |
+| Fix only what preflight/auth asks | Continue after you say continue |
+| Watch Control Plane + Genie | Federation → discover → land → **Convert fan-out** → job → Gate; print URLs |
+
+Shared memory across Convert workers is **disk only** under `agents/out/<run_id>/` (see [What you get — run artifacts](what-you-get.md#run-artifacts-map)).
 
 ---
 
@@ -69,12 +72,14 @@ flowchart LR
 
 | Agent | Role |
 |---|---|
-| `edw-demo-guide` | Track A walkthrough (provision sample + checkpoints) |
-| `edw-coordinator` | Full migration run owner |
-| `edw-assess` | Backlog from inventory |
-| `edw-convert` | One proc/routine → silver/gold SQL |
+| `edw-demo-guide` | Track A walkthrough; runs `preflight_track_a.sh` then provision + checkpoints |
+| `edw-coordinator` | Full migration run owner; validate → parallel Convert waves (≤5) → merge |
+| `edw-assess` | Backlog from inventory (unique silver/gold `target_path`s) |
+| `edw-convert` | One proc/routine → silver/gold SQL + `convert/<item_id>.json` |
 | `edw-test` | Reconcile report |
 | `edw-gate` | Ship / no-ship manifest |
+
+Convert protocol: `validate_backlog_paths.py` → launch up to **5** `edw-convert` agents per wave → `merge_convert_results.py`. What you will see: [during the run](what-you-get.md#what-you-will-see-while-it-works).
 
 Regenerate Cursor + Copilot files anytime:
 
@@ -91,10 +96,10 @@ Workspace hints: [`.github/copilot-instructions.md`](../.github/copilot-instruct
 
 ---
 
-## Track logins (short)
+## Track logins (when asked)
 
-- **Track A:** `az login` + Databricks auth  
+- **Track A:** preflight asks for `az login` + Databricks auth if needed  
 - **Track B MySQL:** Databricks auth; optional `az` for firewall; optional `mysql` CLI for routines  
 - **Track B Azure SQL:** Databricks auth + `SOURCE_*` in `.env`  
 
-Full tool matrix: [prerequisites.md](prerequisites.md)
+Full tool matrix (reference): [prerequisites.md](prerequisites.md)

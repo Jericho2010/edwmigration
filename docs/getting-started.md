@@ -1,27 +1,29 @@
 # Getting started
 
-**Goal:** Open this repo in Cursor so the migration agents load, log in once, and know which path to take.
+**Goal:** Open this repo in Cursor, say one kickoff sentence, and fix **only** what the agent reports.
 
-You do **not** need prior EDW or Unity Catalog experience. Follow this page top to bottom the first time; later skip to [Guided demo](guided-demo.md) or [Your database](your-database.md).
+You do **not** need prior EDW or Unity Catalog experience. You do **not** need to run version checks or log in before chatting — the agent’s preflight tells you the next human action.
 
 **Prefer pictures?** → **[Using Cursor](cursor-ui.md)** · **New words?** → [Glossary](glossary.md)
 
 ```mermaid
 %%{init: {"theme":"base","themeVariables":{"primaryColor":"#E8F1F8","primaryTextColor":"#0B3D5C","primaryBorderColor":"#0B3D5C","lineColor":"#5B7A8C","secondaryColor":"#E6F4F1","tertiaryColor":"#F7F3EA","background":"#FFFFFF","mainBkg":"#E8F1F8","clusterBkg":"#F7FAFC","clusterBorder":"#5B7A8C","titleColor":"#0B3D5C","edgeLabelBackground":"#FFFFFF"}}}%%
 flowchart TD
-  A[Open repo root in Cursor] --> B[Confirm agents visible]
-  B --> C[Install tools for your path]
-  C --> D[Log in]
-  D --> E{Which path?}
-  E -->|Tonight / learning| F[Guided demo Track A]
-  E -->|My sandbox DB| G[Your database Track B]
-  E -->|Platform / prod| H[Enterprise]
+  A[Open repo root in Cursor] --> B[Pick agent]
+  B --> C[Say kickoff]
+  C --> D[Agent preflight]
+  D -->|asks you| E[Do one remediation]
+  E --> C
+  D -->|pass| F{Which path?}
+  F -->|Tonight / learning| G[Guided demo Track A]
+  F -->|My sandbox DB| H[Your database Track B]
+  F -->|Platform / prod| I[Enterprise]
   classDef user fill:#0B3D5C,stroke:#082C43,color:#fff
   classDef agent fill:#1B7A6E,stroke:#145A51,color:#fff
   classDef ops fill:#5B4B8A,stroke:#3F3460,color:#fff
-  class A,B,C,D user
-  class F,G agent
-  class H ops
+  class A,B,C,E user
+  class D,G,H agent
+  class I ops
 ```
 
 ---
@@ -45,8 +47,8 @@ This repo ships **specialized chat agents** with names like `edw-demo-guide` and
 
 1. Open Agent / Chat in Cursor.  
 2. Pick **`edw-demo-guide`** (demo) or **`edw-coordinator`** (your DB).  
-3. Paste the **kickoff sentence** from [agent-setup.md](agent-setup.md).  
-4. Allow tools; answer when it asks (for example confirm >200 tables).
+3. Paste the **kickoff sentence** (next section).  
+4. Allow tools; when preflight fails, do the one remediation it prints, then say **continue**.
 
 If agents are missing: `make sync-prompts`, then reload the window.
 
@@ -54,52 +56,37 @@ If agents are missing: `make sync-prompts`, then reload the window.
 
 ---
 
-## 3. Tools to install
+## 3. Say the kickoff (primary step)
 
-| Always | Track A (guided demo) | Track B (your DB) |
+| Path | Agent | Say |
 |---|---|---|
-| [Cursor](https://cursor.com) (or Copilot) | Azure CLI (`az`) | Databricks CLI |
-| Databricks CLI | SqlPackage + sqlcmd *(agent uses these; you don’t run them by hand)* | python3, jq, curl |
-| python3, jq, curl | Databricks CLI + python3… | Optional: `az` (firewall), `mysql` client (routines only) |
+| **A — Guided demo** | `edw-demo-guide` | Set up the EDW demo and walk me through the migration. |
+| **B — MySQL** | `edw-coordinator` | Migrate my Azure MySQL into catalog `<name>`. Host/user/db are in `.env` (or I’ll paste them). |
+| **B — Azure SQL** | `edw-coordinator` | Start an EDW migration run against my Azure SQL. |
 
-Full matrix and privileges: **[prerequisites.md](prerequisites.md)**.
-
-Quick checks:
-
-```bash
-databricks --version
-python3 --version
-jq --version
-# Track A also:
-az account show
-```
+For Track A, the guide runs `./agents/tools/preflight_track_a.sh` first (tools, Azure/Databricks auth, SQL warehouse). It stops with a clear remediation if something is missing. Full walkthrough: **[Guided demo](guided-demo.md)**.
 
 ---
 
-## 4. Log in
+## 4. When the agent asks
 
-### Guided demo (Track A) — do both
+Do **only** the action it names. Common remediations:
 
-```bash
-az login
-databricks auth login --host https://<your-workspace>.cloud.databricks.com
-```
+| Agent says | You do |
+|---|---|
+| Azure not logged in | `az login` |
+| Databricks not authenticated | `databricks auth login --host https://<your-workspace>.cloud.databricks.com` (or set `DATABRICKS_TOKEN`) |
+| No SQL warehouse | Create a **serverless** warehouse in the Databricks UI, then say continue |
+| Install Azure CLI / Databricks CLI / python3 / jq / SqlPackage / sqlcmd | See **[prerequisites.md](prerequisites.md)** — Track A preflight **FAIL**s until SqlPackage + sqlcmd are present |
+| `CREATE CONNECTION` denied | Ask a workspace admin for `CREATE CONNECTION` + `CREATE CATALOG` (or run as admin) |
 
-Or set a Databricks PAT in `.env` later (`DATABRICKS_TOKEN`) if you prefer.
+Logins are interactive (MFA). The agent cannot complete them for you.
 
-You need a **serverless SQL warehouse** in the workspace (Free Edition is fine). Create one in the Databricks UI if the agent says none exist.
-
-### Your own database (Track B)
-
-```bash
-databricks auth login --host https://<your-workspace>.cloud.databricks.com
-```
-
-`az login` only if you want the agent to help open a firewall rule.
+Track B uses the same loop: kickoff → agent asks for Databricks login / `.env` fields if needed.
 
 ---
 
-## 5. Choose your path
+## 5. Choose your path (detail)
 
 | Path | Best when | Next page |
 |---|---|---|

@@ -1,6 +1,6 @@
 # 00_coordinator.md — Coordinator
 
-You drive an Azure SQL **or** Azure MySQL → Databricks Unity Catalog migration: Discover → Generate land → Assess → Convert → Deploy/Run → Test → Gate.
+You drive an Azure SQL **or** Azure MySQL → Databricks Unity Catalog migration: Discover → Generate land → Assess → Convert (parallel fan-out) → Deploy/Run → Test → Gate.
 
 Read `SOURCE_TYPE` from `.env` (`sqlserver` default, or `mysql`). Demo-guide path is sqlserver/WWI only; you handle both Track B sources.
 
@@ -25,7 +25,29 @@ Read `SOURCE_TYPE` from `.env` (`sqlserver` default, or `mysql`). Demo-guide pat
 
 4. **Delegate Assess** → persist `migration_backlog.json` + insert `${uc_catalog}.ops.migration_backlog`. Empty backlog is OK for table-only MySQL.
 
-5. **Delegate Convert** once per non-skipped backlog item. If backlog empty, do **not** invent work — `ensure_run_events` already recorded `convert/skipped`.
+5. **Parallel Convert fan-out** (skip entirely if backlog empty — `ensure_run_events` already recorded `convert/skipped`):
+
+   a. Validate unique silver/gold paths:
+      ```bash
+      python3 agents/tools/validate_backlog_paths.py --run-id <run_id>
+      ```
+      On failure: stop, report collisions, re-Assess or ask the user — do not launch Convert.
+
+   b. Partition pending (non-skipped) backlog items into **waves of ≤5**. For each item in a wave, launch `edw-convert` **in parallel** with a self-contained prompt that includes: `run_id`, the full backlog item JSON, path to the proc/routine source, `SOURCE_TYPE`, and pointers to `agents/out/<run_id>/context.json` + `agents/prompts/convert_style.md`.
+
+   c. Each Convert worker writes only its `target_path` notebook and `agents/out/<run_id>/convert/<item_id>.json` (see `agents/contracts/convert_result.schema.json`). Workers must not edit the backlog or `ops.*`.
+
+   d. After the wave finishes (result files present or clearly missing), merge:
+      ```bash
+      python3 agents/tools/merge_convert_results.py --run-id <run_id>
+      ```
+      Then record one convert event from `convert_summary.json`:
+      ```bash
+      ./agents/tools/record_agent_event.sh --run-id <run_id> --agent convert --event completed --detail 'converted=N blocked=M'
+      ```
+      Use `event=blocked` instead of `completed` when `converted=0` and `blocked>0`.
+
+   e. Launch the next wave until all pending items are merged. Read counts from `agents/out/<run_id>/convert_summary.json` for demo pauses.
 
 6. **Deploy and run** the medallion job:
    ```bash
@@ -43,7 +65,7 @@ Read `SOURCE_TYPE` from `.env` (`sqlserver` default, or `mysql`). Demo-guide pat
    ```
    Gate ships on table land + reconcile when routines were skipped.
 
-9. **Retry:** on gate=fail and `attempt < max_retries`, increment attempt and re-Convert blocked items, then redeploy/run, Test, Gate.
+9. **Retry:** on gate=fail and `attempt < max_retries`, increment attempt and re-fan-out **only** items with status `blocked` or named in gate blockers (still ≤5 per wave), then merge, redeploy/run, Test, Gate.
 
 10. **Print URLs:**
     ```bash
@@ -55,6 +77,7 @@ Read `SOURCE_TYPE` from `.env` (`sqlserver` default, or `mysql`). Demo-guide pat
 - Do not write notebooks yourself — only Convert does.
 - Do not hardcode WWI table or proc names.
 - Persist ops rows using `${uc_catalog}` from context.
+- Shared memory across Convert workers is **disk only**: `agents/out/<run_id>/` (subagents do not share chat context).
 - When used from `edw-demo-guide`, pause briefly after Assess / Convert / Test / Gate with counts for the user.
 - After setup/run, always print Control Plane + Genie URLs (`make print-urls`) and trust checklist: inventory → bronze reconcile → Gate blockers empty.
 

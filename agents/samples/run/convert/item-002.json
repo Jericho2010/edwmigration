@@ -1,0 +1,8 @@
+{
+  "item_id": "item-002",
+  "legacy_proc": "Integration.MigrateStagedCustomerData",
+  "target_path": "databricks/gold/32_mart_customer_current.sql",
+  "status": "final",
+  "notes": "Mapped customer SCD merge to gold current mart.",
+  "patterns_used": ["scd2"]
+}

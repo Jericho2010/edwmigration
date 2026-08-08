@@ -1,7 +1,14 @@
 #!/usr/bin/env bash
 # Resolve the active migration run_id for Cursor hooks.
 set -euo pipefail
-REPO_ROOT="${1:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
+
+HOOK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [ -n "${1:-}" ]; then
+  REPO_ROOT="$1"
+else
+  REPO_ROOT="$("${HOOK_DIR}/_repo_root.sh")"
+fi
+
 CURRENT="${REPO_ROOT}/agents/out/CURRENT_RUN"
 
 if [ -f "$CURRENT" ]; then
@@ -12,10 +19,30 @@ if [ -f "$CURRENT" ]; then
   fi
 fi
 
-NEWEST="$(find "${REPO_ROOT}/agents/out" -mindepth 2 -maxdepth 2 -name context.json -printf '%T@ %p\n' 2>/dev/null | sort -rn | head -1 | cut -d' ' -f2- || true)"
-if [ -n "$NEWEST" ]; then
-  basename "$(dirname "$NEWEST")"
-  exit 0
+# Portable newest context.json (no GNU find -printf)
+if command -v python3 >/dev/null 2>&1; then
+  NEWEST="$(python3 - "$REPO_ROOT" <<'PY'
+import sys
+from pathlib import Path
+root = Path(sys.argv[1]) / "agents" / "out"
+best = None
+best_mtime = -1.0
+if root.is_dir():
+    for ctx in root.glob("*/context.json"):
+        try:
+            m = ctx.stat().st_mtime
+        except OSError:
+            continue
+        if m > best_mtime:
+            best_mtime = m
+            best = ctx.parent.name
+print(best or "")
+PY
+)"
+  if [ -n "$NEWEST" ]; then
+    printf '%s' "$NEWEST"
+    exit 0
+  fi
 fi
 
 printf 'unknown'

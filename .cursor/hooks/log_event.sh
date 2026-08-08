@@ -4,7 +4,8 @@
 set -euo pipefail
 
 FLUSH_THRESHOLD="${AGENT_EVENT_FLUSH_THRESHOLD:-10}"
-REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+HOOK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$("${HOOK_DIR}/_repo_root.sh")"
 
 if [ -f "${REPO_ROOT}/.env" ]; then
   set -a
@@ -19,8 +20,8 @@ if [ -z "$PAYLOAD" ]; then
   exit 0
 fi
 
-RUN_ID="$("${REPO_ROOT}/.cursor/hooks/_resolve_run_id.sh" "$REPO_ROOT")"
-AGENT="$("${REPO_ROOT}/.cursor/hooks/_map_agent.sh" "$PAYLOAD")"
+RUN_ID="$("${HOOK_DIR}/_resolve_run_id.sh" "$REPO_ROOT")"
+AGENT="$("${HOOK_DIR}/_map_agent.sh" "$PAYLOAD")"
 
 # Parse remaining fields with python3 (jq optional)
 eval "$(python3 - "$PAYLOAD" <<'PY'
@@ -66,7 +67,7 @@ PY
 
 COUNT="$(wc -l < "$BUF_FILE" | tr -d ' ')"
 if [ "$COUNT" -ge "$FLUSH_THRESHOLD" ]; then
-  "${REPO_ROOT}/.cursor/hooks/_flush_events.sh" "$RUN_ID" || true
+  "${HOOK_DIR}/_flush_events.sh" "$RUN_ID" || true
 fi
 
 echo '{}'

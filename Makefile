@@ -18,7 +18,7 @@ SOURCE_TYPE ?= sqlserver
 TOOLS_CORE := databricks jq curl python3
 TOOLS_AZURE := az sqlcmd SqlPackage
 
-.PHONY: check check-core check-azure check-source render bootstrap setup federation secrets deploy run demo teardown genie materialize-demo sync-prompts discover print-urls
+.PHONY: check check-core check-azure check-source check-land render bootstrap setup federation secrets deploy run demo teardown genie materialize-demo sync-prompts discover print-urls
 
 check: check-source
 
@@ -94,7 +94,10 @@ deploy: render ## Bundle validate --strict + deploy
 	databricks workspace mkdirs "/Workspace/Users/$$USER/.bundle/edw_migration/dev/resources" 2>/dev/null || true
 	databricks bundle deploy -t dev
 
-run: ## Run medallion job (requires generated land SQL)
+check-land: ## Fail if bronze land SQL is missing or still the placeholder
+	./agents/tools/check_land_ready.sh
+
+run: check-land ## Run medallion job (requires generated land SQL)
 	databricks bundle run edw_migration_medallion -t dev
 
 demo: check-azure bootstrap setup ## Scripted demo path (non-interactive)

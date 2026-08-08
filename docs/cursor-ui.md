@@ -43,7 +43,7 @@ Allow terminal / tool use when Cursor asks so the agent can run `make` and repo 
 
 ## What good looks like (first 10 minutes)
 
-- Agent verifies logins or tells you the one missing command  
+- Agent runs Track A preflight (`preflight_track_a.sh`) and may ask for a single login or install — do that, then say continue  
 - It writes or updates `.env`  
 - Later it prints **Control Plane** and **Genie** URLs (`make print-urls`)  
 

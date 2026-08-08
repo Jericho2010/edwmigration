@@ -4,7 +4,8 @@
 set -euo pipefail
 
 RUN_ID="${1:?usage: _flush_events.sh <run_id>}"
-REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+HOOK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$("${HOOK_DIR}/_repo_root.sh")"
 BUF_FILE="${REPO_ROOT}/agents/out/${RUN_ID}/events.buf.jsonl"
 RUN_SQL="${REPO_ROOT}/agents/tools/run_sql.sh"
 

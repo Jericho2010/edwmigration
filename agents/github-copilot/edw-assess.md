@@ -22,6 +22,9 @@ Inventory the connected source (Azure SQL or MySQL) and produce a migration back
    - `migrate` — mutates/loads dimension or fact tables
    - `other` — helper; may set `skip` with reason if not worth converting
 4. Propose `target_layer` (`silver`|`gold`) and `target_path` under `databricks/silver/` or `databricks/gold/` using numeric prefixes (20–29 silver, 30–39 gold).
+   - Every convertible item **must** have a **unique** `target_path`.
+   - Paths must match `databricks/(silver|gold)/<file>.sql` — never `databricks/converted/`.
+   - Uniqueness enables parallel Convert fan-out (one worker per path).
 5. Fill reads/writes/priority/risk_flags from the source SQL (T-SQL or MySQL).
 6. Do **not** invent procs or tables absent from inventory. Do **not** hardcode WWI names.
 

@@ -6,14 +6,21 @@ flowchart TD
   Discover --> Generate["Generate land + reconcile"]
   Generate --> Assess["edw-assess (readonly)"]
   Assess -->|"backlog JSON"| Coord
-  Coord --> Convert["edw-convert"]
-  Convert -->|"silver / gold SQL"| Coord
-  Coord --> DeployRun["Bundle deploy + run"]
+  Coord --> Validate["validate_backlog_paths"]
+  Validate --> Wave["Convert wave max 5"]
+  Wave --> C1["edw-convert item"]
+  Wave --> C2["edw-convert item"]
+  Wave --> Cn["edw-convert item"]
+  C1 --> Results["agents/out/run_id/convert"]
+  C2 --> Results
+  Cn --> Results
+  Results --> Merge["merge_convert_results"]
+  Merge --> DeployRun["Bundle deploy + run"]
   DeployRun --> Test["edw-test (readonly)"]
   Test -->|"reconcile report"| Coord
   Coord --> Gate["edw-gate (readonly)"]
   Gate -->|"manifest JSON"| Coord
-  Coord -->|"fail + retries left"| Convert
+  Coord -->|"fail + retries left"| Wave
   Gate --> User
 
   classDef user fill:#0B3D5C,stroke:#082C43,color:#fff
@@ -22,6 +29,6 @@ flowchart TD
   classDef work fill:#C47B2D,stroke:#8F5A1F,color:#fff
 
   class User user
-  class Guide,Coord,Convert agent
+  class Guide,Coord,C1,C2,Cn agent
   class Assess,Test,Gate readonly
-  class Discover,Generate,DeployRun work
+  class Discover,Generate,DeployRun,Validate,Merge,Wave,Results work
