@@ -2,15 +2,15 @@
 
 **The recommended first experience.** About an hour the first time. Uses free Azure SQL + Databricks Free Edition sample data. An agent does the heavy lifting; you watch and confirm — and fix **only** what preflight asks.
 
-**Verified:** Track A tooling and docs path checked against Databricks Free Edition workspace patterns; agent protocol includes Parallel Convert fan-out and kickoff-first preflight as of **2026-08-08** (CI dual-render, `make print-urls` / Control Plane + Genie discovery). Your Gate counts still depend on a full bootstrap + migration on *your* tenant.
+**Verified:** Track A path checked against Databricks Free Edition patterns (preflight → bootstrap → migration → URLs). Demo acceptance counts (≥10 tables / ≥5 procs) depend on a full run on *your* tenant — those counts are checked by the guide, not by Gate.
 
 ← [Getting started](getting-started.md) · [Using Cursor](cursor-ui.md) · [What you get](what-you-get.md) · Stuck? [Troubleshooting](troubleshooting.md)
 
 ```mermaid
 %%{init: {"theme":"base","themeVariables":{"primaryColor":"#E8F1F8","primaryTextColor":"#0B3D5C","primaryBorderColor":"#0B3D5C","lineColor":"#5B7A8C","secondaryColor":"#E6F4F1","tertiaryColor":"#F7F3EA","background":"#FFFFFF","mainBkg":"#E8F1F8","clusterBkg":"#F7FAFC","clusterBorder":"#5B7A8C","titleColor":"#0B3D5C","edgeLabelBackground":"#FFFFFF"}}}%%
 flowchart LR
-  O[Open repo root] --> G[Launch edw-demo-guide]
-  G --> S[Say the kickoff]
+  O[Open repo root] --> G[Type start or edw-demo-guide]
+  G --> S[Choose 1 or paste kickoff]
   S --> F[Fix if agent asks]
   F --> W[Watch Dashboard + Genie]
   W --> T[Teardown when done]
@@ -29,7 +29,7 @@ flowchart LR
 You only need:
 
 - Repo opened at the **git root** in Cursor  
-- Agent **`edw-demo-guide`** visible (else `make sync-prompts`, reload)
+- Agents **`edw-start`** / **`edw-demo-guide`** visible (else `make sync-prompts`, reload)
 
 Warehouse, Azure/Databricks login, and tools: the guide runs `./agents/tools/preflight_track_a.sh` and **asks** if something is missing. Privileges (`CREATE CONNECTION` / `CREATE CATALOG`) are checked when wiring the sink — see [prerequisites](prerequisites.md) if the agent reports a deny.
 
@@ -37,8 +37,8 @@ Warehouse, Azure/Databricks login, and tools: the guide runs `./agents/tools/pre
 
 ## Run it (human path)
 
-1. In Cursor, start **`edw-demo-guide`**.  
-2. Paste this kickoff sentence:
+1. In Cursor, type **`start`** (or launch **`edw-demo-guide`**).  
+2. Choose menu **1**, or paste:
 
    > Set up the EDW demo and walk me through the migration.
 
@@ -49,8 +49,10 @@ Warehouse, Azure/Databricks login, and tools: the guide runs `./agents/tools/pre
    - Wire federation, dashboard, Genie (`make setup`)  
    - Drive the coordinator with checkpoints: Assess → **Convert wave** (≤5 in parallel) → merge → Test → Gate  
 5. When it prints URLs, open **Control Plane** and **Genie**. Ask: *Did the last run ship?*  
-6. Demo acceptance: **≥10 tables** and **≥5 procedures** migrated (counts only).  
-7. When finished: ask the guide to tear down, or run `make teardown`.
+6. Demo acceptance (guide check, **not** a Gate rule): **≥10 tables** and **≥5 procedures** migrated (counts only).  
+7. When finished: ask the guide to tear down, menu **5**, or run `make teardown`.
+
+**Job wiring (plain English):** Gate checks that converted notebooks exist on disk. The medallion job runs a **checked-in** task list — for the WWI demo that already covers the sample. If the guide prints a job-wiring WARN on a custom conversion, the notebook may be “done” for Gate but not yet a job task ([limits.md](limits.md)).
 
 What you will see at each pause: **[What you will see while it works](what-you-get.md#what-you-will-see-while-it-works)**.
 
@@ -61,7 +63,7 @@ sequenceDiagram
   participant Guide as edw-demo-guide
   participant Azure
   participant DBX as Databricks
-  You->>Guide: Kickoff sentence
+  You->>Guide: start then choose 1
   Guide->>Guide: preflight_track_a.sh
   Guide-->>You: Preflight remediation if needed
   You->>Guide: Continue after fix
@@ -81,8 +83,8 @@ You can stop and celebrate when **all** of these are true:
 1. Control Plane and Genie URLs open (`make print-urls`)  
 2. Genie can answer *Did the last run ship?*  
 3. Gate summary shows ship (empty blockers)  
-4. Counts: **≥10** bronze tables and **≥5** converted procs *(counts only)*  
-5. You tore down Azure resources (`make teardown`) **or** consciously kept them for a follow-up  
+4. Demo acceptance counts: **≥10** bronze tables and **≥5** converted procs *(guide check, not Gate)*  
+5. You tore down Azure resources (`make teardown` / menu **5**) **or** consciously kept them for a follow-up  
 
 ---
 
@@ -95,7 +97,7 @@ make materialize-demo
 make demo
 ```
 
-Then still open Cursor and use **`edw-demo-guide`** or **`edw-coordinator`** for the migration walkthrough. Prefer the guide’s preflight + kickoff for first runs.
+Then still open Cursor, type **`start`** → **1**, or use **`edw-demo-guide`** / **`edw-coordinator`** for the migration walkthrough. Prefer the guide’s preflight for first runs.
 
 ---
 

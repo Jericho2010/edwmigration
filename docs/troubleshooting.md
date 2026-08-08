@@ -22,7 +22,7 @@ Something broke? Find the symptom, apply the one-line fix, re-run the agent step
 | Job missing `10_land_all.sql` / placeholder land | Discover + generate for a `run_id`, then `make render` — `make run` now refuses placeholder land |
 | Hooks events on wrong run / `unknown` | Open **repo root**; ensure `agents/out/CURRENT_RUN` exists after coordinator start |
 | Gate fails unconverted | Convert backlog **or** table-only run with `ensure_run_events.py` |
-| Gate fails missing agent_events | `python3 agents/tools/ensure_run_events.py --run-id …` then record test/gate |
+| Gate fails missing agent_events | `ensure_run_events.py` (coordinator + convert/skipped) then `record_agent_event` for assess/test/gate after each persist helper |
 | Dashboard empty | Hooks need a Cursor agent run + `DATABRICKS_CATALOG` in `.env` |
 | No Dashboard / Genie URL | `make print-urls` after `make deploy` / `make genie` |
 | Genie create fails | Ops tables must exist (`make setup`); warehouse ID set |

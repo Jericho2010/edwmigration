@@ -37,7 +37,7 @@ flowchart LR
   class Gate,Obs ops
 ```
 
-**Convert fan-out:** after Assess, `validate_backlog_paths.py` → waves of ≤5 `edw-convert` agents → `merge_convert_results.py` → then deploy/run. Shared memory is `agents/out/<run_id>/` (see [artifacts map](what-you-get.md#run-artifacts-map)).
+**Convert fan-out:** after Assess, `validate_backlog_paths.py` → waves of ≤5 `edw-convert` agents → `merge_convert_results.py` → then deploy/run. Shared memory is disk artifacts under `agents/out/<run_id>/` (orchestrator-worker; land-first Federation — convert reads bronze Delta). See [artifacts map](what-you-get.md#run-artifacts-map).
 
 **Convert vs job tasks:** Gate checks notebooks on disk + `ops.proc_conversion_map`. The medallion DAB job runs the **checked-in** silver/gold task set in `databricks/jobs/edw_migration_medallion.yml` — new convert paths are not auto-wired into job tasks until that YAML is extended. See [limits.md](limits.md).
 

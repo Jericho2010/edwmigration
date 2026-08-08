@@ -26,12 +26,13 @@ All Mermaid diagrams in this repo share one palette (navy / teal / Azure blue / 
 | File | Description |
 |---|---|
 | [architecture.mmd](architecture.mmd) | Source → Federation → medallion → agents (convert fan-out) |
+| [agent_squad_roles.png](agent_squad_roles.png) | Roles-only squad (README hero) — not Mermaid |
 | [agent_delegation.mmd](agent_delegation.mmd) | Guide / Coordinator with parallel Convert wave |
 | [enterprise_sod.mmd](enterprise_sod.mmd) | Segregation of duties swimlanes |
 | [demo_vs_enterprise.mmd](demo_vs_enterprise.mmd) | Demo anti-pattern vs enterprise controls |
 | [cursor_open_repo.png](cursor_open_repo.png) | Cursor: open repo root |
-| [cursor_pick_agent.png](cursor_pick_agent.png) | Cursor: pick agent |
-| [cursor_kickoff.png](cursor_kickoff.png) | Cursor: paste kickoff |
+| [cursor_pick_agent.png](cursor_pick_agent.png) | Cursor: prefer `edw-start` (reshoot if still demo-guide only) |
+| [cursor_kickoff.png](cursor_kickoff.png) | Cursor: after `start` — menu + choose `1` (reshoot if kickoff-only) |
 
 ## Demo GIFs (captures)
 

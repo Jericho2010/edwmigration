@@ -2,6 +2,8 @@
 
 Stage instruction files are generated from `agents/prompts/` by `agents/tools/sync_prompts.sh`.
 
-**Track A guided demo:** open `edw-demo-guide.md` after `az login` and Databricks auth.
+**Front door:** open `edw-start.md` and say `start` for status + phrase menu.
 
-**Track B (Azure SQL or MySQL):** start with `edw-coordinator.md` (or ask Copilot to follow that file).
+**Track A guided demo:** `edw-demo-guide.md` (or menu item 1).
+
+**Track B (Azure SQL or MySQL):** `edw-coordinator.md` (or menu items 2–3).

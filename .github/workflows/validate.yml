@@ -195,8 +195,16 @@ jobs:
       - name: Sync prompts smoke
         run: |
           ./agents/tools/sync_prompts.sh
+          test -f .cursor/agents/edw-start.md
           test -f .cursor/agents/edw-demo-guide.md
           test -f agents/github-copilot/edw-coordinator.md
+          test -x agents/tools/start_status.sh
+          ./agents/tools/start_status.sh >/dev/null
+          test -f agents/tools/persist_backlog.py
+          test -f agents/tools/check_job_wiring.py
+          grep -q "persist_backlog.py" agents/prompts/00_coordinator.md
+          grep -q "merge_failed.json" agents/prompts/00_coordinator.md
+          ! grep -qE 'may set `skip`' agents/prompts/01_assess.md
 
       - name: Slugify unit check
         run: |

@@ -13,7 +13,7 @@ Optional sample estate for the guided demo. **Not part of the migration engine.*
 
 ## How to run
 
-Prefer **`edw-demo-guide`** after `az login` + Databricks auth.
+Prefer typing **`start`** → **1** (or **`edw-demo-guide`**). Log in when preflight asks.
 
 Or: `make materialize-demo && make demo`
 

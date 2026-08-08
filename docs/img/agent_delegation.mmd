@@ -1,7 +1,9 @@
 %%{init: {"theme":"base","themeVariables":{"primaryColor":"#E8F1F8","primaryTextColor":"#0B3D5C","primaryBorderColor":"#0B3D5C","lineColor":"#5B7A8C","secondaryColor":"#E6F4F1","tertiaryColor":"#F7F3EA","background":"#FFFFFF","mainBkg":"#E8F1F8","clusterBkg":"#F7FAFC","clusterBorder":"#5B7A8C","titleColor":"#0B3D5C","edgeLabelBackground":"#FFFFFF"}}}%%
 flowchart TD
-  User["You"] -->|"az login + Databricks auth"| Guide["edw-demo-guide"]
-  Guide -->|"or direct"| Coord["edw-coordinator"]
+  User["You"] -->|"type start"| Start["edw-start"]
+  Start -->|"1"| Guide["edw-demo-guide"]
+  Start -->|"2 or 3"| Coord["edw-coordinator"]
+  Guide --> Coord
   Coord --> Discover["Discover inventory"]
   Discover --> Generate["Generate land + reconcile"]
   Generate --> Assess["edw-assess (readonly)"]
@@ -29,6 +31,6 @@ flowchart TD
   classDef work fill:#C47B2D,stroke:#8F5A1F,color:#fff
 
   class User user
-  class Guide,Coord,C1,C2,Cn agent
+  class Start,Guide,Coord,C1,C2,Cn agent
   class Assess,Test,Gate readonly
   class Discover,Generate,DeployRun,Validate,Merge,Wave,Results work

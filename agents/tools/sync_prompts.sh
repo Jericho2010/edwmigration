@@ -40,17 +40,19 @@ sync_copilot() {
 }
 
 sync_cursor "00_coordinator.md" "edw-coordinator" "false" \
-  "Drives an Azure SQL or Azure MySQL → Databricks migration run end-to-end. Owns the run_id, delegates to edw-assess, edw-convert, edw-test, and edw-gate, and enforces a bounded retry loop on gate failures. Launch for Track B (or after demo-guide)."
+  "Owns run_id; discover → assess → convert fan-out (disk artifacts) → persist helpers → job wiring WARN → test → gate. Track B or after demo-guide."
 sync_cursor "01_assess.md" "edw-assess" "true" \
-  "Inventory discovered base tables and procs/routines; produce a migration backlog (empty OK if routines skipped). Readonly."
+  "Inventory → migration backlog JSON (empty OK if routines skipped). No skip field; unique target_paths. Readonly."
 sync_cursor "02_convert.md" "edw-convert" "false" \
-  'Convert one legacy T-SQL proc or MySQL routine into a Databricks Spark SQL notebook under databricks/silver/ or databricks/gold/. Writes agents/out/<run_id>/convert/<item_id>.json for parallel fan-out merge.'
+  'Convert one T-SQL/MySQL routine to silver/gold notebook + convert/<item_id>.json; land-first bronze reads; validate_artifact before exit.'
 sync_cursor "03_test.md" "edw-test" "true" \
-  "Run generated reconcile SQL and return reconcile_report.json. Readonly."
+  "Run reconcile SQL, query ops.reconcile_results, return reconcile_report.json. Readonly."
 sync_cursor "04_gate.md" "edw-gate" "true" \
-  "Deterministic ship/no-ship Gate from inventory, conversions, reconcile, and agent_events. Table-only ship when routines skipped. Readonly."
+  "Deterministic ship/no-ship from inventory, conversions, reconcile, agent_events; proof SQL; table-only when routines skipped. Readonly."
 sync_cursor "05_demo_guide.md" "edw-demo-guide" "false" \
-  'Track A guided demo: run preflight_track_a.sh after kickoff, then provision WWI sample source, wire UC, deploy Dashboard/Genie, and step through migration with the user.'
+  'Track A guided demo: preflight → bootstrap WWI → setup → coordinator checkpoints; firewall/AutoPause + job wiring WARN.'
+sync_cursor "06_start.md" "edw-start" "false" \
+  'Front door: start → soft status + phrase menu; CURRENT_RUN resume hint; enterprise SoD from docs. No bootstrap until choice.'
 
 for pair in \
   "00_coordinator.md:edw-coordinator" \
@@ -58,7 +60,8 @@ for pair in \
   "02_convert.md:edw-convert" \
   "03_test.md:edw-test" \
   "04_gate.md:edw-gate" \
-  "05_demo_guide.md:edw-demo-guide"
+  "05_demo_guide.md:edw-demo-guide" \
+  "06_start.md:edw-start"
 do
   sync_copilot "${pair%%:*}" "${pair##*:}"
 done
@@ -68,9 +71,11 @@ cat > "${COPILOT_DIR}/README.md" <<'EOF'
 
 Stage instruction files are generated from `agents/prompts/` by `agents/tools/sync_prompts.sh`.
 
-**Track A guided demo:** open `edw-demo-guide.md` after `az login` and Databricks auth.
+**Front door:** open `edw-start.md` and say `start` for status + phrase menu.
 
-**Track B (Azure SQL or MySQL):** start with `edw-coordinator.md` (or ask Copilot to follow that file).
+**Track A guided demo:** `edw-demo-guide.md` (or menu item 1).
+
+**Track B (Azure SQL or MySQL):** `edw-coordinator.md` (or menu items 2–3).
 EOF
 
 echo "[sync_prompts] done."

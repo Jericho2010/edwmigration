@@ -2,21 +2,23 @@
 
 Use this after you’ve done the [guided demo](guided-demo.md), or when you already know you want to point at **your** Azure SQL or Azure MySQL.
 
-Same destination as Track A: a user-named Unity Catalog catalog, bronze land, Gate, Control Plane, Genie. You bring connection fields; **`edw-coordinator`** does the rest.
+Same destination as Track A: a user-named Unity Catalog catalog, bronze land, Gate, Control Plane, Genie. Easiest entry: type **`start`** → choose **2** (Azure SQL) or **3** (MySQL). Or launch **`edw-coordinator`** with a kickoff phrase below.
 
 ← [Getting started](getting-started.md) · [Guided demo](guided-demo.md) · [Enterprise](enterprise.md) · [Troubleshooting](troubleshooting.md)
 
 ```mermaid
 %%{init: {"theme":"base","themeVariables":{"primaryColor":"#E8F1F8","primaryTextColor":"#0B3D5C","primaryBorderColor":"#0B3D5C","lineColor":"#5B7A8C","secondaryColor":"#E6F4F1","tertiaryColor":"#F7F3EA","background":"#FFFFFF","mainBkg":"#E8F1F8","clusterBkg":"#F7FAFC","clusterBorder":"#5B7A8C","titleColor":"#0B3D5C","edgeLabelBackground":"#FFFFFF"}}}%%
 flowchart TD
-  Auth[Databricks login] --> Env[.env with SOURCE_* + catalog]
+  Start[Type start] --> Pick[Choose 2 or 3]
+  Pick --> Auth[Databricks login if asked]
+  Auth --> Env[.env with SOURCE_* + catalog]
   Env --> Setup[make setup]
-  Setup --> Agent[edw-coordinator kickoff]
+  Setup --> Agent[edw-coordinator]
   Agent --> Out[bronze + Gate + URLs]
   classDef user fill:#0B3D5C,stroke:#082C43,color:#fff
   classDef agent fill:#1B7A6E,stroke:#145A51,color:#fff
   classDef ops fill:#5B4B8A,stroke:#3F3460,color:#fff
-  class Auth,Env user
+  class Start,Pick,Auth,Env user
   class Setup,Agent agent
   class Out ops
 ```
@@ -72,7 +74,7 @@ az mysql flexible-server firewall-rule create \
 make setup
 ```
 
-4. In Cursor, launch **`edw-coordinator`** and say:
+4. In Cursor, type **`start`** → **3**, or launch **`edw-coordinator`** and say:
 
    > Migrate my Azure MySQL into catalog `my_edw`. Host/user/db are in `.env` (or I’ll paste them).
 
@@ -106,7 +108,7 @@ DATABRICKS_CATALOG=my_edw
 make setup
 ```
 
-Launch **`edw-coordinator`**:
+Type **`start`** → **2**, or launch **`edw-coordinator`**:
 
 > Start an EDW migration run against my Azure SQL.
 
