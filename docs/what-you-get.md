@@ -76,7 +76,7 @@ flowchart LR
 |---|---|
 | **Discover** | List base tables (+ export procs/routines if tools allow) |
 | **Land** | Copy each table into `bronze.*` and record counts |
-| **Convert** | Turn T-SQL / MySQL routines into Spark SQL notebooks *(skipped cleanly if none)* |
+| **Convert** | Turn T-SQL / MySQL routines into Spark SQL notebooks in **parallel waves (≤5)** via `edw-convert` *(skipped cleanly if none)* |
 | **Test** | Bronze row counts vs source |
 | **Gate** | Ship / no-ship from inventory + reconcile + conversions |
 | **Observe** | Control Plane dashboard + Genie Q&A |
@@ -88,16 +88,60 @@ flowchart TB
   Coord[edw-coordinator]
   Guide --> Coord
   Coord --> Assess[edw-assess]
-  Coord --> Convert[edw-convert]
+  Coord --> C1[edw-convert]
+  Coord --> C2[edw-convert]
   Coord --> Test[edw-test]
   Coord --> Gate[edw-gate]
   classDef agent fill:#1B7A6E,stroke:#145A51,color:#fff
   classDef readonly fill:#6B7C8F,stroke:#4A5663,color:#fff
-  class Guide,Coord,Convert agent
+  class Guide,Coord,C1,C2 agent
   class Assess,Test,Gate readonly
 ```
 
 Also: [`img/agent_delegation.mmd`](img/agent_delegation.mmd) · [`img/architecture.mmd`](img/architecture.mmd)
+
+---
+
+## What you will see while it works
+
+You are not expected to stare at terminals the whole time. Typical pauses:
+
+1. **Inventory** — table (and proc) counts after Discover  
+2. **Convert wave** — up to five `edw-convert` agents writing notebooks in parallel  
+3. **Merge** — `convert_summary.json` with converted / blocked counts  
+4. **Job → Test → Gate** — medallion run, bronze reconcile, ship / no-ship  
+5. **URLs** — Control Plane + Genie (`make print-urls`)
+
+```mermaid
+%%{init: {"theme":"base","themeVariables":{"primaryColor":"#E8F1F8","primaryTextColor":"#0B3D5C","primaryBorderColor":"#0B3D5C","lineColor":"#5B7A8C","secondaryColor":"#E6F4F1","tertiaryColor":"#F7F3EA","background":"#FFFFFF","mainBkg":"#E8F1F8","clusterBkg":"#F7FAFC","clusterBorder":"#5B7A8C","titleColor":"#0B3D5C","edgeLabelBackground":"#FFFFFF"}}}%%
+sequenceDiagram
+  participant You
+  participant Coord as edw-coordinator
+  participant Wave as Convert_wave_max_5
+  participant DBX as Databricks
+  You->>Coord: Kickoff
+  Coord->>DBX: Discover and land bronze
+  Coord->>Wave: Fan-out edw-convert
+  Wave-->>Coord: convert result JSON files
+  Coord->>DBX: Job then Test then Gate
+  Coord-->>You: Dashboard and Genie URLs
+```
+
+---
+
+## Run artifacts map
+
+Everything for one run lives under `agents/out/<run_id>/` (also pointed at by `agents/out/CURRENT_RUN`):
+
+| Artifact | Meaning |
+|---|---|
+| `context.json` | Catalogs, host, retries, `SOURCE_TYPE` |
+| `inventory.json` | Discovered tables + procs/routines |
+| `migration_backlog.json` | Assess output (empty OK if routines skipped) |
+| `convert/<item_id>.json` | One Convert worker result (fan-out handoff) |
+| `convert_summary.json` | Merged converted / blocked counts |
+| `reconcile_report.json` | Test pass/fail checks |
+| `migration_manifest.json` | Gate ship / no-ship + blockers |
 
 ---
 
@@ -108,7 +152,7 @@ After setup: `make print-urls`
 - **Control Plane** — Gate, timeline, backlog, reconcile  
 - **Genie** — *Did the last run ship?* / *Why did the gate fail?*  
 
-Trust checklist: inventory → bronze reconcile pass → Gate blockers empty.
+Trust checklist: inventory → convert artifacts (when procs in scope) → bronze reconcile pass → Gate blockers empty.
 
 ---
 

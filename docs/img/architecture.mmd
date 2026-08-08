@@ -24,7 +24,7 @@ flowchart LR
     Coord["edw-coordinator"]
     Guide --> Coord
     Coord --> Assess["assess"]
-    Coord --> Convert["convert"]
+    Coord --> Convert["convert fan-out"]
     Coord --> Test["test"]
     Coord --> Gate["gate"]
   end

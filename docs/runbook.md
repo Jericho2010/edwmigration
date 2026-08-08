@@ -7,8 +7,8 @@ Short checklist for people who already know the story.
 
 ## Track A — Guided demo
 
-1. `az login` + `databricks auth login --host <workspace>`  
-2. Cursor → **`edw-demo-guide`** → *Set up the EDW demo and walk me through the migration.*  
+1. Cursor → **`edw-demo-guide`** → *Set up the EDW demo and walk me through the migration.*  
+2. If preflight asks: `az login` / `databricks auth login --host <workspace>` / create serverless warehouse — then say continue  
 3. Open Control Plane + Genie URLs  
 4. Teardown: ask the guide, or `make teardown`  
 
@@ -59,5 +59,6 @@ SqlPackage **not** required for `make setup`.
 ## Trust checklist
 
 1. `agents/out/<run_id>/inventory.json`  
-2. Bronze reconcile pass  
-3. Gate blockers empty → `make print-urls`
+2. Convert artifacts (`convert/*.json` + `convert_summary.json`) when procs were in scope  
+3. Bronze reconcile pass  
+4. Gate blockers empty → `make print-urls`

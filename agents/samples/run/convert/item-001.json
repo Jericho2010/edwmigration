@@ -1,0 +1,8 @@
+{
+  "item_id": "item-001",
+  "legacy_proc": "Integration.MigrateStagedStockItemData",
+  "target_path": "databricks/gold/30_mart_daily_sales.sql",
+  "status": "final",
+  "notes": "Mapped staging merge to gold daily sales mart on landed bronze.",
+  "patterns_used": ["snapshot", "scd2"]
+}

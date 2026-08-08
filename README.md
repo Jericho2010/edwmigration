@@ -6,7 +6,7 @@
 
 You do not need to be a migration expert. You do not hand-write medallion SQL. You open this repo in Cursor, log in, say one sentence, and follow along.
 
-**Status:** Demo-ready (Track A guided path) for **Databricks Free Edition** + Azure SQL free offer. Docs, CI, dual-source render, and workspace observability URLs verified **2026-08-03**. Gate acceptance (≥10 tables / ≥5 procs) depends on your warehouse privileges and free-tier quotas — see [guided demo](docs/guided-demo.md) definition of done. Track B (MySQL / existing SQL) is supported in-engine; run it against your own source when ready.
+**Status:** Demo-ready (Track A guided path) for **Databricks Free Edition** + Azure SQL free offer. Agent protocol includes **Parallel Convert fan-out** (waves of ≤5) as of **2026-08-08**; CI, dual-source render, and docs updated. Full Track A Gate acceptance (≥10 tables / ≥5 procs) still depends on your warehouse privileges and free-tier quotas — see [guided demo](docs/guided-demo.md) definition of done. Track B (MySQL / existing SQL) is supported in-engine; run it against your own source when ready.
 
 ```mermaid
 %%{init: {"theme":"base","themeVariables":{"primaryColor":"#E8F1F8","primaryTextColor":"#0B3D5C","primaryBorderColor":"#0B3D5C","lineColor":"#5B7A8C","secondaryColor":"#E6F4F1","tertiaryColor":"#F7F3EA","background":"#FFFFFF","mainBkg":"#E8F1F8","clusterBkg":"#F7FAFC","clusterBorder":"#5B7A8C","titleColor":"#0B3D5C","edgeLabelBackground":"#FFFFFF"}}}%%
@@ -54,7 +54,7 @@ This repo’s agents:
 1. **Connect** to your source (live read via Lakehouse Federation)  
 2. **Discover** every base table (and procedures/routines when tools allow)  
 3. **Land** tables into bronze and prove row counts match  
-4. **Convert** procedures into Spark SQL notebooks when there is a backlog  
+4. **Convert** procedures into Spark SQL notebooks when there is a backlog — several at once in parallel waves (≤5)  
 5. **Gate** the run — ship or no-ship, with reasons  
 6. **Show** progress on a dashboard and a Genie room  
 
@@ -77,13 +77,14 @@ sequenceDiagram
 
 **Track A** builds a free sample warehouse (WideWorldImporters on Azure SQL free offer), wires it into **your** Databricks Free Edition catalog, and walks the migration with you.
 
-1. [Getting started](docs/getting-started.md) + [Using Cursor](docs/cursor-ui.md)  
-2. `az login` and `databricks auth login --host <your-workspace-url>`  
-3. Launch **`edw-demo-guide`** and say:
+1. Open the **repo root** in Cursor ([Getting started](docs/getting-started.md) · [Using Cursor](docs/cursor-ui.md))  
+2. Launch **`edw-demo-guide`** and say:
 
    > Set up the EDW demo and walk me through the migration.
 
-Full hand-holding: **[Guided demo](docs/guided-demo.md)** · Tools: **[Prerequisites](docs/prerequisites.md)**
+3. If preflight asks for a login or install, do **that one thing**, then say continue.
+
+Full hand-holding: **[Guided demo](docs/guided-demo.md)** · Tool reference: **[Prerequisites](docs/prerequisites.md)**
 
 When you’re done: ask the guide to tear down (or `make teardown`).
 

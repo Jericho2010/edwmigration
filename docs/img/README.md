@@ -25,13 +25,23 @@ All Mermaid diagrams in this repo share one palette (navy / teal / Azure blue / 
 
 | File | Description |
 |---|---|
-| [architecture.mmd](architecture.mmd) | Source → Federation → medallion → agents |
-| [agent_delegation.mmd](agent_delegation.mmd) | Guide / Coordinator stage flow |
+| [architecture.mmd](architecture.mmd) | Source → Federation → medallion → agents (convert fan-out) |
+| [agent_delegation.mmd](agent_delegation.mmd) | Guide / Coordinator with parallel Convert wave |
 | [enterprise_sod.mmd](enterprise_sod.mmd) | Segregation of duties swimlanes |
 | [demo_vs_enterprise.mmd](demo_vs_enterprise.mmd) | Demo anti-pattern vs enterprise controls |
 | [cursor_open_repo.png](cursor_open_repo.png) | Cursor: open repo root |
 | [cursor_pick_agent.png](cursor_pick_agent.png) | Cursor: pick agent |
 | [cursor_kickoff.png](cursor_kickoff.png) | Cursor: paste kickoff |
+
+## Demo GIFs (captures)
+
+| File | Note |
+|---|---|
+| [demo_job.gif](demo_job.gif) | Job run capture |
+| [demo_genie.gif](demo_genie.gif) | Genie Q&A capture |
+| [demo_manifest.gif](demo_manifest.gif) | Gate / manifest capture |
+| [demo_fault.gif](demo_fault.gif) | Fault-injection capture |
+| [demo_seed.gif](demo_seed.gif) | **Legacy filename** — offline seed mode was removed; keep the name so storyboard/media paths stay stable |
 
 ```bash
 # Optional PNG export (Node)

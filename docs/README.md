@@ -40,6 +40,7 @@ flowchart TD
 | Look up a word | [glossary.md](glossary.md) |
 | Short command checklist | [runbook.md](runbook.md) |
 | Fix a failure | [troubleshooting.md](troubleshooting.md) |
+| Unblock Azure CLI / RBAC for Track A | [azure-access-unblocking.md](azure-access-unblocking.md) |
 | Diagram theme + PNG sources | [img/README.md](img/README.md) |
 | Engine design | [architecture.md](architecture.md) |
 | SE talk track | [demo-script.md](demo-script.md) |

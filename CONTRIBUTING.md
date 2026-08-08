@@ -3,6 +3,7 @@
 ## Extend the engine (preferred)
 
 - Improve discovery (`discover_inventory.py`), land generation, Gate rules, Dashboard/Genie.
+- Parallel Convert handoff: `agents/contracts/convert_result.schema.json`, `validate_backlog_paths.py`, `merge_convert_results.py`.
 - Keep **WWI object names out of** `databricks/uc/`, stage prompts `00`–`04`, and `slugify.py`.
 - Demo-only content belongs under `demo/wwi/`, `infra/azure/`, or `legacy/`.
 
