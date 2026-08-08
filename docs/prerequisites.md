@@ -1,6 +1,6 @@
 # Prerequisites
 
-**Reference matrix** — install what the agent (or Makefile) names when something is missing. You do **not** need to run a version checklist before the kickoff sentence; Track A preflight (`./agents/tools/preflight_track_a.sh`) owns that smoke test.
+**Reference matrix** — install what the agent (or Makefile) names when something is missing. You do **not** need to run a version checklist before typing `start`. Soft status is informational; Track A preflight (`./agents/tools/preflight_track_a.sh`) runs after you choose menu **1** (or paste the demo kickoff).
 
 ← [Getting started](getting-started.md) · [Guided demo](guided-demo.md)
 

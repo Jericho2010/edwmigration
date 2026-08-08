@@ -6,9 +6,13 @@ This repo migrates Azure SQL or Azure MySQL → a user-named Databricks Unity Ca
 
 Open the repo root so instructions under `agents/github-copilot/` apply. See `docs/agent-setup.md`.
 
+## Front door
+
+If the user says `start`, `menu`, or `help`, follow `agents/github-copilot/edw-start.md`: run `./agents/tools/start_status.sh`, print the phrase menu, wait for a choice. Do not bootstrap until they pick 1–3.
+
 ## Track A — Guided demo
 
-Follow `agents/github-copilot/edw-demo-guide.md`. Kickoff first; the guide runs `./agents/tools/preflight_track_a.sh` and asks for login/install only if needed.
+Follow `agents/github-copilot/edw-demo-guide.md` (or menu item 1). The guide runs `./agents/tools/preflight_track_a.sh` and asks for login/install only if needed.
 
 Kickoff: *Set up the EDW demo and walk me through the migration.*
 

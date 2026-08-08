@@ -1,11 +1,11 @@
 # Documentation
 
-**New here?** Start at the root [README](../README.md), then:
+**New here?** Start at the root [README](../README.md), then the short path:
 
-1. [Using Cursor](cursor-ui.md) — three pictures  
-2. [Getting started](getting-started.md) — logins + path  
-3. [What you get](what-you-get.md) — outcomes & diagrams  
-4. [Guided demo](guided-demo.md) — **recommended first run (Track A)**  
+1. [Using Cursor](cursor-ui.md) — open root → type `start`  
+2. [Getting started](getting-started.md) — `start` menu + remediations  
+3. [Guided demo](guided-demo.md) — **recommended first run (Track A)**  
+4. [What you get](what-you-get.md) — outcomes after you’ve smiled  
 5. [Your database](your-database.md) or [Enterprise](enterprise.md)  
 
 ```mermaid
@@ -13,8 +13,8 @@
 flowchart TD
   R[README] --> CU[Using Cursor]
   CU --> GS[Getting started]
-  GS --> WYG[What you get]
-  WYG --> GD[Guided demo]
+  GS --> GD[Guided demo]
+  GD --> WYG[What you get]
   GD --> YD[Your database]
   GD --> ENT[Enterprise]
   GD --> TB[Troubleshooting]
@@ -53,9 +53,9 @@ flowchart TD
 |---|---|
 | Hook | [README](../README.md) |
 | Cursor UI | [cursor-ui.md](cursor-ui.md) |
-| Setup | [getting-started.md](getting-started.md) |
-| Mental model | [what-you-get.md](what-you-get.md) |
+| Setup + `start` | [getting-started.md](getting-started.md) |
 | First win | [guided-demo.md](guided-demo.md) |
+| Mental model | [what-you-get.md](what-you-get.md) |
 | Real source | [your-database.md](your-database.md) |
 | Real org | [enterprise.md](enterprise.md) |
 | Depth | [architecture.md](architecture.md), [limits.md](limits.md) |
@@ -66,7 +66,7 @@ flowchart TD
 
 | Doc | Purpose |
 |---|---|
-| [agent-setup.md](agent-setup.md) | Agents + kickoffs |
+| [agent-setup.md](agent-setup.md) | `start` menu + agents + kickoffs |
 | [prerequisites.md](prerequisites.md) | Tools and privileges |
 | [runbook.md](runbook.md) | Compact checklist |
 | [troubleshooting.md](troubleshooting.md) | Symptom → fix |

@@ -1,29 +1,30 @@
 # Getting started
 
-**Goal:** Open this repo in Cursor, say one kickoff sentence, and fix **only** what the agent reports.
+**Goal:** Open this repo in Cursor, type **`start`**, pick a menu item, and fix **only** what the agent reports.
 
-You do **not** need prior EDW or Unity Catalog experience. You do **not** need to run version checks or log in before chatting — the agent’s preflight tells you the next human action.
+You do **not** need prior EDW or Unity Catalog experience. You do **not** need to run version checks or log in before chatting.
+
+**Soft status ≠ Track A ready.** Typing `start` only shows a light health check. After you choose menu **1**, Track A **preflight** may still ask you to install SqlPackage/sqlcmd or log in.
 
 **Prefer pictures?** → **[Using Cursor](cursor-ui.md)** · **New words?** → [Glossary](glossary.md)
 
 ```mermaid
 %%{init: {"theme":"base","themeVariables":{"primaryColor":"#E8F1F8","primaryTextColor":"#0B3D5C","primaryBorderColor":"#0B3D5C","lineColor":"#5B7A8C","secondaryColor":"#E6F4F1","tertiaryColor":"#F7F3EA","background":"#FFFFFF","mainBkg":"#E8F1F8","clusterBkg":"#F7FAFC","clusterBorder":"#5B7A8C","titleColor":"#0B3D5C","edgeLabelBackground":"#FFFFFF"}}}%%
 flowchart TD
-  A[Open repo root in Cursor] --> B[Pick agent]
-  B --> C[Say kickoff]
-  C --> D[Agent preflight]
-  D -->|asks you| E[Do one remediation]
-  E --> C
-  D -->|pass| F{Which path?}
-  F -->|Tonight / learning| G[Guided demo Track A]
-  F -->|My sandbox DB| H[Your database Track B]
-  F -->|Platform / prod| I[Enterprise]
+  A[Open repo root in Cursor] --> B[Type start]
+  B --> C[Status + phrase menu]
+  C --> D{User chooses}
+  D -->|1 Guided demo| E[edw-demo-guide + preflight]
+  D -->|2/3 Your DB| F[edw-coordinator]
+  D -->|4–6| G[URLs / teardown / enterprise]
+  E -->|asks you| H[Do one remediation]
+  H --> E
   classDef user fill:#0B3D5C,stroke:#082C43,color:#fff
   classDef agent fill:#1B7A6E,stroke:#145A51,color:#fff
   classDef ops fill:#5B4B8A,stroke:#3F3460,color:#fff
-  class A,B,C,E user
-  class D,G,H agent
-  class I ops
+  class A,B,D,H user
+  class C,E,F agent
+  class G ops
 ```
 
 ---
@@ -35,28 +36,35 @@ flowchart TD
 
 ![Open the repo root](img/cursor_open_repo.png)
 
-**Why the root matters:** Cursor loads [`.cursor/agents/`](../.cursor/agents/) and hooks from the folder you open. If you open a subfolder, agents may not appear. Step-by-step visuals: [cursor-ui.md](cursor-ui.md).
+**Why the root matters:** Cursor loads [`.cursor/agents/`](../.cursor/agents/), [`.cursor/rules/`](../.cursor/rules/), and hooks from the folder you open. If you open a subfolder, agents may not appear. Step-by-step visuals: [cursor-ui.md](cursor-ui.md).
 
 ---
 
-## 2. What is a “Cursor agent” here?
-
-This repo ships **specialized chat agents** with names like `edw-demo-guide` and `edw-coordinator`. Each one has instructions for one job (demo walkthrough, full migration run, convert one procedure, Gate, etc.).
-
-**How to use them:** see **[Using Cursor](cursor-ui.md)** (three screenshots), or:
+## 2. Type `start` (primary step)
 
 1. Open Agent / Chat in Cursor.  
-2. Pick **`edw-demo-guide`** (demo) or **`edw-coordinator`** (your DB).  
-3. Paste the **kickoff sentence** (next section).  
-4. Allow tools; when preflight fails, do the one remediation it prints, then say **continue**.
+2. Prefer **`edw-start`** (or just type **`start`** — a project rule routes bare `start` / `menu` / `help`).  
+3. You get a **soft status** (`./agents/tools/start_status.sh`) and a **numbered phrase menu**.  
+4. Reply with `1`–`6` (or paste the phrase). Nothing bootstraps until you choose.
+
+| # | Phrase | Goes to |
+|---|---|---|
+| 1 | Set up the EDW demo and walk me through the migration. | `edw-demo-guide` (Track A) |
+| 2 | Start an EDW migration run against my Azure SQL. | `edw-coordinator` |
+| 3 | Migrate my Azure MySQL into catalog `<name>`… | `edw-coordinator` |
+| 4 | Print Control Plane and Genie URLs. | `make print-urls` |
+| 5 | Tear down the demo Azure resources. | `make teardown` (confirms first) |
+| 6 | Show me the enterprise / SoD notes. | [enterprise.md](enterprise.md) |
 
 If agents are missing: `make sync-prompts`, then reload the window.
 
-**GitHub Copilot users:** [`agents/github-copilot/`](../agents/github-copilot/) · [`.github/copilot-instructions.md`](../.github/copilot-instructions.md).
+**GitHub Copilot users:** open [`edw-start.md`](../agents/github-copilot/edw-start.md) · [`.github/copilot-instructions.md`](../.github/copilot-instructions.md).
 
 ---
 
-## 3. Say the kickoff (primary step)
+## 3. Direct kickoffs (optional)
+
+You can still pick a specialized agent and paste a phrase without the menu:
 
 | Path | Agent | Say |
 |---|---|---|
@@ -64,7 +72,7 @@ If agents are missing: `make sync-prompts`, then reload the window.
 | **B — MySQL** | `edw-coordinator` | Migrate my Azure MySQL into catalog `<name>`. Host/user/db are in `.env` (or I’ll paste them). |
 | **B — Azure SQL** | `edw-coordinator` | Start an EDW migration run against my Azure SQL. |
 
-For Track A, the guide runs `./agents/tools/preflight_track_a.sh` first (tools, Azure/Databricks auth, SQL warehouse). It stops with a clear remediation if something is missing. Full walkthrough: **[Guided demo](guided-demo.md)**.
+For Track A (menu **1**), the guide runs `./agents/tools/preflight_track_a.sh` first. Full walkthrough: **[Guided demo](guided-demo.md)**.
 
 ---
 
@@ -97,13 +105,16 @@ Track B uses the same loop: kickoff → agent asks for Databricks login / `.env`
 ```mermaid
 %%{init: {"theme":"base","themeVariables":{"primaryColor":"#E8F1F8","primaryTextColor":"#0B3D5C","primaryBorderColor":"#0B3D5C","lineColor":"#5B7A8C","secondaryColor":"#E6F4F1","tertiaryColor":"#F7F3EA","background":"#FFFFFF","mainBkg":"#E8F1F8","clusterBkg":"#F7FAFC","clusterBorder":"#5B7A8C","titleColor":"#0B3D5C","edgeLabelBackground":"#FFFFFF"}}}%%
 flowchart LR
-  Start[Ready] --> A[Track A: edw-demo-guide]
-  Start --> B[Track B: edw-coordinator]
-  Start --> E[Enterprise controls]
+  Start[Type start] --> Menu[Phrase menu]
+  Menu --> A[Track A: edw-demo-guide]
+  Menu --> B[Track B: edw-coordinator]
+  Menu --> E[Enterprise / URLs / teardown]
   A --> Out[Catalog + Dashboard + Genie]
   B --> Out
+  classDef user fill:#0B3D5C,stroke:#082C43,color:#fff
   classDef agent fill:#1B7A6E,stroke:#145A51,color:#fff
   classDef ops fill:#5B4B8A,stroke:#3F3460,color:#fff
+  class Start,Menu user
   class A,B,Out agent
   class E ops
 ```
@@ -114,7 +125,7 @@ flowchart LR
 
 - Agent prints **Control Plane** and **Genie** URLs (`make print-urls`).  
 - You can open the dashboard and ask Genie: *Did the last run ship?*  
-- For the demo: Gate aims for **≥10 tables** and **≥5 procedures** (counts, not hard-coded names).  
+- Gate ship = empty blockers. For the **demo**, the guide also checks **counts** (≥10 tables / ≥5 procedures) — that is demo acceptance, not a Gate rule.  
 
 If something fails: **[troubleshooting.md](troubleshooting.md)**.
 

@@ -84,8 +84,11 @@ flowchart LR
 ```mermaid
 %%{init: {"theme":"base","themeVariables":{"primaryColor":"#E8F1F8","primaryTextColor":"#0B3D5C","primaryBorderColor":"#0B3D5C","lineColor":"#5B7A8C","secondaryColor":"#E6F4F1","tertiaryColor":"#F7F3EA","background":"#FFFFFF","mainBkg":"#E8F1F8","clusterBkg":"#F7FAFC","clusterBorder":"#5B7A8C","titleColor":"#0B3D5C","edgeLabelBackground":"#FFFFFF"}}}%%
 flowchart TB
+  Start[edw-start]
   Guide[edw-demo-guide]
   Coord[edw-coordinator]
+  Start --> Guide
+  Start --> Coord
   Guide --> Coord
   Coord --> Assess[edw-assess]
   Coord --> C1[edw-convert]
@@ -94,11 +97,11 @@ flowchart TB
   Coord --> Gate[edw-gate]
   classDef agent fill:#1B7A6E,stroke:#145A51,color:#fff
   classDef readonly fill:#6B7C8F,stroke:#4A5663,color:#fff
-  class Guide,Coord,C1,C2 agent
+  class Start,Guide,Coord,C1,C2 agent
   class Assess,Test,Gate readonly
 ```
 
-Also: [`img/agent_delegation.mmd`](img/agent_delegation.mmd) · [`img/architecture.mmd`](img/architecture.mmd)
+Also: [`img/agent_squad_roles.png`](img/agent_squad_roles.png) (README roles) · [`img/agent_delegation.mmd`](img/agent_delegation.mmd) · [`img/architecture.mmd`](img/architecture.mmd)
 
 ---
 
@@ -138,8 +141,10 @@ Everything for one run lives under `agents/out/<run_id>/` (also pointed at by `a
 | `context.json` | Catalogs, host, retries, `SOURCE_TYPE` |
 | `inventory.json` | Discovered tables + procs/routines |
 | `migration_backlog.json` | Assess output (empty OK if routines skipped) |
+| `assess_summary.md` | Optional Assess narrative (if persisted) |
 | `convert/<item_id>.json` | One Convert worker result (fan-out handoff) |
 | `convert_summary.json` | Merged converted / blocked counts |
+| `merge_failed.json` | Present only if ops merge failed (fix before continuing) |
 | `reconcile_report.json` | Test pass/fail checks |
 | `migration_manifest.json` | Gate ship / no-ship + blockers |
 
@@ -161,7 +166,8 @@ Trust checklist: inventory → convert artifacts (when procs in scope) → bronz
 | | Track A — Guided demo | Track B — Your DB |
 |---|---|---|
 | Source | Sample WideWorldImporters on free Azure SQL | Your Azure SQL or Azure MySQL |
-| Agent | `edw-demo-guide` | `edw-coordinator` |
+| Entry | `start` → **1** (or `edw-demo-guide`) | `start` → **2** / **3** (or `edw-coordinator`) |
+| Agent | `edw-demo-guide` → coordinator | `edw-coordinator` |
 | Cost (typical) | $0 with Free Edition + teardown | Your existing DB + Free Edition sink |
 | Outcome | Same catalog shape + dashboard + Genie | Same |
 

@@ -7,7 +7,7 @@ Short checklist for people who already know the story.
 
 ## Track A — Guided demo
 
-1. Cursor → **`edw-demo-guide`** → *Set up the EDW demo and walk me through the migration.*  
+1. Cursor → type **`start`** → choose **1** (or **`edw-demo-guide`** + kickoff phrase)  
 2. If preflight asks: `az login` / `databricks auth login --host <workspace>` / create serverless warehouse — then say continue  
 3. Open Control Plane + Genie URLs  
 4. Teardown: ask the guide, or `make teardown`  

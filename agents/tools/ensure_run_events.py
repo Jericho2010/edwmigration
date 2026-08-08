@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
-"""Ensure stage agent_events exist so Gate rule 4 can pass on table-only runs.
+"""Ensure early agent_events for Gate rule 4 on table-only runs.
 
-Writes coordinator/assess events always; convert/skipped when procs_total==0
+Writes coordinator/started always; convert/skipped when procs_total==0
 or routines_skipped_reason is set.
+
+Does **not** record assess/completed — coordinator records that after
+persist_backlog.py succeeds.
 
 Usage: python3 agents/tools/ensure_run_events.py --run-id UUID
 """
@@ -67,14 +70,6 @@ def main() -> int:
     if procs_total == 0 or skip_reason:
         detail = skip_reason or "no backlog / routines skipped"
         record(args.run_id, "convert", "skipped", detail)
-        record(args.run_id, "assess", "completed", "empty backlog (table-only)")
-    else:
-        record(
-            args.run_id,
-            "assess",
-            "completed",
-            f"backlog has {procs_total} procs/routines",
-        )
 
     print(f"[ensure_run_events] run_id={args.run_id} procs_total={procs_total}")
     return 0

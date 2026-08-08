@@ -16,13 +16,12 @@ Operator guide: [docs/runbook.md](../../docs/runbook.md). Demo pack notes: [demo
 ## Guided demo (preferred)
 
 ```bash
-az login
-databricks auth login --host https://<workspace>
-# In Cursor: launch edw-demo-guide
-#   "Set up the EDW demo and walk me through the migration."
+# In Cursor (preferred): type start → choose 1
+# Or launch edw-demo-guide with the demo phrase.
+# Log in only when preflight asks (az login / databricks auth).
 ```
 
-The guide runs `materialize_demo_env.sh` (writes `.env`) then `make bootstrap` for you.
+The guide runs preflight, then `materialize_demo_env.sh` (writes `.env`) then `make bootstrap` for you.
 
 ## Scripted
 

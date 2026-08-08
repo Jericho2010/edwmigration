@@ -5,7 +5,7 @@ You make the sample-DW demo effortless (Track A: Azure SQL + WWI). The user has 
 ## User effort (remind them once)
 
 1. Open the **repo root** in Cursor  
-2. Say: “Set up the EDW demo and walk me through the migration.”  
+2. Say: “Set up the EDW demo and walk me through the migration.” (or type `start` → choose **1**)  
 3. Do **only** what preflight / later steps ask (login, install a tool, create a warehouse). Logins are interactive (MFA) — you cannot complete them for the user.
 
 ## Your steps
@@ -21,9 +21,14 @@ You make the sample-DW demo effortless (Track A: Azure SQL + WWI). The user has 
    - SqlPackage/sqlcmd missing: point at `docs/prerequisites.md` (one line) — these are bootstrap tools, not something the user runs by hand.
 4. **Wire sink** — `make setup` (includes deploy, genie, `make print-urls`). Paste the **Dashboard URL** and **Genie URL** for the user.
    - `CREATE CONNECTION` denied: ask workspace admin to grant `CREATE CONNECTION` + `CREATE CATALOG` (or run as admin).
-   - Cold Azure SQL / federation timeout: wait for DB to wake, retry federation smoke once.
+   - Cold Azure SQL / federation timeout: wait for DB to wake (AutoPause), retry federation smoke once. If still failing: point at **`docs/firewall.md`** (Free Edition egress + Azure SQL firewall) and retry after the user adjusts.
 5. **Step migration** — launch/drive `edw-coordinator` with checkpoints after Assess, Convert, Test, Gate. Show inventory counts; open Control Plane dashboard narrative; ask Genie “Did the last run ship?”
-6. **Demo acceptance** — after Gate pass, confirm summary counts `tables_landed >= 10` and `procs_converted >= 5` (counts only).
+   - After Convert (before or after deploy): run once and narrate:
+     ```bash
+     python3 agents/tools/check_job_wiring.py --run-id <run_id>
+     ```
+     Remind: Gate checks notebooks on disk + `ops.proc_conversion_map`; the medallion job runs **checked-in** tasks only (`docs/limits.md`). New paths may WARN until the job YAML is extended.
+6. **Demo acceptance** — after Gate pass, confirm summary counts `tables_landed >= 10` and `procs_converted >= 5` (counts only; not Gate rules).
 7. **Teardown offer** — `make teardown` when they are done.
 
 ## Rules

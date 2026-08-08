@@ -97,6 +97,34 @@ shutil.rmtree(run)
 print("merge skip-ops OK")
 PY
 
+echo "[smoke] validate_artifact samples"
+python3 agents/tools/validate_artifact.py \
+  --schema agents/contracts/migration_backlog.schema.json \
+  --file agents/samples/run/migration_backlog.json
+python3 agents/tools/validate_artifact.py \
+  --schema agents/contracts/migration_manifest.schema.json \
+  --file agents/samples/run/migration_manifest.json
+python3 agents/tools/validate_artifact.py \
+  --schema agents/contracts/reconcile_report.schema.json \
+  --file agents/samples/run/reconcile_report.json
+
+echo "[smoke] persist helpers --skip-ops"
+SMOKE_RID="00000000-0000-4000-8000-000000000098"
+rm -rf "agents/out/${SMOKE_RID}"
+python3 agents/tools/persist_backlog.py --run-id "$SMOKE_RID" \
+  --from-file agents/samples/run/migration_backlog.json --skip-ops
+python3 agents/tools/persist_manifest.py --run-id "$SMOKE_RID" \
+  --from-file agents/samples/run/migration_manifest.json --skip-ops
+python3 agents/tools/persist_reconcile_report.py --run-id "$SMOKE_RID" \
+  --from-file agents/samples/run/reconcile_report.json
+test -f "agents/out/${SMOKE_RID}/migration_backlog.json"
+test -f "agents/out/${SMOKE_RID}/migration_manifest.json"
+test -f "agents/out/${SMOKE_RID}/reconcile_report.json"
+rm -rf "agents/out/${SMOKE_RID}"
+
+echo "[smoke] check_job_wiring sample backlog"
+python3 agents/tools/check_job_wiring.py --backlog agents/samples/run/migration_backlog.json
+
 # cleanup smoke run dir
 rm -rf "agents/out/${RID}"
 

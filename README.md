@@ -4,26 +4,15 @@
 
 **Watch an agent migrate a warehouse into Databricks — while you watch a Control Plane and ask Genie if the run shipped.**
 
-You do not need to be a migration expert. You do not hand-write medallion SQL. You open this repo in Cursor, log in, say one sentence, and follow along.
+You do not need to be a migration expert. You do not hand-write medallion SQL. Open this repo in Cursor, type **`start`**, pick a menu item, and follow along. Log in only when the agent asks.
 
-**Status:** Demo-ready (Track A guided path) for **Databricks Free Edition** + Azure SQL free offer. Agent protocol includes **Parallel Convert fan-out** (waves of ≤5) as of **2026-08-08**; CI, dual-source render, and docs updated. Full Track A Gate acceptance (≥10 tables / ≥5 procs) still depends on your warehouse privileges and free-tier quotas — see [guided demo](docs/guided-demo.md) definition of done. Track B (MySQL / existing SQL) is supported in-engine; run it against your own source when ready.
+**Demo-ready** on **Databricks Free Edition** + Azure SQL free offer (Track A). Your own Azure SQL / MySQL works too (Track B). Details and acceptance counts: [guided demo](docs/guided-demo.md).
 
-```mermaid
-%%{init: {"theme":"base","themeVariables":{"primaryColor":"#E8F1F8","primaryTextColor":"#0B3D5C","primaryBorderColor":"#0B3D5C","lineColor":"#5B7A8C","secondaryColor":"#E6F4F1","tertiaryColor":"#F7F3EA","background":"#FFFFFF","mainBkg":"#E8F1F8","clusterBkg":"#F7FAFC","clusterBorder":"#5B7A8C","titleColor":"#0B3D5C","edgeLabelBackground":"#FFFFFF"}}}%%
-flowchart LR
-  You[You] --> Login[Log in]
-  Login --> Say[One sentence]
-  Say --> Agents[Repo agents]
-  Agents --> Cat[Your UC catalog]
-  Agents --> Dash[Control Plane]
-  Agents --> Genie[Genie]
-  classDef user fill:#0B3D5C,stroke:#082C43,color:#fff
-  classDef agent fill:#1B7A6E,stroke:#145A51,color:#fff
-  classDef ops fill:#5B4B8A,stroke:#3F3460,color:#fff
-  class You,Login,Say user
-  class Agents agent
-  class Cat,Dash,Genie ops
-```
+Type **`start`** — these agents do the rest:
+
+![EDW migration agent squad — roles only](docs/img/agent_squad_roles.png)
+
+Pipeline detail (convert waves, merge, retries): [agent_delegation.png](docs/img/agent_delegation.png) · [What you get](docs/what-you-get.md)
 
 ---
 
@@ -54,7 +43,7 @@ This repo’s agents:
 1. **Connect** to your source (live read via Lakehouse Federation)  
 2. **Discover** every base table (and procedures/routines when tools allow)  
 3. **Land** tables into bronze and prove row counts match  
-4. **Convert** procedures into Spark SQL notebooks when there is a backlog — several at once in parallel waves (≤5)  
+4. **Convert** procedures into Spark SQL notebooks when there is a backlog  
 5. **Gate** the run — ship or no-ship, with reasons  
 6. **Show** progress on a dashboard and a Genie room  
 
@@ -64,7 +53,7 @@ sequenceDiagram
   participant You
   participant Agent as Cursor agent
   participant DBX as Databricks
-  You->>Agent: Kickoff sentence
+  You->>Agent: start then pick 1
   Agent->>DBX: Wire catalog + federation
   Agent->>DBX: Discover + land bronze
   Agent->>DBX: Convert / job / Gate
@@ -73,20 +62,21 @@ sequenceDiagram
 
 ---
 
-## Start tonight (recommended): guided demo
-
-**Track A** builds a free sample warehouse (WideWorldImporters on Azure SQL free offer), wires it into **your** Databricks Free Edition catalog, and walks the migration with you.
+## Start tonight (recommended): type `start`
 
 1. Open the **repo root** in Cursor ([Getting started](docs/getting-started.md) · [Using Cursor](docs/cursor-ui.md))  
-2. Launch **`edw-demo-guide`** and say:
+2. Type **`start`** (or launch **`edw-start`**) — soft status + phrase menu.  
+3. Choose **1** for the guided demo:
 
    > Set up the EDW demo and walk me through the migration.
 
-3. If preflight asks for a login or install, do **that one thing**, then say continue.
+4. If Track A preflight asks for a login or install, do **that one thing**, then say continue.
+
+**Track A** builds a free sample warehouse (WideWorldImporters on Azure SQL free offer), wires it into **your** Databricks Free Edition catalog, and walks the migration with you.
 
 Full hand-holding: **[Guided demo](docs/guided-demo.md)** · Tool reference: **[Prerequisites](docs/prerequisites.md)**
 
-When you’re done: ask the guide to tear down (or `make teardown`).
+When you’re done: menu **5**, or ask the guide to tear down (`make teardown`).
 
 ---
 
@@ -105,7 +95,7 @@ When you’re done: ask the guide to tear down (or `make teardown`).
 
 Same simplicity — you bring logins and connection fields; agents do the rest.
 
-→ **[Your database (Track B)](docs/your-database.md)** — Azure MySQL or existing Azure SQL.
+→ **[Your database (Track B)](docs/your-database.md)** — Azure MySQL or existing Azure SQL (`start` → **2** or **3**).
 
 For production-shaped controls (not Free Edition public firewall), read **[Enterprise](docs/enterprise.md)** first.
 
@@ -115,7 +105,8 @@ For production-shaped controls (not Free Edition public firewall), read **[Enter
 
 - Tables in `${DATABRICKS_CATALOG}.bronze.*`  
 - **Control Plane** + **Genie** URLs (`make print-urls`)  
-- Gate ship with empty blockers (demo also aims for ≥10 tables / ≥5 procs as **counts**)  
+- Gate ship with empty blockers  
+- Demo path also checks **counts** (≥10 tables / ≥5 procs) — that is demo acceptance, not a Gate rule  
 
 More: **[What you get](docs/what-you-get.md)**
 
@@ -126,8 +117,8 @@ More: **[What you get](docs/what-you-get.md)**
 | You | Agent / Makefile |
 |---|---|
 | Open this repo at the **git root** in Cursor | Loads agents + hooks |
-| Log in (Azure and/or Databricks) | Verifies auth; writes `.env` |
-| One kickoff sentence | Federation → discover → land → convert → job → Gate |
+| Type **`start`** and pick a menu item | Soft status + routes to the right agent |
+| Fix only what preflight / the agent names (login, install, warehouse) | Writes `.env`; federation → discover → land → convert → job → Gate |
 | Watch Dashboard + Genie; confirm if asked (>200 tables) | Prints URLs; clears blockers on retry |
 
 No object lists. No Lakebridge. No hand-written landing SQL.
@@ -139,7 +130,7 @@ No object lists. No Lakebridge. No hand-written landing SQL.
 | Path | For |
 |---|---|
 | [docs/cursor-ui.md](docs/cursor-ui.md) | Three-step Cursor visuals |
-| [docs/getting-started.md](docs/getting-started.md) | First open + logins |
+| [docs/getting-started.md](docs/getting-started.md) | First open + `start` menu |
 | [docs/what-you-get.md](docs/what-you-get.md) | Outcomes & diagrams |
 | [docs/guided-demo.md](docs/guided-demo.md) | Track A |
 | [docs/your-database.md](docs/your-database.md) | Track B |

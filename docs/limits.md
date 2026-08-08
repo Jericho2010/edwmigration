@@ -27,7 +27,7 @@ Constraints shape the engine and the demo.
 - **Full-auto discovery:** all visible base tables + procs/routines when export tools exist. If `tables_total > 200`, the coordinator warns and asks for confirm before land.
 - **Batch full-refresh** bronze land (`CREATE OR REPLACE TABLE AS SELECT`). No CDC/streaming in v1.
 - **Convert fan-out:** up to 5 parallel `edw-convert` workers per wave; results under `agents/out/<run_id>/convert/`.
-- **Convert vs job tasks:** Gate verifies notebooks on disk + `ops.proc_conversion_map`. The medallion job (`databricks/jobs/edw_migration_medallion.yml`) runs the **checked-in** silver/gold task paths only — a newly converted notebook is not auto-added as a job task until you extend that YAML.
+- **Convert vs job tasks:** Gate verifies notebooks on disk + `ops.proc_conversion_map`. The medallion job (`databricks/jobs/edw_migration_medallion.yml`) runs the **checked-in** silver/gold task paths only — a newly converted notebook is not auto-added as a job task until you extend that YAML. Coordinator/demo-guide run `python3 agents/tools/check_job_wiring.py --run-id <run_id>` (WARN-only) before deploy.
 - **Auth:** PAT supported now; OAuth (`databricks auth login`) is the enterprise target state.
 
 ## Out of scope
