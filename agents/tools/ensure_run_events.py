@@ -22,6 +22,27 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 
 
+def prefer_repo_venv() -> None:
+    """Re-exec under repo .venv when mlflow is missing on current interpreter."""
+    if os.environ.get("EDW_SKIP_VENV_REEXEC", "").strip().lower() in ("1", "true", "yes"):
+        return
+    try:
+        import mlflow  # noqa: F401
+
+        return
+    except Exception:
+        pass
+    venv_py = ROOT / ".venv" / "bin" / "python"
+    if not venv_py.is_file():
+        return
+    try:
+        if Path(sys.executable).resolve() == venv_py.resolve():
+            return
+    except OSError:
+        return
+    os.execv(str(venv_py), [str(venv_py), *sys.argv])
+
+
 def load_env() -> None:
     env_path = ROOT / ".env"
     if not env_path.is_file():
@@ -67,6 +88,7 @@ def init_mlflow(run_id: str) -> None:
 
 
 def main() -> int:
+    prefer_repo_venv()
     load_env()
     ap = argparse.ArgumentParser()
     ap.add_argument("--run-id", required=True)

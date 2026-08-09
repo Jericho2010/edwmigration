@@ -29,6 +29,29 @@ import mlflow_context as ctx
 ROOT = Path(__file__).resolve().parents[2]
 TRUNCATE_LIMIT = 4096
 
+
+def prefer_repo_venv() -> None:
+    """Re-exec under repo .venv/bin/python when mlflow is missing on current interpreter."""
+    if os.environ.get("EDW_SKIP_VENV_REEXEC", "").strip().lower() in ("1", "true", "yes"):
+        return
+    # Already have mlflow on this interpreter — stay put (tests / activated venv).
+    try:
+        import mlflow  # noqa: F401
+
+        return
+    except Exception:
+        pass
+    venv_py = ROOT / ".venv" / "bin" / "python"
+    if not venv_py.is_file():
+        return
+    try:
+        if Path(sys.executable).resolve() == venv_py.resolve():
+            return
+    except OSError:
+        return
+    os.execv(str(venv_py), [str(venv_py), *sys.argv])
+
+
 try:
     import mlflow
     from mlflow import MlflowClient
@@ -746,6 +769,7 @@ def main(argv: list[str] | None = None) -> int:
     tools = str(Path(__file__).resolve().parent)
     if tools not in sys.path:
         sys.path.insert(0, tools)
+    prefer_repo_venv()
     ap = build_parser()
     args = ap.parse_args(argv)
     try:

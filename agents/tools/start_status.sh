@@ -61,5 +61,12 @@ else
   echo "[start_status] INFO databricks CLI not on PATH"
 fi
 
+# MLflow observe readiness (soft — does not block the menu)
+if [ -x ./agents/tools/check_mlflow_observe.sh ]; then
+  ./agents/tools/check_mlflow_observe.sh || true
+else
+  echo "[start_status] WARN MLflow check script missing"
+fi
+
 echo "[start_status] done (soft report only — choose a menu item to begin)"
 exit 0

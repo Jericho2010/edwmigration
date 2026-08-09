@@ -100,6 +100,21 @@ else
     "Install sqlcmd - see docs/prerequisites.md (required for Track A proc export)"
 fi
 
+# MLflow live traces — WARN (migration continues; recording needs observe-setup)
+if [ -x "${REPO_ROOT}/agents/tools/check_mlflow_observe.sh" ]; then
+  if "${REPO_ROOT}/agents/tools/check_mlflow_observe.sh" --strict >/tmp/edw_mlflow_preflight.$$ 2>&1; then
+    ok "MLflow observe ready (venv + mlflow>=3.8)"
+    rm -f /tmp/edw_mlflow_preflight.$$
+  else
+    cat /tmp/edw_mlflow_preflight.$$ 2>/dev/null || true
+    rm -f /tmp/edw_mlflow_preflight.$$
+    warn "MLflow observe not ready — traces will no-op" \
+      "make observe-setup   (creates .venv and installs requirements-observe.txt)"
+  fi
+else
+  warn "MLflow check script missing" "Restore agents/tools/check_mlflow_observe.sh"
+fi
+
 echo "[preflight] done fails=${FAILS} warnings=${WARNINGS}"
 if [ "$FAILS" -gt 0 ]; then
   echo "[preflight] Fix the FAIL remediations above, then say continue."

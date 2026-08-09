@@ -113,14 +113,17 @@ PY
 )"
   fi
   if [ -z "${OBSERVE_URL:-}" ] && [ -n "${RUN_ID:-}" ] && [ -f "${REPO_ROOT}/agents/tools/mlflow_observe.py" ]; then
-    OBSERVE_URL="$(python3 "${REPO_ROOT}/agents/tools/mlflow_observe.py" trace-url --run-id "$RUN_ID" 2>/dev/null || true)"
+    PY="$("${REPO_ROOT}/agents/tools/resolve_python.sh" 2>/dev/null || command -v python3 || true)"
+    if [ -n "${PY:-}" ]; then
+      OBSERVE_URL="$("$PY" "${REPO_ROOT}/agents/tools/mlflow_observe.py" trace-url --run-id "$RUN_ID" 2>/dev/null || true)"
+    fi
   fi
 fi
 if [ -n "${OBSERVE_URL:-}" ]; then
   echo "observe_url: ${OBSERVE_URL}"
   echo "MLflow traces: ${OBSERVE_URL}"
 else
-  echo "MLflow traces: optional — pip install 'mlflow>=3.8' then re-run ensure_run_events / migration (same Databricks auth as CLI)"
+  echo "MLflow traces: run make observe-setup then re-init (mlflow_observe init / ensure_run_events)"
 fi
 
 echo "================="

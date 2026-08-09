@@ -35,8 +35,10 @@ Portable prompts + contracts. Cursor and GitHub Copilot adapters are generated.
 | `print_observability_urls.sh` | Control Plane + Genie + MLflow `observe_url` |
 | `record_agent_event.sh` | Insert ops.agent_events row (+ MLflow stage span) |
 | `ensure_run_events.py` | `coordinator/started` + table-only `convert/skipped` (not assess); inits MLflow run |
-| `mlflow_observe.py` | Soft MLflow init / spans / stage / end-run / trace-url |
+| `mlflow_observe.py` | Soft MLflow init / spans / stage / end-run / trace-url (prefers `.venv`) |
 | `mlflow_context.py` | `agents/out/<run_id>/mlflow_context.json` helpers |
+| `resolve_python.sh` | Prefer `/.venv/bin/python` for observe tools/hooks |
+| `check_mlflow_observe.sh` | Health: venv + mlflow≥3.8 + DATABRICKS_HOST (`--strict` for preflight WARN) |
 | `discover_inventory.py` | Base tables + procs/routines (`SOURCE_TYPE`) |
 | `generate_from_inventory.py` | Land + reconcile SQL |
 | `validate_artifact.py` | JSON Schema check against `agents/contracts/` |

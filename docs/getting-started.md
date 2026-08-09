@@ -58,6 +58,8 @@ flowchart TD
 
 If agents are missing: `make sync-prompts`, then reload the window.
 
+**Live MLflow traces:** once per machine run `make observe-setup` (creates `.venv` + installs `mlflow`). Soft status and Track A preflight report whether observe is ready.
+
 **GitHub Copilot / CLIs:** [CLI setup](cli-setup.md) · [`edw-start.md`](../agents/github-copilot/edw-start.md) · [`.github/copilot-instructions.md`](../.github/copilot-instructions.md).
 
 ---

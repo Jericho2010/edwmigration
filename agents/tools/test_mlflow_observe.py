@@ -166,13 +166,14 @@ class ObserveMemoryTests(unittest.TestCase):
             root = Path(td)
             run_id = "cli-init-1"
             (root / "agents" / "out" / run_id).mkdir(parents=True)
-            with mock.patch.object(mobs, "ROOT", root), mock.patch.object(mctx, "ROOT", root):
-                with mock.patch("sys.stdout", new_callable=lambda: __import__("io").StringIO()) as out:
-                    rc = mobs.main(["init", "--run-id", run_id])
-                    self.assertEqual(rc, 0)
-                    text = out.getvalue()
-                    self.assertIn("observe_url:", text)
-                    self.assertIn("Observed by MLflow:", text)
+            with mock.patch.dict(os.environ, {"EDW_SKIP_VENV_REEXEC": "1"}, clear=False):
+                with mock.patch.object(mobs, "ROOT", root), mock.patch.object(mctx, "ROOT", root):
+                    with mock.patch("sys.stdout", new_callable=lambda: __import__("io").StringIO()) as out:
+                        rc = mobs.main(["init", "--run-id", run_id])
+                        self.assertEqual(rc, 0)
+                        text = out.getvalue()
+                        self.assertIn("observe_url:", text)
+                        self.assertIn("Observed by MLflow:", text)
 
 
 class EnsureRunEventsAnnounceTests(unittest.TestCase):
