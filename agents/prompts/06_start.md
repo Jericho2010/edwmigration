@@ -31,7 +31,7 @@ User says any of: `start`, `menu`, `help`, `hi`, `hello` — or opens you as `ed
    3. Migrate my Azure MySQL into catalog <name>. Host/user/db are in .env (or I’ll paste them).
       → Track B MySQL (edw-coordinator)
 
-   4. Print Control Plane and Genie URLs.
+   4. Print Control Plane, Genie, and MLflow observe URLs.
       → make print-urls
 
    5. Tear down the demo Azure resources.
@@ -50,7 +50,7 @@ User says any of: `start`, `menu`, `help`, `hi`, `hello` — or opens you as `ed
 | **1** | Hand off to **`edw-demo-guide`** protocol (or launch that subagent): run Track A preflight, then bootstrap/setup/migrate per `agents/prompts/05_demo_guide.md`. Remind them logins are interactive. |
 | **2** | Hand off to **`edw-coordinator`** with Azure SQL kickoff. If `.env` incomplete, ask for `SOURCE_*` / catalog fields first; then `make setup` if needed before Discover. |
 | **3** | Hand off to **`edw-coordinator`** with MySQL kickoff. Ensure `SOURCE_TYPE=mysql` and clear stale WWI foreign-catalog names if present. |
-| **4** | Run `make print-urls` (or `./agents/tools/print_observability_urls.sh`). If it fails, say what `.env` / deploy step is missing — do not bootstrap. |
+| **4** | Run `make print-urls` (or `./agents/tools/print_observability_urls.sh`). Paste Control Plane, Genie, and `observe_url` when present. If it fails, say what `.env` / deploy step is missing — do not bootstrap. |
 | **5** | Confirm once (“This deletes the demo resource group”), then `make teardown` only if they confirm. |
 | **6** | Open and summarize **`docs/enterprise.md`**: demo vs enterprise table (auth → OAuth/SP, network → Private Link/allowlist, secrets, privileges, Gate as policy not self-approve) and the **SoD roles** table (requester / platform / migration engineer / data owner / ops / security). Link the path. No infra changes. |
 

@@ -23,7 +23,10 @@ Shared memory is **disk only** under `agents/out/<run_id>/` (orchestrator-worker
    python3 agents/tools/validate_artifact.py \
      --schema agents/contracts/context.schema.json \
      --file agents/out/<run_id>/context.json
+   python3 agents/tools/mlflow_observe.py init --run-id <run_id>
    ```
+
+   **Immediately paste** any `observe_url:` / `Observed by MLflow:` lines to the user (live traces while the run continues). Soft no-op if mlflow is absent — continue Discover either way.
 
 2. **Discover everything.** Run:
    ```bash
@@ -39,7 +42,7 @@ Shared memory is **disk only** under `agents/out/<run_id>/` (orchestrator-worker
    ./agents/tools/run_sql.sh --file databricks/_rendered/generated/load_inventory.sql
    python3 agents/tools/ensure_run_events.py --run-id <run_id>
    ```
-   (`ensure_run_events` records `coordinator/started` and `convert/skipped` for table-only — **not** `assess/completed`.)
+   (`ensure_run_events` records `coordinator/started` and `convert/skipped` for table-only — **not** `assess/completed`. It re-inits MLflow idempotently; if `observe_url:` appears and you have not shown it yet, paste it now.)
 
 4. **Delegate Assess** → save Assess JSON to a temp file under the run dir, then:
    ```bash
@@ -121,7 +124,7 @@ Shared memory is **disk only** under `agents/out/<run_id>/` (orchestrator-worker
 - Do not hardcode WWI table or proc names.
 - Persist ops rows using helpers (`persist_backlog.py`, `merge_convert_results.py`, `persist_manifest.py`) — do not invent ad-hoc ops SQL.
 - When used from `edw-demo-guide`, pause briefly after Assess / Convert / Test / Gate with counts for the user.
-- After setup/run, always print Control Plane + Genie URLs (`make print-urls`) and trust checklist: inventory → bronze reconcile → Gate blockers empty.
+- After setup/run, always print Control Plane + Genie + MLflow `observe_url` (`make print-urls`) and trust checklist: inventory → bronze reconcile → Gate blockers empty.
 
 ## Kickoff examples
 
@@ -132,4 +135,4 @@ If the user pastes MySQL fields, write/update `.env` (`SOURCE_TYPE=mysql`, `SOUR
 
 ## Final message
 
-Print: run_id, `SOURCE_TYPE`, gate, tables_landed/tables_total, procs_converted/procs_total (0/0 OK if routines skipped), reconcile pass/fail, path to manifest, any job-wiring WARN, **Dashboard URL** and **Genie URL** from `make print-urls`.
+Print: run_id, `SOURCE_TYPE`, gate, tables_landed/tables_total, procs_converted/procs_total (0/0 OK if routines skipped), reconcile pass/fail, path to manifest, any job-wiring WARN, **Dashboard URL**, **Genie URL**, and **observe_url** (MLflow traces) from `make print-urls`.

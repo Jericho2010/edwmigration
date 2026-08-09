@@ -2,7 +2,8 @@
 """Ensure early agent_events for Gate rule 4 on table-only runs.
 
 Writes coordinator/started always; convert/skipped when procs_total==0
-or routines_skipped_reason is set.
+or routines_skipped_reason is set. Also best-effort inits MLflow observe
+(agents/tools/mlflow_observe.py) for live traces.
 
 Does **not** record assess/completed — coordinator records that after
 persist_backlog.py succeeds.
@@ -51,6 +52,20 @@ def record(run_id: str, agent: str, event: str, detail: str = "") -> None:
         raise SystemExit(proc.returncode)
 
 
+def init_mlflow(run_id: str) -> None:
+    """Best-effort MLflow run + root span; print observe_url when enabled."""
+    tools = str(ROOT / "agents" / "tools")
+    if tools not in sys.path:
+        sys.path.insert(0, tools)
+    try:
+        import mlflow_observe as mobs  # noqa: WPS433 — local tool module
+
+        data = mobs.init_run(run_id, root=ROOT)
+        mobs.announce_observe_url(str(data.get("observe_url") or ""))
+    except Exception:
+        pass
+
+
 def main() -> int:
     load_env()
     ap = argparse.ArgumentParser()
@@ -65,6 +80,7 @@ def main() -> int:
         procs_total = int(inv.get("procs_total") or 0)
         skip_reason = inv.get("routines_skipped_reason") or ""
 
+    init_mlflow(args.run_id)
     record(args.run_id, "coordinator", "started", "ensure_run_events")
 
     if procs_total == 0 or skip_reason:

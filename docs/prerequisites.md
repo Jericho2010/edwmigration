@@ -16,6 +16,7 @@
 | Databricks CLI 0.281+ | `databricks --version` |
 | python3 3.10+ | `python3 --version` |
 | jq, curl | `jq --version` |
+| *(optional)* `mlflow>=3.8` | Live subagent traces in Databricks Experiments (`pip install 'mlflow>=3.8'`); same workspace auth as the Databricks CLI. Soft no-op if absent. |
 
 ### Track A — Guided demo
 

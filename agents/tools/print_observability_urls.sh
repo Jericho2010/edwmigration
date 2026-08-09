@@ -92,5 +92,36 @@ else
 fi
 
 echo "Trust checklist: inventory.json → bronze reconcile pass → Gate blockers empty"
+
+# MLflow observe_url (additive live traces; soft)
+OBSERVE_URL=""
+CURRENT_FILE="${REPO_ROOT}/agents/out/CURRENT_RUN"
+if [ -f "$CURRENT_FILE" ]; then
+  RUN_ID="$(tr -d '[:space:]' < "$CURRENT_FILE")"
+  CTX_FILE="${REPO_ROOT}/agents/out/${RUN_ID}/mlflow_context.json"
+  if [ -n "$RUN_ID" ] && [ -f "$CTX_FILE" ] && command -v python3 >/dev/null 2>&1; then
+    OBSERVE_URL="$(python3 - "$CTX_FILE" <<'PY'
+import json, sys
+from pathlib import Path
+p = Path(sys.argv[1])
+try:
+    d = json.loads(p.read_text())
+except Exception:
+    d = {}
+print((d.get("observe_url") or "").strip())
+PY
+)"
+  fi
+  if [ -z "${OBSERVE_URL:-}" ] && [ -n "${RUN_ID:-}" ] && [ -f "${REPO_ROOT}/agents/tools/mlflow_observe.py" ]; then
+    OBSERVE_URL="$(python3 "${REPO_ROOT}/agents/tools/mlflow_observe.py" trace-url --run-id "$RUN_ID" 2>/dev/null || true)"
+  fi
+fi
+if [ -n "${OBSERVE_URL:-}" ]; then
+  echo "observe_url: ${OBSERVE_URL}"
+  echo "MLflow traces: ${OBSERVE_URL}"
+else
+  echo "MLflow traces: optional — pip install 'mlflow>=3.8' then re-run ensure_run_events / migration (same Databricks auth as CLI)"
+fi
+
 echo "================="
 echo
