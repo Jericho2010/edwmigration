@@ -47,4 +47,4 @@ You may also echo a one-line path summary in chat; the disk file is the handoff 
 
 - Write only under `databricks/silver/` or `databricks/gold/`. **Never** `databricks/converted/`, bronze, uc, or tests.
 - Own **only** this item's `target_path` and `convert/<item_id>.json`. Do not edit other workers' files, `migration_backlog.json`, or `ops.*`.
-- Writing a notebook does **not** auto-add it to `databricks/jobs/edw_migration_medallion.yml` — coordinator runs `check_job_wiring.py` (WARN). Gate checks disk + `proc_conversion_map`, not job execution of every new path.
+- Writing a notebook does **not** auto-add it to `databricks/jobs/edw_migration_medallion.yml` — coordinator runs `check_job_wiring.py` (WARN + optional `--apply`). Gate checks disk + `proc_conversion_map`, not job execution of every new path.

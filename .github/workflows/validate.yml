@@ -206,6 +206,10 @@ jobs:
           grep -q "merge_failed.json" agents/prompts/00_coordinator.md
           ! grep -qE 'may set `skip`' agents/prompts/01_assess.md
 
+      - name: Job wiring unit tests
+        run: |
+          python3 -m unittest discover -s agents/tools -p 'test_check_job_wiring.py' -v
+
       - name: Slugify unit check
         run: |
           python3 - <<'PY'

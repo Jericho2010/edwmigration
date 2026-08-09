@@ -52,7 +52,7 @@ Warehouse, Azure/Databricks login, and tools: the guide runs `./agents/tools/pre
 6. Demo acceptance (guide check, **not** a Gate rule): **≥10 tables** and **≥5 procedures** migrated (counts only).  
 7. When finished: ask the guide to tear down, menu **5**, or run `make teardown`.
 
-**Job wiring (plain English):** Gate checks that converted notebooks exist on disk. The medallion job runs a **checked-in** task list — for the WWI demo that already covers the sample. If the guide prints a job-wiring WARN on a custom conversion, the notebook may be “done” for Gate but not yet a job task ([limits.md](limits.md)).
+**Job wiring (plain English):** Gate checks that converted notebooks exist on disk. The medallion job runs a **checked-in** task list — for the WWI demo that already covers the sample. If the guide prints a job-wiring WARN on a custom conversion, it can propose/apply a safe YAML patch (`check_job_wiring.py --apply`) so the new notebook becomes a job task without exceeding Free Edition concurrency ([limits.md](limits.md)).
 
 What you will see at each pause: **[What you will see while it works](what-you-get.md#what-you-will-see-while-it-works)**.
 
