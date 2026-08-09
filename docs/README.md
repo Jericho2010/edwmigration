@@ -34,7 +34,7 @@ flowchart TD
 |---|---|
 | See how to click in Cursor | [cursor-ui.md](cursor-ui.md) |
 | Cursor CLI or Copilot CLI | [cli-setup.md](cli-setup.md) |
-| Try the free demo tonight | [guided-demo.md](guided-demo.md) |
+| Recommended first run | [guided-demo.md](guided-demo.md) |
 | Launch the right agent | [agent-setup.md](agent-setup.md) |
 | Connect my Azure SQL / MySQL | [your-database.md](your-database.md) |
 | Enterprise / SoD / prod controls | [enterprise.md](enterprise.md) |
