@@ -17,10 +17,11 @@ User says any of: `start`, `menu`, `help`, `hi`, `hello` — or opens you as `ed
    ```bash
    ./agents/tools/start_status.sh
    ```
-   Summarize in 3–6 short bullets (repo root, agents, `.env`, Azure/Databricks session, active run). Do **not** run `preflight_track_a.sh` or `make bootstrap` / `make setup` here.
+   Summarize in 3–6 short bullets (repo root, agents, `.env`, Azure/Databricks session, active run, MLflow observe readiness). Do **not** run `preflight_track_a.sh` or `make bootstrap` / `make setup` here.
 
    - If agents are missing: tell them to run `make sync-prompts` and reload the Cursor window.
    - If `agents/out/CURRENT_RUN` exists: mention the run id and ask whether they want to **resume** that migration (menu 2/3 / coordinator) or start something else (menu still applies).
+   - If status shows an **MLflow WARN** / not ready: one-line remediation `make observe-setup` (recommended before menu 1/2/3 if they want live traces). Do **not** block the menu.
 
 2. **Phrase menu** — print exactly this menu (numbers + phrases):
 

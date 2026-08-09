@@ -79,7 +79,7 @@ flowchart LR
 | **Convert** | Turn T-SQL / MySQL routines into Spark SQL notebooks in **parallel waves (≤5)** via `edw-convert` *(skipped cleanly if none)* |
 | **Test** | Bronze row counts vs source |
 | **Gate** | Ship / no-ship from inventory + reconcile + conversions |
-| **Observe** | Control Plane dashboard + Genie Q&A |
+| **Observe** | Control Plane dashboard + Genie Q&A + MLflow live traces (`observe_url`) |
 
 ```mermaid
 %%{init: {"theme":"base","themeVariables":{"primaryColor":"#E8F1F8","primaryTextColor":"#0B3D5C","primaryBorderColor":"#0B3D5C","lineColor":"#5B7A8C","secondaryColor":"#E6F4F1","tertiaryColor":"#F7F3EA","background":"#FFFFFF","mainBkg":"#E8F1F8","clusterBkg":"#F7FAFC","clusterBorder":"#5B7A8C","titleColor":"#0B3D5C","edgeLabelBackground":"#FFFFFF"}}}%%
@@ -113,7 +113,7 @@ You are not expected to stare at terminals the whole time. Typical pauses:
 2. **Convert wave** — up to five `edw-convert` agents writing notebooks in parallel  
 3. **Merge** — `convert_summary.json` with converted / blocked counts  
 4. **Job → Test → Gate** — medallion run, bronze reconcile, ship / no-ship  
-5. **URLs** — Control Plane + Genie (`make print-urls`)
+5. **URLs** — Control Plane + Genie + MLflow `observe_url` (`make print-urls`). Setup-time print-urls may lack `observe_url` until the coordinator mints a run; open the live link when it appears.
 
 ```mermaid
 %%{init: {"theme":"base","themeVariables":{"primaryColor":"#E8F1F8","primaryTextColor":"#0B3D5C","primaryBorderColor":"#0B3D5C","lineColor":"#5B7A8C","secondaryColor":"#E6F4F1","tertiaryColor":"#F7F3EA","background":"#FFFFFF","mainBkg":"#E8F1F8","clusterBkg":"#F7FAFC","clusterBorder":"#5B7A8C","titleColor":"#0B3D5C","edgeLabelBackground":"#FFFFFF"}}}%%
@@ -127,7 +127,7 @@ sequenceDiagram
   Coord->>Wave: Fan-out edw-convert
   Wave-->>Coord: convert result JSON files
   Coord->>DBX: Job then Test then Gate
-  Coord-->>You: Dashboard and Genie URLs
+  Coord-->>You: Dashboard Genie and observe_url
 ```
 
 ---
@@ -147,15 +147,17 @@ Everything for one run lives under `agents/out/<run_id>/` (also pointed at by `a
 | `merge_failed.json` | Present only if ops merge failed (fix before continuing) |
 | `reconcile_report.json` | Test pass/fail checks |
 | `migration_manifest.json` | Gate ship / no-ship + blockers |
+| `mlflow_context.json` | MLflow experiment/trace ids + `observe_url` (after observe init) |
 
 ---
 
-## Control Plane + Genie
+## Control Plane + Genie + MLflow
 
-After setup: `make print-urls`
+After setup: `make print-urls` (Dashboard + Genie). After the coordinator mints a run: same command also prints **`observe_url`** when MLflow observe is ready (`make observe-setup`).
 
 - **Control Plane** — Gate, timeline, backlog, reconcile  
 - **Genie** — *Did the last run ship?* / *Why did the gate fail?*  
+- **MLflow** — live subagent/tool span tree while Convert runs  
 
 Trust checklist: inventory → convert artifacts (when procs in scope) → bronze reconcile pass → Gate blockers empty.
 
@@ -169,7 +171,7 @@ Trust checklist: inventory → convert artifacts (when procs in scope) → bronz
 | Entry | `start` → **1** (or `edw-demo-guide`) | `start` → **2** / **3** (or `edw-coordinator`) |
 | Agent | `edw-demo-guide` → coordinator | `edw-coordinator` |
 | Cost (typical) | $0 with Free Edition + teardown | Your existing DB + Free Edition sink |
-| Outcome | Same catalog shape + dashboard + Genie | Same |
+| Outcome | Same catalog shape + dashboard + Genie + MLflow traces | Same |
 
 Production-shaped controls: **[Enterprise](enterprise.md)**.
 

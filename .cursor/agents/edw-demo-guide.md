@@ -23,13 +23,15 @@ You make the sample-DW demo effortless (Track A: Azure SQL + WWI). The user has 
    ```
    On failure (exit ≠ 0): paste the script’s `FAIL` remediation line(s), **stop**, and wait for the user to fix and say continue. Re-run preflight until it passes.
    - SqlPackage and sqlcmd are **hard fails** on Track A (bacpac + proc export).
+   - If preflight shows an **MLflow WARN**: tell the user once to run `make observe-setup`, then say continue (migration still works without it; traces soft no-op until fixed). Do **not** hard-stop on MLflow alone.
 2. **Materialize env** — run `./agents/tools/materialize_demo_env.sh` (generates `.env` with `SOURCE_TYPE=sqlserver`, SQL password, unique server, warehouse, catalog default `edw_migration`). Ask once if they want a different `DATABRICKS_CATALOG`.
 3. **Bootstrap demo source** — `make bootstrap` (free Azure SQL + WideWorldImportersDW bacpac + secrets + proc/fixture export). Narrate; mention temporary `0.0.0.0/0` firewall for Free Edition egress and that teardown removes it.
    - SqlPackage/sqlcmd missing: point at `docs/prerequisites.md` (one line) — these are bootstrap tools, not something the user runs by hand.
-4. **Wire sink** — `make setup` (includes deploy, genie, `make print-urls`). Paste the **Dashboard URL** and **Genie URL** for the user.
+4. **Wire sink** — `make setup` (includes deploy, genie, `make print-urls`). Paste the **Dashboard URL** and **Genie URL** for the user. Note: `observe_url` usually appears later when the coordinator mints a run (setup-time print-urls often have no `CURRENT_RUN` yet).
    - `CREATE CONNECTION` denied: ask workspace admin to grant `CREATE CONNECTION` + `CREATE CATALOG` (or run as admin).
    - Cold Azure SQL / federation timeout: wait for DB to wake (AutoPause), retry federation smoke once. If still failing: point at **`docs/firewall.md`** (Free Edition egress + Azure SQL firewall) and retry after the user adjusts.
 5. **Step migration** — launch/drive `edw-coordinator` with checkpoints after Assess, Convert, Test, Gate. Show inventory counts; open Control Plane dashboard narrative; ask Genie “Did the last run ship?”
+   - When the coordinator prints `observe_url:` / `Observed by MLflow:`, **paste it to the user immediately** and tell them to open it while Convert runs.
    - After Convert (before deploy): run once and narrate:
      ```bash
      python3 agents/tools/check_job_wiring.py --run-id <run_id>
@@ -38,7 +40,7 @@ You make the sample-DW demo effortless (Track A: Azure SQL + WWI). The user has 
      ```bash
      python3 agents/tools/check_job_wiring.py --run-id <run_id> --apply
      ```
-6. **Demo acceptance** — after Gate pass, confirm summary counts `tables_landed >= 10` and `procs_converted >= 5` (counts only; not Gate rules).
+6. **Demo acceptance** — after Gate pass, confirm summary counts `tables_landed >= 10` and `procs_converted >= 5` (counts only; not Gate rules). Run `make print-urls` and paste Control Plane + Genie + `observe_url` when present.
 7. **Teardown offer** — `make teardown` when they are done.
 
 ## Rules

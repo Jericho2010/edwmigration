@@ -86,7 +86,7 @@ federation: secrets render ## UC federation + ops
 	./agents/tools/run_sql.sh --file databricks/_rendered/uc/03_ops_and_views.sql
 	./agents/tools/run_sql.sh --file databricks/_rendered/uc/02_federation_smoke.sql
 
-print-urls: check-core ## Print Control Plane dashboard + Genie URLs
+print-urls: check-core ## Print Control Plane + Genie + MLflow observe_url
 	./agents/tools/print_observability_urls.sh
 
 setup: check-source federation deploy genie print-urls ## Wire sink + dashboard + genie

@@ -12,7 +12,7 @@ flowchart LR
   O[Open repo root] --> G[Type start or edw-demo-guide]
   G --> S[Choose 1 or paste kickoff]
   S --> F[Fix if agent asks]
-  F --> W[Watch Dashboard + Genie]
+  F --> W[Watch Dashboard Genie MLflow]
   W --> T[Teardown when done]
   classDef user fill:#0B3D5C,stroke:#082C43,color:#fff
   classDef agent fill:#1B7A6E,stroke:#145A51,color:#fff
@@ -28,8 +28,9 @@ flowchart LR
 
 You only need:
 
-- Repo opened at the **git root** in Cursor  
-- Agents **`edw-start`** / **`edw-demo-guide`** visible (else `make sync-prompts`, reload)
+- Repo opened at the **git root** in **Cursor** (hooks need Cursor, not VS Code alone)  
+- Agents **`edw-start`** / **`edw-demo-guide`** visible (else `make sync-prompts`, reload)  
+- **Recommended for live traces:** `make observe-setup` once (preflight WARNs if missing; migration still continues)
 
 Warehouse, Azure/Databricks login, and tools: the guide runs `./agents/tools/preflight_track_a.sh` and **asks** if something is missing. Privileges (`CREATE CONNECTION` / `CREATE CATALOG`) are checked when wiring the sink — see [prerequisites](prerequisites.md) if the agent reports a deny.
 
@@ -84,7 +85,8 @@ You can stop and celebrate when **all** of these are true:
 2. Genie can answer *Did the last run ship?*  
 3. Gate summary shows ship (empty blockers)  
 4. Demo acceptance counts: **≥10** bronze tables and **≥5** converted procs *(guide check, not Gate)*  
-5. You tore down Azure resources (`make teardown` / menu **5**) **or** consciously kept them for a follow-up  
+5. **MLflow (recommended):** you ran `make observe-setup` once, and opened `observe_url` when the coordinator minted the run (setup-time print-urls may not have it yet)  
+6. You tore down Azure resources (`make teardown` / menu **5**) **or** consciously kept them for a follow-up  
 
 ---
 

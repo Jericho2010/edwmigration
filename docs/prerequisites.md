@@ -16,7 +16,12 @@
 | Databricks CLI 0.281+ | `databricks --version` |
 | python3 3.10+ | `python3 --version` |
 | jq, curl | `jq --version` |
-| **MLflow observe** | `make observe-setup` — creates `.venv` and installs `requirements-observe.txt` (`mlflow>=3.8`). Soft no-op without it; `start` status + Track A preflight check this. Same Databricks auth as the CLI (`DATABRICKS_HOST`). |
+
+### Recommended for live traces
+
+| Tool | Verify (when asked) |
+|---|---|
+| **MLflow observe** | `make observe-setup` — creates `.venv` and installs `requirements-observe.txt` (`mlflow>=3.8`). Migration still runs without it (soft no-op). Soft status + Track A preflight **WARN** if missing. Same Databricks auth as the CLI (`DATABRICKS_HOST`). |
 
 ### Track A — Guided demo
 

@@ -49,10 +49,13 @@ SqlPackage **not** required for `make setup`.
 | `make materialize-demo` | Build `.env` from logins (A) |
 | `make bootstrap` | Free Azure SQL + WWI |
 | `make setup` | Secrets + federation + deploy + genie + URLs |
-| `make print-urls` | Dashboard + Genie links |
+| `make observe-setup` | Create `.venv` + install MLflow observe deps |
+| `make print-urls` | Control Plane + Genie + MLflow `observe_url` (when a run exists) |
 | `make deploy` / `make run` | Bundle deploy / job |
 | `make teardown` | Delete demo Azure RG |
 | `make sync-prompts` | Regenerate Cursor + Copilot agents |
+
+Also: `./agents/tools/check_mlflow_observe.sh` (add `--strict` in Track A preflight).
 
 ---
 
