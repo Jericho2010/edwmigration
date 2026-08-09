@@ -45,8 +45,9 @@ This repo’s agents:
 2. **Discover** every base table (and procedures/routines when tools allow)  
 3. **Land** tables into bronze and prove row counts match  
 4. **Convert** procedures into Spark SQL notebooks when there is a backlog  
-5. **Gate** the run — ship or no-ship, with reasons  
-6. **Show** progress on a dashboard and a Genie room  
+5. **Wire** new notebooks into the medallion job when needed (`check_job_wiring.py --apply`; safe concurrency)  
+6. **Gate** the run — ship or no-ship, with reasons  
+7. **Show** progress on a dashboard and a Genie room  
 
 ```mermaid
 %%{init: {"theme":"base","themeVariables":{"primaryColor":"#E8F1F8","primaryTextColor":"#0B3D5C","primaryBorderColor":"#0B3D5C","lineColor":"#5B7A8C","secondaryColor":"#E6F4F1","tertiaryColor":"#F7F3EA","background":"#FFFFFF","mainBkg":"#E8F1F8","clusterBkg":"#F7FAFC","clusterBorder":"#5B7A8C","titleColor":"#0B3D5C","edgeLabelBackground":"#FFFFFF"}}}%%

@@ -40,7 +40,7 @@ sync_copilot() {
 }
 
 sync_cursor "00_coordinator.md" "edw-coordinator" "false" \
-  "Owns run_id; discover → assess → convert fan-out (disk artifacts) → persist helpers → job wiring WARN → test → gate. Track B or after demo-guide."
+  "Owns run_id; discover → assess → convert fan-out (disk artifacts) → persist helpers → job wiring WARN/--apply → test → gate. Track B or after demo-guide."
 sync_cursor "01_assess.md" "edw-assess" "true" \
   "Inventory → migration backlog JSON (empty OK if routines skipped). No skip field; unique target_paths. Readonly."
 sync_cursor "02_convert.md" "edw-convert" "false" \
@@ -50,7 +50,7 @@ sync_cursor "03_test.md" "edw-test" "true" \
 sync_cursor "04_gate.md" "edw-gate" "true" \
   "Deterministic ship/no-ship from inventory, conversions, reconcile, agent_events; proof SQL; table-only when routines skipped. Readonly."
 sync_cursor "05_demo_guide.md" "edw-demo-guide" "false" \
-  'Track A guided demo: preflight → bootstrap WWI → setup → coordinator checkpoints; firewall/AutoPause + job wiring WARN.'
+  'Track A guided demo: preflight → bootstrap WWI → setup → coordinator checkpoints; firewall/AutoPause + job wiring WARN/--apply.'
 sync_cursor "06_start.md" "edw-start" "false" \
   'Front door: start → soft status + phrase menu; CURRENT_RUN resume hint; enterprise SoD from docs. No bootstrap until choice.'
 

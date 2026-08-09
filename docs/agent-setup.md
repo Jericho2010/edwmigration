@@ -81,7 +81,7 @@ Shared memory across Convert workers is **disk only** under `agents/out/<run_id>
 | `edw-test` | Reconcile report |
 | `edw-gate` | Ship / no-ship manifest |
 
-Convert protocol: `validate_backlog_paths.py` → launch up to **5** `edw-convert` agents per wave → `merge_convert_results.py`. Persist helpers: `persist_backlog.py` / `persist_reconcile_report.py` / `persist_manifest.py`. Job wiring: `check_job_wiring.py` (WARN). What you will see: [during the run](what-you-get.md#what-you-will-see-while-it-works).
+Convert protocol: `validate_backlog_paths.py` → launch up to **5** `edw-convert` agents per wave → `merge_convert_results.py`. Persist helpers: `persist_backlog.py` / `persist_reconcile_report.py` / `persist_manifest.py`. Job wiring: `check_job_wiring.py` (WARN + optional `--apply`). What you will see: [during the run](what-you-get.md#what-you-will-see-while-it-works).
 
 Regenerate Cursor + Copilot files anytime:
 
