@@ -24,7 +24,7 @@ Pipeline detail (convert waves, merge, retries): [agent_delegation.png](docs/img
 | Use **Cursor CLI** or **Copilot CLI** | [CLI setup](docs/cli-setup.md) |
 | Understand what I’ll get | [What you get](docs/what-you-get.md) |
 | Set up for the first time | [Getting started](docs/getting-started.md) |
-| **Try the free guided demo tonight** | [Guided demo (Track A)](docs/guided-demo.md) |
+| **Recommended first run** | [Guided demo (Track A)](docs/guided-demo.md) |
 | Point at my own Azure SQL / MySQL | [Your database (Track B)](docs/your-database.md) |
 | Plan for real orgs / SoD | [Enterprise](docs/enterprise.md) |
 | Look up a term | [Glossary](docs/glossary.md) |
@@ -64,7 +64,7 @@ sequenceDiagram
 
 ---
 
-## Start tonight (recommended): type `start`
+## Recommended first run: type `start`
 
 1. Open the **repo root** in **Cursor** ([Getting started](docs/getting-started.md) · [Using Cursor](docs/cursor-ui.md)) — hooks need Cursor at the root (VS Code alone won’t dual-write the same way).  
 2. **Recommended for live traces:** `make observe-setup` once (creates `.venv` + installs MLflow). Soft status / Track A preflight report readiness; migration still works without it.  
