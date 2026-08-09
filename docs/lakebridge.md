@@ -16,4 +16,4 @@ Lakebridge is Databricks’ migration toolkit (profile / analyze / transpile / r
 
 ## Punchline
 
-For **Azure SQL EDW → Databricks UC**, this path is simpler: permissions in, agents discover and migrate, you watch the Control Plane. Lakebridge wins on heterogeneous estate breadth. We do **not** shell out to Lakebridge — we compete on the job-to-be-done and the operating model.
+For **Azure SQL EDW → Databricks UC**, this path is simpler: permissions in, agents discover and migrate, you watch the Control Plane. Lakebridge wins on heterogeneous estate breadth. We do **not** invoke Lakebridge or wrap it — we compete on the job-to-be-done and the operating model.
