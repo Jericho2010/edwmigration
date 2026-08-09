@@ -18,9 +18,16 @@ SOURCE_TYPE ?= sqlserver
 TOOLS_CORE := databricks jq curl python3
 TOOLS_AZURE := az sqlcmd SqlPackage
 
-.PHONY: check check-core check-azure check-source check-land render bootstrap setup federation secrets deploy run demo teardown genie materialize-demo sync-prompts discover print-urls
+.PHONY: check check-core check-azure check-source check-land render bootstrap setup federation secrets deploy run demo teardown genie materialize-demo sync-prompts discover print-urls observe-setup
 
 check: check-source
+
+observe-setup: ## Create .venv and install MLflow observe deps (requirements-observe.txt)
+	python3 -m venv .venv
+	.venv/bin/pip install -U pip
+	.venv/bin/pip install -r requirements-observe.txt
+	./agents/tools/check_mlflow_observe.sh
+	@echo "observe-setup OK — use .venv (tools auto-prefer it via resolve_python / re-exec)"
 
 check-core:
 	@for t in $(TOOLS_CORE); do \

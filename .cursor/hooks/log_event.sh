@@ -73,11 +73,12 @@ PY
 
 # Dual-write MLflow spans (soft no-op; never fail the hook).
 OBSERVE="${REPO_ROOT}/agents/tools/mlflow_observe.py"
-if [ -f "$OBSERVE" ] && command -v python3 >/dev/null 2>&1 && [ "$RUN_ID" != "unknown" ]; then
+PY="$("${REPO_ROOT}/agents/tools/resolve_python.sh" 2>/dev/null || true)"
+if [ -f "$OBSERVE" ] && [ -n "${PY:-}" ] && [ "$RUN_ID" != "unknown" ]; then
   case "$EVENT" in
     subagentStart)
       KEY="subagent:${SUB_ID:-$AGENT}"
-      python3 "$OBSERVE" span-start \
+      "$PY" "$OBSERVE" span-start \
         --run-id "$RUN_ID" --key "$KEY" --name "agent.${AGENT}" \
         --kind agent --agent "$AGENT" --detail "$DETAIL" >/dev/null 2>&1 || true
       ;;
@@ -87,13 +88,13 @@ if [ -f "$OBSERVE" ] && command -v python3 >/dev/null 2>&1 && [ "$RUN_ID" != "un
       case "${EXIT_CODE}" in
         error|failed|fail|1) STATUS="ERROR" ;;
       esac
-      python3 "$OBSERVE" span-end \
+      "$PY" "$OBSERVE" span-end \
         --run-id "$RUN_ID" --key "$KEY" --detail "$DETAIL" --status "$STATUS" \
         >/dev/null 2>&1 || true
       ;;
     afterShellExecution)
       KEY="tool:shell:$(date +%s%N)"
-      python3 "$OBSERVE" span-start \
+      "$PY" "$OBSERVE" span-start \
         --run-id "$RUN_ID" --key "$KEY" --name "tool.shell" \
         --kind tool --tool "$TOOL" --detail "$DETAIL" >/dev/null 2>&1 || true
       SHELL_STATUS="OK"
@@ -101,30 +102,30 @@ if [ -f "$OBSERVE" ] && command -v python3 >/dev/null 2>&1 && [ "$RUN_ID" != "un
         0|"") SHELL_STATUS="OK" ;;
         *) SHELL_STATUS="ERROR" ;;
       esac
-      python3 "$OBSERVE" span-end \
+      "$PY" "$OBSERVE" span-end \
         --run-id "$RUN_ID" --key "$KEY" --detail "$DETAIL" --status "$SHELL_STATUS" \
         >/dev/null 2>&1 || true
       if [ "$SHELL_STATUS" = "OK" ]; then
-        python3 "$OBSERVE" metric --run-id "$RUN_ID" --key shell_success --value 1 >/dev/null 2>&1 || true
+        "$PY" "$OBSERVE" metric --run-id "$RUN_ID" --key shell_success --value 1 >/dev/null 2>&1 || true
       else
-        python3 "$OBSERVE" metric --run-id "$RUN_ID" --key shell_failure --value 1 >/dev/null 2>&1 || true
+        "$PY" "$OBSERVE" metric --run-id "$RUN_ID" --key shell_failure --value 1 >/dev/null 2>&1 || true
       fi
       ;;
     afterMCPExecution)
       KEY="tool:mcp:$(date +%s%N)"
-      python3 "$OBSERVE" span-start \
+      "$PY" "$OBSERVE" span-start \
         --run-id "$RUN_ID" --key "$KEY" --name "tool.mcp" \
         --kind tool --tool "$TOOL" --detail "$DETAIL" >/dev/null 2>&1 || true
-      python3 "$OBSERVE" span-end \
+      "$PY" "$OBSERVE" span-end \
         --run-id "$RUN_ID" --key "$KEY" --detail "$DETAIL" --status OK \
         >/dev/null 2>&1 || true
       ;;
     afterFileEdit)
       KEY="tool:file:$(date +%s%N)"
-      python3 "$OBSERVE" span-start \
+      "$PY" "$OBSERVE" span-start \
         --run-id "$RUN_ID" --key "$KEY" --name "tool.file_edit" \
         --kind tool --detail "$DETAIL" >/dev/null 2>&1 || true
-      python3 "$OBSERVE" span-end \
+      "$PY" "$OBSERVE" span-end \
         --run-id "$RUN_ID" --key "$KEY" --detail "$DETAIL" --status OK \
         >/dev/null 2>&1 || true
       ;;

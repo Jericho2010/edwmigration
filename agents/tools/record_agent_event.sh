@@ -63,9 +63,12 @@ echo "[record_agent_event] ${AGENT}/${EVENT} run_id=${RUN_ID}"
 
 # Dual-write stage span to MLflow (soft no-op if mlflow absent / tracking fails).
 OBSERVE="${REPO_ROOT}/agents/tools/mlflow_observe.py"
-if [ -f "$OBSERVE" ] && command -v python3 >/dev/null 2>&1; then
-  STAGE_ARGS=(stage --run-id "$RUN_ID" --agent "$AGENT" --event "$EVENT")
-  [ -n "$TOOL" ] && STAGE_ARGS+=(--tool "$TOOL")
-  [ -n "$DETAIL" ] && STAGE_ARGS+=(--detail "$DETAIL")
-  python3 "$OBSERVE" "${STAGE_ARGS[@]}" >/dev/null 2>&1 || true
+if [ -f "$OBSERVE" ]; then
+  PY="$("${REPO_ROOT}/agents/tools/resolve_python.sh" 2>/dev/null || command -v python3 || true)"
+  if [ -n "${PY:-}" ]; then
+    STAGE_ARGS=(stage --run-id "$RUN_ID" --agent "$AGENT" --event "$EVENT")
+    [ -n "$TOOL" ] && STAGE_ARGS+=(--tool "$TOOL")
+    [ -n "$DETAIL" ] && STAGE_ARGS+=(--detail "$DETAIL")
+    "$PY" "$OBSERVE" "${STAGE_ARGS[@]}" >/dev/null 2>&1 || true
+  fi
 fi
