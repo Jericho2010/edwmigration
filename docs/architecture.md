@@ -64,8 +64,12 @@ Foreign catalog mirrors the source via `CONNECTION` `TYPE SQLSERVER` or `TYPE MY
 
 ## Observability
 
-Hooks → `ops.agent_events`. Control Plane dashboard (`dataset_catalog` / `ops`). Genie with dynamic `table_identifiers`. Print links with `make print-urls`.
+Two planes (additive):
 
+1. **UC events** — Hooks + `record_agent_event.sh` → `ops.agent_events`. Control Plane dashboard (`dataset_catalog` / `ops`). Genie with dynamic `table_identifiers`. Gate rule 4 reads this table only.
+2. **MLflow traces** — Optional live hierarchy in Databricks Experiments (`/Shared/edw-migration`): root `edw.run`, stage spans from milestones, AGENT spans from Cursor `subagentStart`/`Stop`, TOOL spans from shell/MCP/file hooks. Context: `agents/out/<run_id>/mlflow_context.json`. Soft no-op if `mlflow` is not installed. The coordinator announces `observe_url` when the run is minted (`mlflow_observe init`) and again from `ensure_run_events` if needed — not only at Gate.
+
+Print links with `make print-urls` (Control Plane + Genie + `observe_url` when available).
 ---
 
 ## Auth

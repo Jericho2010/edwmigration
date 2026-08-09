@@ -32,9 +32,11 @@ Portable prompts + contracts. Cursor and GitHub Copilot adapters are generated.
 | `materialize_demo_env.sh` | Build `.env` from logins |
 | `render_sql.sh` | Catalog/federation render (`SOURCE_TYPE`) → `_rendered/` |
 | `resolve_source_env.sh` | Map `SOURCE_*` / `AZ_SQL_*` |
-| `print_observability_urls.sh` | Control Plane + Genie URLs |
-| `record_agent_event.sh` | Insert ops.agent_events row |
-| `ensure_run_events.py` | `coordinator/started` + table-only `convert/skipped` (not assess) |
+| `print_observability_urls.sh` | Control Plane + Genie + MLflow `observe_url` |
+| `record_agent_event.sh` | Insert ops.agent_events row (+ MLflow stage span) |
+| `ensure_run_events.py` | `coordinator/started` + table-only `convert/skipped` (not assess); inits MLflow run |
+| `mlflow_observe.py` | Soft MLflow init / spans / stage / end-run / trace-url |
+| `mlflow_context.py` | `agents/out/<run_id>/mlflow_context.json` helpers |
 | `discover_inventory.py` | Base tables + procs/routines (`SOURCE_TYPE`) |
 | `generate_from_inventory.py` | Land + reconcile SQL |
 | `validate_artifact.py` | JSON Schema check against `agents/contracts/` |

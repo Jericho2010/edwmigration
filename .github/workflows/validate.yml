@@ -210,6 +210,10 @@ jobs:
         run: |
           python3 -m unittest discover -s agents/tools -p 'test_check_job_wiring.py' -v
 
+      - name: MLflow observe unit tests
+        run: |
+          python3 -m unittest discover -s agents/tools -p 'test_mlflow_observe.py' -v
+
       - name: Slugify unit check
         run: |
           python3 - <<'PY'

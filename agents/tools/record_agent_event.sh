@@ -60,3 +60,12 @@ SELECT 'agent_event_ok' AS check_name, '${AGENT}' AS agent, '${EVENT}' AS event;
 
 "${REPO_ROOT}/agents/tools/run_sql.sh" --sql "$SQL"
 echo "[record_agent_event] ${AGENT}/${EVENT} run_id=${RUN_ID}"
+
+# Dual-write stage span to MLflow (soft no-op if mlflow absent / tracking fails).
+OBSERVE="${REPO_ROOT}/agents/tools/mlflow_observe.py"
+if [ -f "$OBSERVE" ] && command -v python3 >/dev/null 2>&1; then
+  STAGE_ARGS=(stage --run-id "$RUN_ID" --agent "$AGENT" --event "$EVENT")
+  [ -n "$TOOL" ] && STAGE_ARGS+=(--tool "$TOOL")
+  [ -n "$DETAIL" ] && STAGE_ARGS+=(--detail "$DETAIL")
+  python3 "$OBSERVE" "${STAGE_ARGS[@]}" >/dev/null 2>&1 || true
+fi

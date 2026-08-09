@@ -44,9 +44,15 @@ if not event:
 tool = o.get("tool_name") or o.get("tool") or o.get("command") or ""
 parts = [o.get("task"), o.get("status"), o.get("file_path"), o.get("description")]
 detail = " | ".join(str(p) for p in parts if p)
+sub_id = o.get("subagent_id") or o.get("subagent_type") or o.get("agent") or ""
+exit_code = o.get("exit_code")
+if exit_code is None:
+    exit_code = o.get("status") or ""
 print(f"EVENT={shlex.quote(str(event)[:80])}")
 print(f"TOOL={shlex.quote(str(tool)[:200])}")
 print(f"DETAIL={shlex.quote(str(detail)[:500])}")
+print(f"SUB_ID={shlex.quote(str(sub_id)[:120])}")
+print(f"EXIT_CODE={shlex.quote(str(exit_code)[:40])}")
 PY
 )"
 
@@ -64,6 +70,66 @@ with open(path, "a") as f:
         "tool": tool, "detail": detail, "ts": ts,
     }) + "\n")
 PY
+
+# Dual-write MLflow spans (soft no-op; never fail the hook).
+OBSERVE="${REPO_ROOT}/agents/tools/mlflow_observe.py"
+if [ -f "$OBSERVE" ] && command -v python3 >/dev/null 2>&1 && [ "$RUN_ID" != "unknown" ]; then
+  case "$EVENT" in
+    subagentStart)
+      KEY="subagent:${SUB_ID:-$AGENT}"
+      python3 "$OBSERVE" span-start \
+        --run-id "$RUN_ID" --key "$KEY" --name "agent.${AGENT}" \
+        --kind agent --agent "$AGENT" --detail "$DETAIL" >/dev/null 2>&1 || true
+      ;;
+    subagentStop)
+      KEY="subagent:${SUB_ID:-$AGENT}"
+      STATUS="OK"
+      case "${EXIT_CODE}" in
+        error|failed|fail|1) STATUS="ERROR" ;;
+      esac
+      python3 "$OBSERVE" span-end \
+        --run-id "$RUN_ID" --key "$KEY" --detail "$DETAIL" --status "$STATUS" \
+        >/dev/null 2>&1 || true
+      ;;
+    afterShellExecution)
+      KEY="tool:shell:$(date +%s%N)"
+      python3 "$OBSERVE" span-start \
+        --run-id "$RUN_ID" --key "$KEY" --name "tool.shell" \
+        --kind tool --tool "$TOOL" --detail "$DETAIL" >/dev/null 2>&1 || true
+      SHELL_STATUS="OK"
+      case "${EXIT_CODE}" in
+        0|"") SHELL_STATUS="OK" ;;
+        *) SHELL_STATUS="ERROR" ;;
+      esac
+      python3 "$OBSERVE" span-end \
+        --run-id "$RUN_ID" --key "$KEY" --detail "$DETAIL" --status "$SHELL_STATUS" \
+        >/dev/null 2>&1 || true
+      if [ "$SHELL_STATUS" = "OK" ]; then
+        python3 "$OBSERVE" metric --run-id "$RUN_ID" --key shell_success --value 1 >/dev/null 2>&1 || true
+      else
+        python3 "$OBSERVE" metric --run-id "$RUN_ID" --key shell_failure --value 1 >/dev/null 2>&1 || true
+      fi
+      ;;
+    afterMCPExecution)
+      KEY="tool:mcp:$(date +%s%N)"
+      python3 "$OBSERVE" span-start \
+        --run-id "$RUN_ID" --key "$KEY" --name "tool.mcp" \
+        --kind tool --tool "$TOOL" --detail "$DETAIL" >/dev/null 2>&1 || true
+      python3 "$OBSERVE" span-end \
+        --run-id "$RUN_ID" --key "$KEY" --detail "$DETAIL" --status OK \
+        >/dev/null 2>&1 || true
+      ;;
+    afterFileEdit)
+      KEY="tool:file:$(date +%s%N)"
+      python3 "$OBSERVE" span-start \
+        --run-id "$RUN_ID" --key "$KEY" --name "tool.file_edit" \
+        --kind tool --detail "$DETAIL" >/dev/null 2>&1 || true
+      python3 "$OBSERVE" span-end \
+        --run-id "$RUN_ID" --key "$KEY" --detail "$DETAIL" --status OK \
+        >/dev/null 2>&1 || true
+      ;;
+  esac
+fi
 
 COUNT="$(wc -l < "$BUF_FILE" | tr -d ' ')"
 if [ "$COUNT" -ge "$FLUSH_THRESHOLD" ]; then
