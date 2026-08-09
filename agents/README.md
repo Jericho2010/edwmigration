@@ -43,7 +43,7 @@ Portable prompts + contracts. Cursor and GitHub Copilot adapters are generated.
 | `persist_reconcile_report.py` | Test → `reconcile_report.json` |
 | `persist_manifest.py` | Gate → `migration_manifest.json` + `ops.migration_manifest_current` |
 | `merge_convert_results.py` | Merge `convert/*.json` → backlog + `ops.proc_conversion_map` |
-| `check_job_wiring.py` | WARN if backlog paths missing from medallion job YAML |
+| `check_job_wiring.py` | WARN + propose (or `--apply`) safe YAML patch for missing job tasks |
 | `run_sql.sh` | Statement Execution API |
 | `sync_prompts.sh` | Cursor + Copilot |
 
