@@ -1,6 +1,6 @@
 ---
 name: edw-coordinator
-description: Owns run_id; discover → assess → convert fan-out (disk artifacts) → persist helpers → job wiring WARN → test → gate. Track B or after demo-guide.
+description: Owns run_id; discover → assess → convert fan-out (disk artifacts) → persist helpers → job wiring WARN/--apply → test → gate. Track B or after demo-guide.
 model: inherit
 readonly: false
 ---
@@ -85,9 +85,15 @@ Shared memory is **disk only** under `agents/out/<run_id>/` (orchestrator-worker
 6. **Job wiring check (WARN), then deploy/run:**
    ```bash
    python3 agents/tools/check_job_wiring.py --run-id <run_id>
+   ```
+   If wiring WARN fires: show the proposed patch, then apply a safe serialized wiring (peak concurrency ≤ 5) before deploy:
+   ```bash
+   python3 agents/tools/check_job_wiring.py --run-id <run_id> --apply
+   ```
+   Tell the user Gate can still pass notebooks the job does not run until wiring is applied (see `docs/limits.md`). Prefer `--apply` over hand-editing; humans may still tighten `depends_on` afterward.
+   ```bash
    make deploy && make run
    ```
-   If wiring WARN fires: tell the user Gate can still pass notebooks that the **medallion job does not yet run** — extend `databricks/jobs/edw_migration_medallion.yml` (see `docs/limits.md`). Do not auto-edit the YAML.
 
 7. **Delegate Test** → save Test JSON, then:
    ```bash

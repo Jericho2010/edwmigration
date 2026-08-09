@@ -125,6 +125,9 @@ rm -rf "agents/out/${SMOKE_RID}"
 echo "[smoke] check_job_wiring sample backlog"
 python3 agents/tools/check_job_wiring.py --backlog agents/samples/run/migration_backlog.json
 
+echo "[smoke] check_job_wiring propose/apply on temp job"
+python3 -m unittest discover -s agents/tools -p 'test_check_job_wiring.py' -q
+
 # cleanup smoke run dir
 rm -rf "agents/out/${RID}"
 

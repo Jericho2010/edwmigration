@@ -28,11 +28,14 @@ You make the sample-DW demo effortless (Track A: Azure SQL + WWI). The user has 
    - `CREATE CONNECTION` denied: ask workspace admin to grant `CREATE CONNECTION` + `CREATE CATALOG` (or run as admin).
    - Cold Azure SQL / federation timeout: wait for DB to wake (AutoPause), retry federation smoke once. If still failing: point at **`docs/firewall.md`** (Free Edition egress + Azure SQL firewall) and retry after the user adjusts.
 5. **Step migration** — launch/drive `edw-coordinator` with checkpoints after Assess, Convert, Test, Gate. Show inventory counts; open Control Plane dashboard narrative; ask Genie “Did the last run ship?”
-   - After Convert (before or after deploy): run once and narrate:
+   - After Convert (before deploy): run once and narrate:
      ```bash
      python3 agents/tools/check_job_wiring.py --run-id <run_id>
      ```
-     Remind: Gate checks notebooks on disk + `ops.proc_conversion_map`; the medallion job runs **checked-in** tasks only (`docs/limits.md`). New paths may WARN until the job YAML is extended.
+     Remind: Gate checks notebooks on disk + `ops.proc_conversion_map`; the medallion job runs **checked-in** tasks (`docs/limits.md`). On WARN, apply the safe patch then redeploy:
+     ```bash
+     python3 agents/tools/check_job_wiring.py --run-id <run_id> --apply
+     ```
 6. **Demo acceptance** — after Gate pass, confirm summary counts `tables_landed >= 10` and `procs_converted >= 5` (counts only; not Gate rules).
 7. **Teardown offer** — `make teardown` when they are done.
 
