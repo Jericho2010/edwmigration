@@ -25,6 +25,8 @@ Something broke? Find the symptom, apply the one-line fix, re-run the agent step
 | Gate fails missing agent_events | `ensure_run_events.py` (coordinator + convert/skipped) then `record_agent_event` for assess/test/gate after each persist helper |
 | Dashboard empty | Hooks need a Cursor agent run + `DATABRICKS_CATALOG` in `.env` |
 | No Dashboard / Genie URL | `make print-urls` after `make deploy` / `make genie` |
+| No MLflow `observe_url` | `make observe-setup`, then re-run `mlflow_observe.py init` / coordinator mint; setup-time `print-urls` often has no run yet |
+| `mlflow_context.json` has `enabled: false` | Fix `.venv`/mlflow (`make observe-setup`); check `error` field; Shared experiment create may need fallback / workspace perms |
 | Genie create fails | Ops tables must exist (`make setup`); warehouse ID set |
 
 Offline seed mode was removed — use the [guided demo](guided-demo.md) or [your database](your-database.md).

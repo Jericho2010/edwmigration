@@ -59,20 +59,21 @@ sequenceDiagram
   Agent->>DBX: Wire catalog + federation
   Agent->>DBX: Discover + land bronze
   Agent->>DBX: Convert / job / Gate
-  DBX-->>You: Dashboard + Genie URLs
+  DBX-->>You: Dashboard + Genie + MLflow observe_url
 ```
 
 ---
 
 ## Start tonight (recommended): type `start`
 
-1. Open the **repo root** in Cursor ([Getting started](docs/getting-started.md) · [Using Cursor](docs/cursor-ui.md))  
-2. Type **`start`** (or launch **`edw-start`**) — soft status + phrase menu.  
-3. Choose **1** for the guided demo:
+1. Open the **repo root** in **Cursor** ([Getting started](docs/getting-started.md) · [Using Cursor](docs/cursor-ui.md)) — hooks need Cursor at the root (VS Code alone won’t dual-write the same way).  
+2. **Recommended for live traces:** `make observe-setup` once (creates `.venv` + installs MLflow). Soft status / Track A preflight report readiness; migration still works without it.  
+3. Type **`start`** (or launch **`edw-start`**) — soft status + phrase menu. Confirm `[mlflow_check] ready` if you want traces.  
+4. Choose **1** for the guided demo:
 
    > Set up the EDW demo and walk me through the migration.
 
-4. If Track A preflight asks for a login or install, do **that one thing**, then say continue.
+5. If Track A preflight asks for a login or install, do **that one thing**, then say continue.
 
 **Track A** builds a free sample warehouse (WideWorldImporters on Azure SQL free offer), wires it into **your** Databricks Free Edition catalog, and walks the migration with you.
 
@@ -106,7 +107,7 @@ For production-shaped controls (not Free Edition public firewall), read **[Enter
 ## What “done” looks like
 
 - Tables in `${DATABRICKS_CATALOG}.bronze.*`  
-- **Control Plane** + **Genie** URLs (`make print-urls`)  
+- **Control Plane** + **Genie** + **MLflow `observe_url`** (`make print-urls`; observe link appears after the coordinator mints a run)  
 - Gate ship with empty blockers  
 - Demo path also checks **counts** (≥10 tables / ≥5 procs) — that is demo acceptance, not a Gate rule  
 

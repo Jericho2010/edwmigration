@@ -36,7 +36,7 @@ flowchart TD
 
 ![Open the repo root](img/cursor_open_repo.png)
 
-**Why the root matters:** Cursor loads [`.cursor/agents/`](../.cursor/agents/), [`.cursor/rules/`](../.cursor/rules/), and hooks from the folder you open. If you open a subfolder, agents may not appear. Step-by-step visuals: [cursor-ui.md](cursor-ui.md).
+**Why the root matters:** Cursor loads [`.cursor/agents/`](../.cursor/agents/), [`.cursor/rules/`](../.cursor/rules/), and **hooks** from the folder you open. If you open a subfolder, agents may not appear. Use **Cursor** (not VS Code alone) so hooks can dual-write `ops.agent_events` and MLflow spans. Step-by-step visuals: [cursor-ui.md](cursor-ui.md).
 
 ---
 
@@ -52,13 +52,13 @@ flowchart TD
 | 1 | Set up the EDW demo and walk me through the migration. | `edw-demo-guide` (Track A) |
 | 2 | Start an EDW migration run against my Azure SQL. | `edw-coordinator` |
 | 3 | Migrate my Azure MySQL into catalog `<name>`… | `edw-coordinator` |
-| 4 | Print Control Plane and Genie URLs. | `make print-urls` |
+| 4 | Print Control Plane, Genie, and MLflow observe URLs. | `make print-urls` |
 | 5 | Tear down the demo Azure resources. | `make teardown` (confirms first) |
 | 6 | Show me the enterprise / SoD notes. | [enterprise.md](enterprise.md) |
 
 If agents are missing: `make sync-prompts`, then reload the window.
 
-**Live MLflow traces:** once per machine run `make observe-setup` (creates `.venv` + installs `mlflow`). Soft status and Track A preflight report whether observe is ready.
+**Live MLflow traces:** once per machine run `make observe-setup` (creates `.venv` + installs `mlflow`). Soft status and Track A preflight report whether observe is ready — you do **not** need a login ritual before chatting; run observe-setup when you want recording (or when status shows an MLflow WARN).
 
 **GitHub Copilot / CLIs:** [CLI setup](cli-setup.md) · [`edw-start.md`](../agents/github-copilot/edw-start.md) · [`.github/copilot-instructions.md`](../.github/copilot-instructions.md).
 
@@ -125,8 +125,8 @@ flowchart LR
 
 ## 6. What “success” feels like in the first session
 
-- Agent prints **Control Plane** and **Genie** URLs (`make print-urls`).  
-- You can open the dashboard and ask Genie: *Did the last run ship?*  
+- Agent prints **Control Plane**, **Genie**, and (after a run is minted) **MLflow `observe_url`** (`make print-urls`).  
+- You can open the dashboard, ask Genie: *Did the last run ship?*, and watch the live MLflow trace during Convert.  
 - Gate ship = empty blockers. For the **demo**, the guide also checks **counts** (≥10 tables / ≥5 procedures) — that is demo acceptance, not a Gate rule.  
 
 If something fails: **[troubleshooting.md](troubleshooting.md)**.
