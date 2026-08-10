@@ -67,9 +67,14 @@ Foreign catalog mirrors the source via `CONNECTION` `TYPE SQLSERVER` or `TYPE MY
 Two planes (additive):
 
 1. **UC events** — Hooks + `record_agent_event.sh` → `ops.agent_events`. Control Plane dashboard (`dataset_catalog` / `ops`). Genie with dynamic `table_identifiers`. Gate rule 4 reads this table only.
-2. **MLflow traces** — Optional live hierarchy in Databricks Experiments (`/Shared/edw-migration`): root `edw.run`, stage spans from milestones, AGENT spans from Cursor `subagentStart`/`Stop`, TOOL spans from shell/MCP/file hooks. Context: `agents/out/<run_id>/mlflow_context.json`. Setup: `make observe-setup` (repo `.venv` + `mlflow>=3.8`). Soft no-op until then. Health: `./agents/tools/check_mlflow_observe.sh` (also run from `start_status` / Track A preflight). The coordinator announces `observe_url` when the run is minted (`mlflow_observe init`) and again from `ensure_run_events` if needed — not only at Gate.
+2. **MLflow traces** — Optional live hierarchy in Databricks Experiments (`/Shared/edw-migration`): root `edw.run`, stage spans from milestones, AGENT spans from Cursor `subagentStart`/`Stop`, TOOL spans from shell/MCP/file hooks. Soft no-op until `make observe-setup`. The coordinator announces `observe_url` when the run is minted (`mlflow_observe init`) and again from `ensure_run_events` if needed — not only at Gate.
+
+**MLflow’s role:** live agent/tool span tree while the run executes. It does not replace Control Plane or Genie (those answer ship/fail from `ops.*`). Cursor hooks dual-write the same lifecycle into both planes; every subagent (`edw-start` through `edw-gate`, including Convert fan-out) appears as AGENT spans under one shared trace via `agents/out/<run_id>/mlflow_context.json`.
 
 Print links with `make print-urls` (Control Plane + Genie + `observe_url` when available).
+
+Full wiring, hook table, setup, and operator checklist: **[MLflow observability](mlflow.md)**.
+
 ---
 
 ## Auth
@@ -86,4 +91,4 @@ Serverless warehouse only; Federation not Lakeflow Connect; job concurrency ≤5
 
 ## Related
 
-- [Guided demo](guided-demo.md) · [Your database](your-database.md) · [Enterprise](enterprise.md) · [Glossary](glossary.md) · [Agents](../agents/README.md) · [Diagrams](img/README.md)
+- [Guided demo](guided-demo.md) · [Your database](your-database.md) · [Enterprise](enterprise.md) · [MLflow](mlflow.md) · [Glossary](glossary.md) · [Agents](../agents/README.md) · [Diagrams](img/README.md)

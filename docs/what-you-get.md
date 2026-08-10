@@ -157,7 +157,9 @@ After setup: `make print-urls` (Dashboard + Genie). After the coordinator mints 
 
 - **Control Plane** — Gate, timeline, backlog, reconcile  
 - **Genie** — *Did the last run ship?* / *Why did the gate fail?*  
-- **MLflow** — live subagent/tool span tree while Convert runs  
+- **MLflow** — live subagent/tool span tree while Convert runs (Cursor hooks dual-write every `edw-*` agent + shell/MCP/file tools). Soft no-op until `make observe-setup`.  
+
+Deep dive: **[MLflow observability](mlflow.md)** (role, wiring, all subagents).
 
 Trust checklist: inventory → convert artifacts (when procs in scope) → bronze reconcile pass → Gate blockers empty.
 
@@ -179,4 +181,4 @@ Production-shaped controls: **[Enterprise](enterprise.md)**.
 
 ## Next
 
-→ **[Guided demo](guided-demo.md)** · **[Your database](your-database.md)** · **[Enterprise](enterprise.md)** · **[Architecture](architecture.md)**
+→ **[Guided demo](guided-demo.md)** · **[Your database](your-database.md)** · **[Enterprise](enterprise.md)** · **[Architecture](architecture.md)** · **[MLflow](mlflow.md)**
