@@ -26,7 +26,7 @@ All Mermaid diagrams in this repo share one palette (navy / teal / Azure blue / 
 | File | Description |
 |---|---|
 | [architecture.mmd](architecture.mmd) | Source → Federation → medallion → agents (convert fan-out) |
-| [agent_squad_roles.png](agent_squad_roles.png) | Roles-only squad (README hero) — not Mermaid |
+| [agent_squad_roles.png](agent_squad_roles.png) | Agent squad + table/view/proc fate (README hero) — generated PNG, not Mermaid |
 | [agent_delegation.mmd](agent_delegation.mmd) | Guide / Coordinator with parallel Convert wave |
 | [enterprise_sod.mmd](enterprise_sod.mmd) | Segregation of duties swimlanes |
 | [demo_vs_enterprise.mmd](demo_vs_enterprise.mmd) | Demo anti-pattern vs enterprise controls |
