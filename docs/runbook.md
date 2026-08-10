@@ -55,7 +55,7 @@ SqlPackage **not** required for `make setup`.
 | `make teardown` | Delete demo Azure RG |
 | `make sync-prompts` | Regenerate Cursor + Copilot agents |
 
-Also: `./agents/tools/check_mlflow_observe.sh` (add `--strict` in Track A preflight).
+Also: `./agents/tools/check_mlflow_observe.sh` (add `--strict` in Track A preflight). Full write-up: **[MLflow observability](mlflow.md)**.
 
 ---
 

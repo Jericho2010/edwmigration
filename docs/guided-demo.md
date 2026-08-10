@@ -4,7 +4,7 @@
 
 **Verified:** Track A path checked against Databricks Free Edition patterns (preflight → bootstrap → migration → URLs). Demo acceptance counts (≥10 tables / ≥5 procs) depend on a full run on *your* tenant — those counts are checked by the guide, not by Gate.
 
-← [Getting started](getting-started.md) · [Using Cursor](cursor-ui.md) · [What you get](what-you-get.md) · Stuck? [Troubleshooting](troubleshooting.md)
+← [Getting started](getting-started.md) · [Using Cursor](cursor-ui.md) · [What you get](what-you-get.md) · **[MLflow](mlflow.md)** · Stuck? [Troubleshooting](troubleshooting.md)
 
 ```mermaid
 %%{init: {"theme":"base","themeVariables":{"primaryColor":"#E8F1F8","primaryTextColor":"#0B3D5C","primaryBorderColor":"#0B3D5C","lineColor":"#5B7A8C","secondaryColor":"#E6F4F1","tertiaryColor":"#F7F3EA","background":"#FFFFFF","mainBkg":"#E8F1F8","clusterBkg":"#F7FAFC","clusterBorder":"#5B7A8C","titleColor":"#0B3D5C","edgeLabelBackground":"#FFFFFF"}}}%%
@@ -30,7 +30,7 @@ You only need:
 
 - Repo opened at the **git root** in **Cursor** (hooks need Cursor, not VS Code alone)  
 - Agents **`edw-start`** / **`edw-demo-guide`** visible (else `make sync-prompts`, reload)  
-- **Recommended for live traces:** `make observe-setup` once (preflight WARNs if missing; migration still continues)
+- **Recommended for live traces:** `make observe-setup` once (preflight WARNs if missing; migration still continues). Write-up: **[MLflow observability](mlflow.md)**.
 
 Warehouse, Azure/Databricks login, and tools: the guide runs `./agents/tools/preflight_track_a.sh` and **asks** if something is missing. Privileges (`CREATE CONNECTION` / `CREATE CATALOG`) are checked when wiring the sink — see [prerequisites](prerequisites.md) if the agent reports a deny.
 
@@ -49,7 +49,7 @@ Warehouse, Azure/Databricks login, and tools: the guide runs `./agents/tools/pre
    - Bootstrap free Azure SQL + WideWorldImporters sample (`make bootstrap`)  
    - Wire federation, dashboard, Genie (`make setup`)  
    - Drive the coordinator with checkpoints: Assess → **Convert wave** (≤5 in parallel) → merge → Test → Gate  
-5. When it prints URLs, open **Control Plane** and **Genie**. Ask: *Did the last run ship?*  
+5. When it prints URLs, open **Control Plane**, **Genie**, and **MLflow `observe_url`** (when present). Ask Genie: *Did the last run ship?* See [mlflow.md](mlflow.md).  
 6. Demo acceptance (guide check, **not** a Gate rule): **≥10 tables** and **≥5 procedures** migrated (counts only).  
 7. When finished: ask the guide to tear down, menu **5**, or run `make teardown`.
 

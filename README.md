@@ -2,17 +2,19 @@
 
 [![Validate](https://github.com/Jericho2010/edwmigration/actions/workflows/validate.yml/badge.svg)](https://github.com/Jericho2010/edwmigration/actions/workflows/validate.yml)
 
-**Watch an agent migrate a warehouse into Databricks — while you watch a Control Plane and ask Genie if the run shipped.**
+**Watch an agent migrate a warehouse into Databricks — while you watch a Control Plane, ask Genie if the run shipped, and follow live MLflow traces of every subagent.**
 
 You do not need to be a migration expert. You do not hand-write medallion SQL. Open this repo in Cursor, type **`start`**, pick a menu item, and follow along. Log in only when the agent asks.
 
 **Demo-ready** on **Databricks Free Edition** + Azure SQL free offer (Track A). Your own Azure SQL / MySQL works too (Track B). Details and acceptance counts: [guided demo](docs/guided-demo.md).
 
+**Observability:** Control Plane + Genie + **[MLflow live traces](docs/mlflow.md)** — how Cursor hooks wire every `edw-*` subagent into one span tree.
+
 Type **`start`** — these agents do the rest:
 
 ![EDW migration agent squad — tables, views, procs](docs/img/agent_squad_roles.png)
 
-Pipeline detail (convert waves, merge, retries): [agent_delegation.png](docs/img/agent_delegation.png) · [What you get](docs/what-you-get.md)
+Pipeline detail (convert waves, merge, retries): [agent_delegation.png](docs/img/agent_delegation.png) · [What you get](docs/what-you-get.md) · [MLflow](docs/mlflow.md)
 
 ---
 
@@ -23,6 +25,7 @@ Pipeline detail (convert waves, merge, retries): [agent_delegation.png](docs/img
 | See Cursor in three pictures | [Using Cursor](docs/cursor-ui.md) |
 | Use **Cursor CLI** or **Copilot CLI** | [CLI setup](docs/cli-setup.md) |
 | Understand what I’ll get | [What you get](docs/what-you-get.md) |
+| **Watch MLflow / observability** | **[MLflow observability](docs/mlflow.md)** |
 | Set up for the first time | [Getting started](docs/getting-started.md) |
 | **Recommended first run** | [Guided demo (Track A)](docs/guided-demo.md) |
 | Point at my own Azure SQL / MySQL | [Your database (Track B)](docs/your-database.md) |
@@ -47,7 +50,7 @@ This repo’s agents:
 4. **Convert** procedures into Spark SQL notebooks when there is a backlog  
 5. **Wire** new notebooks into the medallion job when needed (`check_job_wiring.py --apply`; safe concurrency)  
 6. **Gate** the run — ship or no-ship, with reasons  
-7. **Show** progress on a dashboard and a Genie room  
+7. **Show** progress on a Control Plane, Genie, and **[MLflow](docs/mlflow.md)** live agent/tool traces (`observe_url`)
 
 ```mermaid
 %%{init: {"theme":"base","themeVariables":{"primaryColor":"#E8F1F8","primaryTextColor":"#0B3D5C","primaryBorderColor":"#0B3D5C","lineColor":"#5B7A8C","secondaryColor":"#E6F4F1","tertiaryColor":"#F7F3EA","background":"#FFFFFF","mainBkg":"#E8F1F8","clusterBkg":"#F7FAFC","clusterBorder":"#5B7A8C","titleColor":"#0B3D5C","edgeLabelBackground":"#FFFFFF"}}}%%
@@ -67,7 +70,7 @@ sequenceDiagram
 ## Recommended first run: type `start`
 
 1. Open the **repo root** in **Cursor** ([Getting started](docs/getting-started.md) · [Using Cursor](docs/cursor-ui.md)) — hooks need Cursor at the root (VS Code alone won’t dual-write the same way).  
-2. **Recommended for live traces:** `make observe-setup` once (creates `.venv` + installs MLflow). Soft status / Track A preflight report readiness; migration still works without it.  
+2. **Recommended for live traces:** `make observe-setup` once (creates `.venv` + installs MLflow). Soft status / Track A preflight report readiness; migration still works without it. Full write-up: **[docs/mlflow.md](docs/mlflow.md)**.
 3. Type **`start`** (or launch **`edw-start`**) — soft status + phrase menu. Confirm `[mlflow_check] ready` if you want traces.  
 4. Choose **1** for the guided demo:
 
@@ -87,10 +90,11 @@ When you’re done: menu **5**, or ask the guide to tear down (`make teardown`).
 
 | Persona | Next |
 |---|---|
-| **Learning / SE / first try** | Stay on [Guided demo](docs/guided-demo.md); then [What you get](docs/what-you-get.md) |
+| **Learning / SE / first try** | Stay on [Guided demo](docs/guided-demo.md); then [What you get](docs/what-you-get.md) · [MLflow](docs/mlflow.md) |
 | **Have a sandbox DB** | [Your database](docs/your-database.md) |
+| **Watch agents live** | **[MLflow observability](docs/mlflow.md)** — Control Plane + Genie + traces |
 | **Platform / security / prod** | **[Enterprise](docs/enterprise.md)** — SoD, OAuth, private network, CI |
-| **Extending the engine** | [Architecture](docs/architecture.md) · [MLflow](docs/mlflow.md) · [CONTRIBUTING](CONTRIBUTING.md) |
+| **Extending the engine** | [Architecture](docs/architecture.md) · [CONTRIBUTING](CONTRIBUTING.md) |
 
 ---
 
@@ -111,7 +115,7 @@ For production-shaped controls (not Free Edition public firewall), read **[Enter
 - Gate ship with empty blockers  
 - Demo path also checks **counts** (≥10 tables / ≥5 procs) — that is demo acceptance, not a Gate rule  
 
-More: **[What you get](docs/what-you-get.md)**
+More: **[What you get](docs/what-you-get.md)** · **[MLflow observability](docs/mlflow.md)**
 
 ---
 

@@ -6,7 +6,8 @@
 2. [Getting started](getting-started.md) — `start` menu + remediations  
 3. [Guided demo](guided-demo.md) — **recommended first run (Track A)**  
 4. [What you get](what-you-get.md) — outcomes after you’ve smiled  
-5. [Your database](your-database.md) or [Enterprise](enterprise.md)  
+5. **[MLflow observability](mlflow.md)** — live traces for every subagent (Control Plane + Genie companion)  
+6. [Your database](your-database.md) or [Enterprise](enterprise.md)  
 
 ```mermaid
 %%{init: {"theme":"base","themeVariables":{"primaryColor":"#E8F1F8","primaryTextColor":"#0B3D5C","primaryBorderColor":"#0B3D5C","lineColor":"#5B7A8C","secondaryColor":"#E6F4F1","tertiaryColor":"#F7F3EA","background":"#FFFFFF","mainBkg":"#E8F1F8","clusterBkg":"#F7FAFC","clusterBorder":"#5B7A8C","titleColor":"#0B3D5C","edgeLabelBackground":"#FFFFFF"}}}%%
@@ -15,6 +16,7 @@ flowchart TD
   CU --> GS[Getting started]
   GS --> GD[Guided demo]
   GD --> WYG[What you get]
+  GD --> ML[MLflow]
   GD --> YD[Your database]
   GD --> ENT[Enterprise]
   GD --> TB[Troubleshooting]
@@ -23,7 +25,7 @@ flowchart TD
   classDef ops fill:#5B4B8A,stroke:#3F3460,color:#fff
   class R,CU,GS user
   class WYG,GD,YD agent
-  class ENT,TB ops
+  class ENT,TB,ML ops
 ```
 
 ---
@@ -35,6 +37,7 @@ flowchart TD
 | See how to click in Cursor | [cursor-ui.md](cursor-ui.md) |
 | Cursor CLI or Copilot CLI | [cli-setup.md](cli-setup.md) |
 | Recommended first run | [guided-demo.md](guided-demo.md) |
+| **Watch MLflow / observability** | **[mlflow.md](mlflow.md)** |
 | Launch the right agent | [agent-setup.md](agent-setup.md) |
 | Connect my Azure SQL / MySQL | [your-database.md](your-database.md) |
 | Enterprise / SoD / prod controls | [enterprise.md](enterprise.md) |
@@ -44,7 +47,6 @@ flowchart TD
 | Unblock Azure CLI / RBAC for Track A | [azure-access-unblocking.md](azure-access-unblocking.md) |
 | Diagram theme + PNG sources | [img/README.md](img/README.md) |
 | Engine design | [architecture.md](architecture.md) |
-| MLflow live traces | [mlflow.md](mlflow.md) |
 | SE talk track | [demo-script.md](demo-script.md) |
 
 ---
@@ -68,6 +70,7 @@ flowchart TD
 
 | Doc | Purpose |
 |---|---|
+| [mlflow.md](mlflow.md) | **MLflow observability** — role, Cursor hooks, all subagents |
 | [agent-setup.md](agent-setup.md) | `start` menu + agents + kickoffs |
 | [cli-setup.md](cli-setup.md) | Cursor CLI + GitHub Copilot CLI |
 | [prerequisites.md](prerequisites.md) | Tools and privileges |
@@ -81,8 +84,7 @@ flowchart TD
 
 | Doc | Purpose |
 |---|---|
-| [architecture.md](architecture.md) | Engine vs demo pack |
-| [mlflow.md](mlflow.md) | Live traces: role, Cursor hooks, all subagents |
+| [architecture.md](architecture.md) | Engine vs demo pack (+ Observability summary) |
 | [enterprise.md](enterprise.md) | SoD and production controls |
 | [limits.md](limits.md) | Free tiers + scope |
 | [lakebridge.md](lakebridge.md) | Compete, don’t compose |
