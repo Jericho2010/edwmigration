@@ -60,9 +60,10 @@ flowchart TD
 | Setup + `start` | [getting-started.md](getting-started.md) |
 | First win | [guided-demo.md](guided-demo.md) |
 | Mental model | [what-you-get.md](what-you-get.md) |
+| Observability | **[mlflow.md](mlflow.md)** |
 | Real source | [your-database.md](your-database.md) |
 | Real org | [enterprise.md](enterprise.md) |
-| Depth | [architecture.md](architecture.md), [mlflow.md](mlflow.md), [limits.md](limits.md) |
+| Depth | [architecture.md](architecture.md), [limits.md](limits.md) |
 
 ---
 
