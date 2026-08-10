@@ -90,7 +90,7 @@ When you’re done: menu **5**, or ask the guide to tear down (`make teardown`).
 | **Learning / SE / first try** | Stay on [Guided demo](docs/guided-demo.md); then [What you get](docs/what-you-get.md) |
 | **Have a sandbox DB** | [Your database](docs/your-database.md) |
 | **Platform / security / prod** | **[Enterprise](docs/enterprise.md)** — SoD, OAuth, private network, CI |
-| **Extending the engine** | [Architecture](docs/architecture.md) · [CONTRIBUTING](CONTRIBUTING.md) |
+| **Extending the engine** | [Architecture](docs/architecture.md) · [MLflow](docs/mlflow.md) · [CONTRIBUTING](CONTRIBUTING.md) |
 
 ---
 

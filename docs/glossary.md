@@ -22,6 +22,9 @@ Short definitions for terms used in this repo. ← [Getting started](getting-sta
 | **Gate** | Deterministic ship / no-ship from inventory + reconcile + conversions (empty blockers). Demo ≥10/≥5 counts are a separate guide check, not Gate. |
 | **Control Plane** | AI/BI dashboard over `ops.*` for the migration run. |
 | **Genie** | Natural-language room over ops (and later silver/gold) tables. |
+| **MLflow / observe** | Live agent/tool span tree in Databricks Experiments (`/Shared/edw-migration`). Soft dual-write from Cursor hooks + milestones; does not replace Control Plane/Genie. See [mlflow.md](mlflow.md). |
+| **`observe_url`** | Link to the live MLflow trace for the current `run_id` (printed after `mlflow_observe init` / `make print-urls`). |
+| **`mlflow_context.json`** | Per-run file under `agents/out/<run_id>/` holding experiment/trace ids, open spans, and `observe_url`. |
 | **Track A** | Guided demo with sample WideWorldImporters on free Azure SQL. |
 | **Track B** | Your existing Azure SQL or Azure MySQL. |
 | **start / edw-start** | Front door: soft status + numbered phrase menu; routes to demo-guide, coordinator, URLs, teardown, or enterprise docs. |
@@ -33,4 +36,4 @@ Short definitions for terms used in this repo. ← [Getting started](getting-sta
 
 ## Next
 
-→ [What you get](what-you-get.md) · [Enterprise](enterprise.md) · [Architecture](architecture.md)
+→ [What you get](what-you-get.md) · [Enterprise](enterprise.md) · [Architecture](architecture.md) · [MLflow](mlflow.md)

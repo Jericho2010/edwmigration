@@ -58,7 +58,7 @@ flowchart TD
 
 If agents are missing: `make sync-prompts`, then reload the window.
 
-**Live MLflow traces:** once per machine run `make observe-setup` (creates `.venv` + installs `mlflow`). Soft status and Track A preflight report whether observe is ready — you do **not** need a login ritual before chatting; run observe-setup when you want recording (or when status shows an MLflow WARN).
+**Live MLflow traces:** once per machine run `make observe-setup` (creates `.venv` + installs `mlflow`). Soft status and Track A preflight report whether observe is ready — you do **not** need a login ritual before chatting; run observe-setup when you want recording (or when status shows an MLflow WARN). How traces attach to Cursor hooks and every subagent: [mlflow.md](mlflow.md).
 
 **GitHub Copilot / CLIs:** [CLI setup](cli-setup.md) · [`edw-start.md`](../agents/github-copilot/edw-start.md) · [`.github/copilot-instructions.md`](../.github/copilot-instructions.md).
 

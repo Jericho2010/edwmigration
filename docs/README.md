@@ -44,6 +44,7 @@ flowchart TD
 | Unblock Azure CLI / RBAC for Track A | [azure-access-unblocking.md](azure-access-unblocking.md) |
 | Diagram theme + PNG sources | [img/README.md](img/README.md) |
 | Engine design | [architecture.md](architecture.md) |
+| MLflow live traces | [mlflow.md](mlflow.md) |
 | SE talk track | [demo-script.md](demo-script.md) |
 
 ---
@@ -59,7 +60,7 @@ flowchart TD
 | Mental model | [what-you-get.md](what-you-get.md) |
 | Real source | [your-database.md](your-database.md) |
 | Real org | [enterprise.md](enterprise.md) |
-| Depth | [architecture.md](architecture.md), [limits.md](limits.md) |
+| Depth | [architecture.md](architecture.md), [mlflow.md](mlflow.md), [limits.md](limits.md) |
 
 ---
 
@@ -81,6 +82,7 @@ flowchart TD
 | Doc | Purpose |
 |---|---|
 | [architecture.md](architecture.md) | Engine vs demo pack |
+| [mlflow.md](mlflow.md) | Live traces: role, Cursor hooks, all subagents |
 | [enterprise.md](enterprise.md) | SoD and production controls |
 | [limits.md](limits.md) | Free tiers + scope |
 | [lakebridge.md](lakebridge.md) | Compete, don’t compose |

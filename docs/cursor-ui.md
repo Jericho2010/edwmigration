@@ -14,7 +14,7 @@ Follow these three steps: open the root, type **`start`**, pick a number.
 
 If you open a nested folder, agents under `.cursor/agents/` may not load.
 
-**Hooks need Cursor at the repo root.** VS Code alone will not dual-write lifecycle events into `ops.agent_events` / MLflow the same way.
+**Hooks need Cursor at the repo root.** VS Code alone will not dual-write lifecycle events into `ops.agent_events` / MLflow the same way. How hooks attach every subagent and tool call to one MLflow trace: **[mlflow.md](mlflow.md)**.
 
 ---
 
