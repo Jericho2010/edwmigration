@@ -63,13 +63,17 @@ flowchart TD
 
 ### 1. Run mint (coordinator)
 
-After `run_id` is created, the coordinator runs:
+After `run_id` is created, the coordinator runs (prefer repo `.venv`):
 
 ```bash
-python3 agents/tools/mlflow_observe.py init --run-id <run_id>
+"$(./agents/tools/resolve_python.sh)" agents/tools/mlflow_observe.py init --run-id <run_id>
 ```
 
-It must paste `observe_url:` / `Observed by MLflow:` to the user **immediately** so they can open live traces while Convert continues. `ensure_run_events.py` re-inits idempotently (same URL if already enabled).
+It must paste `observe_url:` / `Observed by MLflow:` to the user **immediately** so they can open live traces while Convert continues. `ensure_run_events.py` re-inits idempotently (same URL if already enabled) and **force-flushes** the Cursor hook buffer into `ops.agent_events`.
+
+If `mlflow_context.json` shows `last_error` with `Parent span ... not found`, observe auto-re-inits with `--force` and re-announces the URL. Empty tree after a pasted `observe_url` is a bug — re-init, do not wait until Gate.
+
+Bare `python3 agents/tools/mlflow_observe.py …` still re-execs into `.venv` when mlflow is missing, but demos should call `resolve_python.sh` explicitly.
 
 ### 2. Cursor hooks (automatic)
 
@@ -77,12 +81,16 @@ With the **repository root** open in **Cursor** (not VS Code alone), [`.cursor/h
 
 | Hook event | MLflow span | Notes |
 |---|---|---|
-| `subagentStart` / `subagentStop` | AGENT (`agent.<name>`) | Keyed `subagent:<id>`; status OK/ERROR on stop |
+| `subagentStart` / `subagentStop` | AGENT (`agent.<name>`) | Keyed `subagent:<id>`; status OK/ERROR on stop; stop also flushes UC buffer |
 | `afterShellExecution` | TOOL (`tool.shell`) | Plus `shell_success` / `shell_failure` metrics |
 | `afterMCPExecution` | TOOL (`tool.mcp`) | MCP tool name in attributes |
 | `afterFileEdit` | TOOL (`tool.file_edit`) | Path/detail truncated |
 
 Hooks resolve `run_id` via `CURRENT_RUN` / `_resolve_run_id.sh`, then dual-write to MLflow using shared `mlflow_context.json` so separate hook processes attach to **one** tree (`parent_id` via open spans). Tool spans prefer an open subagent span as parent when present.
+
+**Flush:** default `AGENT_EVENT_FLUSH_THRESHOLD=1` so each hook event lands in `ops.agent_events` (Control Plane timeline). Milestone helpers (`record_agent_event.sh`, `ensure_run_events.py`) also force-flush. Checkpoint helper: `./agents/tools/observe_status.sh --stage <Name>`.
+
+**Stale sink:** dashboard widgets are catalog-scoped, not run-scoped. Prior-run reconcile/backlog poisons the Control Plane until `make reset-sink` (Databricks only; keeps Azure).
 
 ### 3. Milestone dual-write
 
@@ -122,12 +130,21 @@ Soft status / preflight **WARN** if observe is not ready; they do **not** block 
 
 ---
 
-## Operator checklist
+## While you watch
 
 1. Open the **repo root** in Cursor so hooks load ([cursor-ui.md](cursor-ui.md)).  
 2. Run `make observe-setup` once per machine.  
-3. Start a run (`start` → Track A/B); when `observe_url` appears, open it while Convert runs.  
-4. Use Control Plane / Genie for ship/fail narrative; use MLflow for the live agent/tool hierarchy.
+3. Type **`start`** → choose menu **1 / 2 / 3** (agents must not invent a migration on bare `start`).  
+4. If offered `make reset-sink` before mint (stale dashboard from a prior demo): answer yes/no once — never expect auto-reset.  
+5. When setup/mint prints Control Plane + Genie + `observe_url`, **open them once** and leave them open.  
+6. After each stage, chat should show `observe_status` counts (not another URL essay).  
+7. Mid-run: Events for this `run_id`, MLflow AGENT spans, Genie on inventory/events. Gate Hero stays empty until Gate — expected.
+
+## Maintainer anti-patterns
+
+- Bare-`start` migration (only menu **1/2/3** may migrate).  
+- Opaque Task / `generalPurpose` for Assess/Convert/Test/Gate without `dual_write_agent_lifecycle.sh` (Convert: **`--item-id` per item**).  
+- Waiting until Gate to open URLs.
 
 ---
 
@@ -135,13 +152,16 @@ Soft status / preflight **WARN** if observe is not ready; they do **not** block 
 
 | Path | Role |
 |---|---|
+| `agents/prompts/_live_observability.md` | Shared live-during contract |
 | `agents/tools/mlflow_observe.py` | init / span-start / span-end / stage / metric / end-run / trace-url |
 | `agents/tools/mlflow_context.py` | Locked read/write of `mlflow_context.json` |
 | `.cursor/hooks.json` + `.cursor/hooks/log_event.sh` | Cursor lifecycle → UC buffer + MLflow spans |
-| `agents/tools/record_agent_event.sh` | UC row + MLflow stage span |
+| `agents/tools/record_agent_event.sh` | UC row + MLflow stage span + force flush |
+| `agents/tools/dual_write_agent_lifecycle.sh` | Fallback UC + MLflow start/stop when hooks cannot fire (Convert: `--item-id` per worker) |
 | `agents/tools/ensure_run_events.py` | Milestone rows + idempotent MLflow init |
 | `agents/tools/check_mlflow_observe.sh` | venv + `mlflow≥3.8` + host readiness |
-| `agents/tools/print_observability_urls.sh` | Control Plane + Genie + `observe_url` |
+| `agents/tools/observe_status.sh` | Ops counts + URLs snapshot for stage checkpoints |
+| `agents/tools/reset_databricks_sink.sh` | Wipe managed sink + `agents/out` (keeps Azure) |
 
 ---
 

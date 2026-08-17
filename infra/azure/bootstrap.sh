@@ -115,7 +115,8 @@ run "az sql server create --name '${AZ_SQL_SERVER}' --resource-group '${AZ_RG}' 
 # ---------------------------------------------------------------------------
 echo
 echo "[4/9] creating free-offer database '${AZ_SQL_DB}' (AutoPause on limit) ..."
-run "az sql db create --resource-group '${AZ_RG}' --server '${AZ_SQL_SERVER}' --name '${AZ_SQL_DB}' --edition GeneralPurpose --compute-model Serverless --family Gen5 --capacity 1 --auto-pause-delay 15 --min-capacity 0.5 --max-size 32GB --use-free-limit true --free-limit-exhaustion-behavior AutoPause"
+# Free-limit DBs require the platform default auto-pause delay (do not pass --auto-pause-delay).
+run "az sql db create --resource-group '${AZ_RG}' --server '${AZ_SQL_SERVER}' --name '${AZ_SQL_DB}' --edition GeneralPurpose --compute-model Serverless --family Gen5 --capacity 1 --min-capacity 0.5 --max-size 32GB --use-free-limit true --free-limit-exhaustion-behavior AutoPause"
 
 # ---------------------------------------------------------------------------
 # 5. Firewall rules
@@ -147,7 +148,7 @@ if [ ! -s "$BACPAC_PATH" ]; then
   run "${REPO_ROOT}/legacy/wideworldimportersdw/download_bacpac.sh"
 fi
 CONN_STR="Server=tcp:${AZ_SQL_SERVER}.database.windows.net,1433;Database=${AZ_SQL_DB};User ID=${AZ_SQL_ADMIN};Password=${AZ_SQL_PASSWORD};Encrypt=true;TrustServerCertificate=false;"
-run "SqlPackage /a:Import /tf:'${BACPAC_PATH}' /tcs:'${CONN_STR}'"
+run "SqlPackage /a:Import /sf:'${BACPAC_PATH}' /tcs:'${CONN_STR}'"
 
 # ---------------------------------------------------------------------------
 # 7. Warmup the (now-cold) serverless DB
@@ -196,8 +197,9 @@ if [ "$DRY_RUN" -eq 0 ]; then
   databricks secrets create-scope "$DATABRICKS_SECRET_SCOPE" 2>/dev/null \
     || echo "  scope already exists; continuing."
   # Store the SQL password for the federation connection (unified + legacy alias).
-  printf '%s' "$AZ_SQL_PASSWORD" | databricks secrets put-secret "$DATABRICKS_SECRET_SCOPE" source-password --string-from-stdin
-  printf '%s' "$AZ_SQL_PASSWORD" | databricks secrets put-secret "$DATABRICKS_SECRET_SCOPE" azure-sql-password --string-from-stdin
+  # Databricks CLI v0.2xx+: --string-value (stdin flag removed)
+  databricks secrets put-secret "$DATABRICKS_SECRET_SCOPE" source-password --string-value "$AZ_SQL_PASSWORD"
+  databricks secrets put-secret "$DATABRICKS_SECRET_SCOPE" azure-sql-password --string-value "$AZ_SQL_PASSWORD"
   echo "  stored secrets 'source-password' + 'azure-sql-password' in scope '${DATABRICKS_SECRET_SCOPE}'."
 else
   echo "  (dry-run) databricks secrets create-scope + put-secret"

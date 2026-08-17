@@ -51,12 +51,14 @@ SqlPackage **not** required for `make setup`.
 | `make setup` | Secrets + federation + deploy + genie + URLs |
 | `make observe-setup` | Create `.venv` + install MLflow observe deps |
 | `make print-urls` | Control Plane + Genie + MLflow `observe_url` (when a run exists) |
+| `make reset-sink` | Wipe Databricks managed sink + `agents/out` (**keeps Azure**) |
 | `make deploy` / `make run` | Bundle deploy / job |
 | `make teardown` | Delete demo Azure RG |
 | `make sync-prompts` | Regenerate Cursor + Copilot agents |
 
-Also: `./agents/tools/check_mlflow_observe.sh` (add `--strict` in Track A preflight). Full write-up: **[MLflow observability](mlflow.md)**.
+Also: `./agents/tools/observe_status.sh` (stage checkpoint), `./agents/tools/check_mlflow_observe.sh` (add `--strict` in Track A preflight). Full write-up: **[MLflow observability](mlflow.md)**.
 
+**Re-demo without rebuilding Azure:** `make reset-sink` then mint a new run (Discover → Gate). Control Plane should look empty until inventory/events land.
 ---
 
 ## Trust checklist

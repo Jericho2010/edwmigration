@@ -9,6 +9,10 @@ When the user's message is only (or primarily) one of: `start`, `menu`, `help`, 
 
 1. Follow **`edw-start`** (`agents/prompts/06_start.md` / `.cursor/agents/edw-start.md`).
 2. Run `./agents/tools/start_status.sh`, summarize briefly (mention `CURRENT_RUN` if present), print the numbered phrase menu, and **stop**.
-3. Do **not** run Track A preflight, `make bootstrap`, or `make setup` until they pick menu item **1**, **2**, or **3** (or paste that phrase).
+3. Do **not** run Track A preflight, `make bootstrap`, `make setup`, mint a `run_id`, Discover, or any Assess/Convert/Test/Gate work until they pick menu item **1**, **2**, or **3** (or paste that phrase).
 
 After they choose a number or phrase, route as `edw-start` specifies (demo-guide, coordinator, print-urls, teardown, or enterprise docs).
+
+## Live observability (after menu 1/2/3 only)
+
+Migration agents must follow `agents/prompts/_live_observability.md`: paste Control Plane + Genie + MLflow `observe_url` as soon as available; keep them updating **during** the run; run Assess/Convert/Test/Gate as Cursor **`edw-*`** subagents so hooks fire. Never invent a migration outside this menu path.

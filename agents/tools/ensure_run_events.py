@@ -74,17 +74,61 @@ def record(run_id: str, agent: str, event: str, detail: str = "") -> None:
 
 
 def init_mlflow(run_id: str) -> None:
-    """Best-effort MLflow run + root span; print observe_url when enabled."""
-    tools = str(ROOT / "agents" / "tools")
-    if tools not in sys.path:
-        sys.path.insert(0, tools)
-    try:
-        import mlflow_observe as mobs  # noqa: WPS433 — local tool module
+    """Best-effort MLflow run + root span; print observe_url when enabled.
 
-        data = mobs.init_run(run_id, root=ROOT)
-        mobs.announce_observe_url(str(data.get("observe_url") or ""))
-    except Exception:
-        pass
+    Prefer repo .venv via resolve_python.sh so first init is not enabled=False.
+    On parent-span-missing last_error, force re-init once and re-announce.
+    """
+    observe = ROOT / "agents" / "tools" / "mlflow_observe.py"
+    resolve = ROOT / "agents" / "tools" / "resolve_python.sh"
+    py = sys.executable
+    if resolve.is_file():
+        proc = subprocess.run(
+            [str(resolve)],
+            cwd=str(ROOT),
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if proc.returncode == 0 and proc.stdout.strip():
+            py = proc.stdout.strip()
+
+    def run_init(force: bool = False) -> None:
+        cmd = [py, str(observe), "init", "--run-id", run_id]
+        if force:
+            cmd.append("--force")
+        subprocess.run(cmd, cwd=str(ROOT), check=False)
+
+    run_init(force=False)
+
+    ctx_path = ROOT / "agents" / "out" / run_id / "mlflow_context.json"
+    if ctx_path.is_file():
+        try:
+            data = json.loads(ctx_path.read_text())
+        except Exception:
+            data = {}
+        err = str(data.get("last_error") or data.get("error") or "")
+        if "Parent span" in err or (
+            data.get("enabled") and not data.get("open_spans") and data.get("root_span_id")
+            and "Parent span" in err
+        ):
+            run_init(force=True)
+        elif data.get("enabled") is False and not data.get("trace_id"):
+            # Retry once with force after a soft-failed first init.
+            run_init(force=True)
+
+
+def force_flush(run_id: str) -> None:
+    flush = ROOT / ".cursor" / "hooks" / "_flush_events.sh"
+    if not flush.is_file():
+        return
+    subprocess.run(
+        [str(flush), run_id],
+        cwd=str(ROOT),
+        capture_output=True,
+        text=True,
+        check=False,
+    )
 
 
 def main() -> int:
@@ -108,6 +152,8 @@ def main() -> int:
     if procs_total == 0 or skip_reason:
         detail = skip_reason or "no backlog / routines skipped"
         record(args.run_id, "convert", "skipped", detail)
+
+    force_flush(args.run_id)
 
     print(f"[ensure_run_events] run_id={args.run_id} procs_total={procs_total}")
     return 0

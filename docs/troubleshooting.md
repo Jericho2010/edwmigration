@@ -23,11 +23,16 @@ Something broke? Find the symptom, apply the one-line fix, re-run the agent step
 | Hooks events on wrong run / `unknown` | Open **repo root**; ensure `agents/out/CURRENT_RUN` exists after coordinator start |
 | Gate fails unconverted | Convert backlog **or** table-only run with `ensure_run_events.py` |
 | Gate fails missing agent_events | `ensure_run_events.py` (coordinator + convert/skipped) then `record_agent_event` for assess/test/gate after each persist helper |
-| Dashboard empty | Hooks need a Cursor agent run + `DATABRICKS_CATALOG` in `.env` |
+| Dashboard empty / stale | Hooks buffer not flushed, or prior-run ops rows. Flush threshold is now 1; `record_agent_event` / `ensure_run_events` force-flush. If widgets show prior-run reconcile/backlog: `make reset-sink` (Databricks only; keeps Azure). Gate Hero empty until Gate writes `migration_manifest_current`. |
+| Events stuck in `events.buf.jsonl` | Force flush: `.cursor/hooks/_flush_events.sh $(cat agents/out/CURRENT_RUN)` or lower `AGENT_EVENT_FLUSH_THRESHOLD` (default 1). |
 | No Dashboard / Genie URL | `make print-urls` after `make deploy` / `make genie` |
-| No MLflow `observe_url` | `make observe-setup`, then re-run `mlflow_observe.py init` / coordinator mint; setup-time `print-urls` often has no run yet. See [mlflow.md](mlflow.md). |
+| No MLflow `observe_url` | `make observe-setup`, then init via `.venv`: `"$(./agents/tools/resolve_python.sh)" agents/tools/mlflow_observe.py init --run-id <id>`. Setup-time `print-urls` often has no run yet. See [mlflow.md](mlflow.md). |
 | `mlflow_context.json` has `enabled: false` | Fix `.venv`/mlflow (`make observe-setup`); check `error` field; Shared experiment create may need fallback / workspace perms. See [mlflow.md](mlflow.md). |
-| Genie create fails | Ops tables must exist (`make setup`); warehouse ID set |
+| MLflow `Parent span ... not found` | Trace root was lost; observe auto `--force` re-inits and re-announces `observe_url`. Or: `"$(./agents/tools/resolve_python.sh)" agents/tools/mlflow_observe.py init --run-id <id> --force`. |
+| Silent agent / empty Dashboard **during** Convert | Assess/Convert/Test/Gate must be Cursor **`edw-*`** subagents so hooks fire. Opaque Task / `generalPurpose` without `dual_write_agent_lifecycle.sh` (Convert: `--item-id` per item) produces silence. Paste `./agents/tools/observe_status.sh --stage <Name>` after each stage. |
+| Agent self-starts migration on bare `start` | Bug — only menu **1/2/3** may migrate. See `agents/prompts/06_start.md` / `.cursor/rules/edw-start.mdc`. |
+| Genie create fails | Ops tables must exist (`make setup`); warehouse ID set. Update may WARN on `serialized_space` quirk — existing space is kept; Genie still useful once `ops.*` rows appear mid-run. |
+| Need clean demo without Azure teardown | `make reset-sink` — wipes managed bronze/silver/gold + `ops.*` + `agents/out`; keeps Azure SQL + `.env` + foreign catalog. Offer before a fresh menu **1/2/3** if widgets look stale. |
 
 Offline seed mode was removed — use the [guided demo](guided-demo.md) or [your database](your-database.md).
 

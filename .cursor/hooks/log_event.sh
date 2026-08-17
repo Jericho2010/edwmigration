@@ -3,7 +3,9 @@
 # Cursor payloads do not include run_id; see _resolve_run_id.sh / CURRENT_RUN.
 set -euo pipefail
 
-FLUSH_THRESHOLD="${AGENT_EVENT_FLUSH_THRESHOLD:-10}"
+# Default 1 so Control Plane timeline updates during parent-shell demos
+# (no subagentStop). Override with AGENT_EVENT_FLUSH_THRESHOLD if needed.
+FLUSH_THRESHOLD="${AGENT_EVENT_FLUSH_THRESHOLD:-1}"
 HOOK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$("${HOOK_DIR}/_repo_root.sh")"
 

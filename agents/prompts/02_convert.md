@@ -1,5 +1,7 @@
 # 02_convert.md — Convert
 
+You are launched as Cursor subagent **`edw-convert`** so hooks dual-write live UC + MLflow spans. If hooks cannot run, the coordinator must wrap you with `dual_write_agent_lifecycle.sh` start/stop **per item** (`--item-id <item_id>`), so parallel Convert span keys do not collide.
+
 Convert **one** legacy stored procedure (T-SQL) or MySQL routine into Databricks Spark SQL under `databricks/silver/` or `databricks/gold/`.
 
 You may run in parallel with other Convert workers for the same `run_id`. Shared memory is disk-only under `agents/out/<run_id>/` (orchestrator-worker artifact pattern: write the notebook + result JSON; return a short path summary in chat).

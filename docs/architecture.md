@@ -64,16 +64,20 @@ Foreign catalog mirrors the source via `CONNECTION` `TYPE SQLSERVER` or `TYPE MY
 
 ## Observability
 
-Two planes (additive):
+Observability is **live during the migration**, not only after Gate. Four planes:
 
-1. **UC events** — Hooks + `record_agent_event.sh` → `ops.agent_events`. Control Plane dashboard (`dataset_catalog` / `ops`). Genie with dynamic `table_identifiers`. Gate rule 4 reads this table only.
-2. **MLflow traces** — Optional live hierarchy in Databricks Experiments (`/Shared/edw-migration`): root `edw.run`, stage spans from milestones, AGENT spans from Cursor `subagentStart`/`Stop`, TOOL spans from shell/MCP/file hooks. Soft no-op until `make observe-setup`. The coordinator announces `observe_url` when the run is minted (`mlflow_observe init`) and again from `ensure_run_events` if needed — not only at Gate.
+1. **Cursor chat** — stage banners + pasted `observe_status.sh` after each stage (`agents/prompts/_live_observability.md`).
+2. **UC events** — Cursor hooks + `record_agent_event.sh` → `ops.agent_events`. Control Plane dashboard (`dataset_catalog` / `ops`). Genie with dynamic `table_identifiers`. Gate rule 4 reads this table only. Flush default is 1 event so the timeline updates while Convert runs.
+3. **MLflow traces** — live hierarchy in Databricks Experiments (`/Shared/edw-migration`): root `edw.run`, stage spans from milestones, AGENT spans from Cursor `subagentStart`/`Stop`, TOOL spans from shell/MCP/file hooks. Soft no-op until `make observe-setup`. The coordinator announces `observe_url` at mint — open it **while** Convert runs.
+4. **Genie** — same `ops.*` tables; useful as soon as inventory/events/backlog rows appear mid-run.
 
-**MLflow’s role:** live agent/tool span tree while the run executes. It does not replace Control Plane or Genie (those answer ship/fail from `ops.*`). Cursor hooks dual-write the same lifecycle into both planes; every subagent (`edw-start` through `edw-gate`, including Convert fan-out) appears as AGENT spans under one shared trace via `agents/out/<run_id>/mlflow_context.json`.
+**Subagents:** Assess / Convert / Test / Gate must run as Cursor **`edw-assess` / `edw-convert` / `edw-test` / `edw-gate`** so hooks fire. Opaque Task / `generalPurpose` fan-out is forbidden unless `dual_write_agent_lifecycle.sh` start/stop dual-writes the same UC + MLflow events (Convert: **`--item-id` per item**).
 
-Print links with `make print-urls` (Control Plane + Genie + `observe_url` when available).
+**MLflow’s role:** live agent/tool span tree while the run executes. It does not replace Control Plane or Genie (those answer ship/fail from `ops.*`).
 
-Full wiring, hook table, setup, and operator checklist: **[MLflow observability](mlflow.md)**.
+Paste Control Plane + Genie + `observe_url` **once** at setup/mint (`make print-urls`); keep them open during the run. Gate Hero stays empty until Gate — expected. Stale dashboard from a prior demo: `make reset-sink` (keeps Azure).
+
+Full wiring, hook table, setup, and operator checklist: **[MLflow observability](mlflow.md)**. Entry: type **`start`** — do not invent a migration outside the menu.
 
 ---
 
