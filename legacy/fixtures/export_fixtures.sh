@@ -9,7 +9,8 @@
 #     WARNING: Migrate* procs mutate the database. Re-import the bacpac to get
 #     a clean baseline before re-running this script.
 #
-# Fixtures are committed to legacy/fixtures/*.csv with stable column ordering.
+# Fixtures are written to legacy/fixtures/*.csv (gitignored). Commit scripts +
+# expectations.json only; regenerate CSVs locally via this script when needed.
 #
 # Usage:
 #   ./export_fixtures.sh

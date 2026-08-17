@@ -138,6 +138,36 @@ ORDER BY table_schema, table_name
     return tables
 
 
+def _copy_proc_sqls(sql_dir: Path, out_dir: Path) -> list[dict]:
+    """Copy Schema.Proc.sql files from sql_dir into out_dir; return inventory rows."""
+    out_dir.mkdir(parents=True, exist_ok=True)
+    procs: list[dict] = []
+    if not sql_dir.is_dir():
+        return procs
+    for p in sorted(sql_dir.glob("*.sql")):
+        if p.name.startswith("export"):
+            continue
+        stem = p.stem
+        if "." not in stem:
+            continue
+        schema, name = stem.split(".", 1)
+        dest = out_dir / p.name
+        if p.resolve() != dest.resolve():
+            dest.write_text(p.read_text())
+        procs.append(
+            {
+                "object_type": "proc",
+                "source_schema": schema,
+                "source_name": name,
+                "landing_name": None,
+                "skip": False,
+                "skip_reason": None,
+                "source_path": str(dest.relative_to(ROOT)),
+            }
+        )
+    return procs
+
+
 def export_procs_sqlserver(out_dir: Path, src: dict) -> list[dict]:
     server = src["az_sql_server"]
     admin = src["user"]
@@ -149,39 +179,37 @@ def export_procs_sqlserver(out_dir: Path, src: dict) -> list[dict]:
             server_arg = f"tcp:{src['host']},{src['port']}"
         else:
             print(
-                "[discover] SQL Server credentials missing — skipping proc export",
+                "[discover] SQL Server credentials missing — using vendored legacy/procs",
                 file=sys.stderr,
             )
-            return []
+            return _copy_proc_sqls(ROOT / "legacy" / "procs", out_dir)
     else:
         server_arg = f"tcp:{server}.database.windows.net,1433"
 
     out_dir.mkdir(parents=True, exist_ok=True)
     export_sh = ROOT / "legacy" / "procs" / "export_proc_source.sh"
     if export_sh.is_file():
-        subprocess.run([str(export_sh)], cwd=str(ROOT), check=False)
-        procs = []
-        for p in sorted((ROOT / "legacy" / "procs").glob("*.sql")):
-            if p.name.startswith("export"):
-                continue
-            stem = p.stem
-            if "." not in stem:
-                continue
-            schema, name = stem.split(".", 1)
-            dest = out_dir / p.name
-            dest.write_text(p.read_text())
-            procs.append(
-                {
-                    "object_type": "proc",
-                    "source_schema": schema,
-                    "source_name": name,
-                    "landing_name": None,
-                    "skip": False,
-                    "skip_reason": None,
-                    "source_path": str(dest.relative_to(ROOT)),
-                }
-            )
-        return procs
+        env = os.environ.copy()
+        env["PROC_EXPORT_DIR"] = str(out_dir)
+        if server:
+            env.setdefault("AZ_SQL_SERVER", server)
+        if admin:
+            env.setdefault("AZ_SQL_ADMIN", admin)
+        if password:
+            env.setdefault("AZ_SQL_PASSWORD", password)
+        if db:
+            env.setdefault("AZ_SQL_DB", db)
+        result = subprocess.run(
+            [str(export_sh)], cwd=str(ROOT), env=env, check=False
+        )
+        procs = _copy_proc_sqls(out_dir, out_dir)
+        if result.returncode == 0 and procs:
+            return procs
+        print(
+            "[discover] live proc export failed or empty — falling back to vendored legacy/procs",
+            file=sys.stderr,
+        )
+        return _copy_proc_sqls(ROOT / "legacy" / "procs", out_dir)
 
     # Minimal sqlcmd fallback if export script missing
     query = """
@@ -198,8 +226,8 @@ ORDER BY s.name, o.name;
         qpath = tf.name
     try:
         if not shutil.which("sqlcmd"):
-            print("[discover] sqlcmd not found — skipping proc export", file=sys.stderr)
-            return []
+            print("[discover] sqlcmd not found — using vendored legacy/procs", file=sys.stderr)
+            return _copy_proc_sqls(ROOT / "legacy" / "procs", out_dir)
         proc = subprocess.run(
             [
                 "sqlcmd",
@@ -227,9 +255,16 @@ ORDER BY s.name, o.name;
     finally:
         os.unlink(qpath)
     if proc.returncode != 0:
-        print(f"[discover] sqlcmd proc list failed: {proc.stderr}", file=sys.stderr)
-        return []
-    return []
+        print(
+            f"[discover] sqlcmd list failed — using vendored legacy/procs: {proc.stderr}",
+            file=sys.stderr,
+        )
+        return _copy_proc_sqls(ROOT / "legacy" / "procs", out_dir)
+    print(
+        "[discover] export script missing and minimal list path not implemented for definitions — using vendored legacy/procs",
+        file=sys.stderr,
+    )
+    return _copy_proc_sqls(ROOT / "legacy" / "procs", out_dir)
 
 
 def export_routines_mysql(out_dir: Path, src: dict) -> tuple[list[dict], str | None]:

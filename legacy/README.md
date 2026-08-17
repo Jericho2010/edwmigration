@@ -20,23 +20,29 @@ Microsoft sample EDW as a `.bacpac`, SHA-256 pinned. Bootstrap imports it with
 
 ## `procs/`
 
-`export_proc_source.sh` dumps user procedures from the connected Azure SQL DB
-(used by bootstrap and by `discover_inventory.py`). Vendored `Integration.*`
-files let Convert work from git when a live export has not run yet; a live
-export overwrites them.
+`export_proc_source.sh` dumps procedures from the connected Azure SQL DB into
+**`PROC_EXPORT_DIR`** (Discover: `agents/out/<run_id>/procs`; bootstrap default:
+`legacy/procs/.export/`, gitignored). It does **not** overwrite the vendored
+`Integration.*.sql` teaching copies in this folder.
 
-Discovery does **not** hard-code this list — Assess builds the backlog from
-whatever procs are exported / inventoried.
+Vendored files let Convert work from git when a live export has not run yet.
+Discovery inventorizes the live export when available; otherwise it falls back
+to these vendored copies.
+
+Assess builds the backlog from whatever procs are inventoried — it does not
+hard-code this list.
 
 ## `fixtures/`
 
-`export_fixtures.sh` captures optional reconcile fixtures (can mutate DB via
-`Migrate*` procs). `build_expectations.sh` regenerates `expectations.json` and
+`export_fixtures.sh` captures optional reconcile fixtures as **local** CSVs
+(gitignored; can mutate DB via `Migrate*` procs). `build_expectations.sh`
+regenerates `expectations.json` and
 `databricks/tests/13_stage_fixture_expectations.sql` (catalog placeholder
 `__UC_CATALOG__`).
 
 Primary correctness for the engine is **generated** bronze-vs-source row-count
-reconcile from inventory; fixtures are demo-pack enrichment.
+reconcile from inventory; fixtures are demo-pack enrichment. Commit scripts +
+`expectations.json` only — not large CSV dumps.
 
 ## Manual usage
 
