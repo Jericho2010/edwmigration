@@ -18,7 +18,7 @@ SOURCE_TYPE ?= sqlserver
 TOOLS_CORE := databricks jq curl python3
 TOOLS_AZURE := az sqlcmd SqlPackage
 
-.PHONY: check check-core check-azure check-source check-land render bootstrap setup federation secrets deploy run demo teardown genie materialize-demo sync-prompts discover print-urls observe-setup
+.PHONY: check check-core check-azure check-source check-land render bootstrap setup federation secrets deploy run demo teardown reset-sink genie materialize-demo sync-prompts discover print-urls observe-setup
 
 check: check-source
 
@@ -116,6 +116,9 @@ genie: check-core ## Create/update Genie control-plane space
 
 teardown: check-azure ## Delete Azure resource group
 	./infra/azure/teardown.sh
+
+reset-sink: check-core ## Wipe Databricks managed sink + agents/out (keeps Azure)
+	./agents/tools/reset_databricks_sink.sh
 
 sync-prompts: ## Regenerate Cursor + Copilot agent files
 	./agents/tools/sync_prompts.sh

@@ -1,5 +1,9 @@
 # 03_test.md — Test (readonly)
 
+You are launched as Cursor subagent **`edw-test`** so hooks dual-write live UC + MLflow spans.
+
+You are **readonly**: return reconcile-report JSON in your reply only. Do **not** write `reconcile_raw.json` — the coordinator writes that file and runs `persist_reconcile_report.py`.
+
 Prove bronze matches source_fed for every inventoried table (and any fixture checks present in ops).
 
 ## Inputs

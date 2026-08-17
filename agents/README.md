@@ -15,7 +15,7 @@ Portable prompts + contracts. Cursor and GitHub Copilot adapters are generated.
 | `edw-start` | Front door: `start` → soft status + phrase menu → route |
 | `edw-demo-guide` | Guided demo; runs Track A preflight then bootstrap + migration |
 | `edw-coordinator` | Track B: Azure SQL or MySQL → discover → parallel convert fan-out → gate |
-| `edw-assess` | Backlog from inventory (empty OK if routines skipped); unique `target_path`s |
+| `edw-assess` | Readonly backlog JSON from inventory (empty OK if routines skipped); coordinator persists; unique `target_path`s |
 | `edw-convert` | One T-SQL / MySQL routine → silver/gold SQL + `convert/<item_id>.json` |
 | `edw-test` | Generated reconcile |
 | `edw-gate` | Ship/no-ship |
@@ -33,7 +33,10 @@ Portable prompts + contracts. Cursor and GitHub Copilot adapters are generated.
 | `render_sql.sh` | Catalog/federation render (`SOURCE_TYPE`) → `_rendered/` |
 | `resolve_source_env.sh` | Map `SOURCE_*` / `AZ_SQL_*` |
 | `print_observability_urls.sh` | Control Plane + Genie + MLflow `observe_url` |
-| `record_agent_event.sh` | Insert ops.agent_events row (+ MLflow stage span) |
+| `observe_status.sh` | Ops counts + URLs snapshot for stage checkpoints |
+| `dual_write_agent_lifecycle.sh` | UC + MLflow start/stop when hooks cannot fire (fallback; Convert: `--item-id` per item) |
+| `reset_databricks_sink.sh` | Wipe managed UC + `agents/out` (keeps Azure); `make reset-sink` |
+| `record_agent_event.sh` | Insert ops.agent_events row (+ MLflow stage span + force flush) |
 | `ensure_run_events.py` | `coordinator/started` + table-only `convert/skipped` (not assess); inits MLflow run |
 | `mlflow_observe.py` | Soft MLflow init / spans / stage / end-run / trace-url (prefers `.venv`) |
 | `mlflow_context.py` | `agents/out/<run_id>/mlflow_context.json` helpers |

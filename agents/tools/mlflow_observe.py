@@ -381,6 +381,9 @@ def ensure_init(run_id: str, root: Path | None = None) -> dict[str, Any]:
     root = root or ROOT
     existing = ctx.load_context(run_id, root)
     if existing and existing.get("enabled") and existing.get("trace_id"):
+        err = str(existing.get("last_error") or "")
+        if _parent_span_missing(err):
+            return _recover_trace(run_id, root)
         return existing
     context_json = ctx.run_dir(run_id, root) / "context.json"
     if not context_json.is_file() and run_id == "unknown":
@@ -395,6 +398,18 @@ def _active_parent_id(c: dict[str, Any]) -> str:
         if str(key).startswith("subagent:"):
             return str(sid)
     return str(c.get("root_span_id") or "")
+
+
+def _parent_span_missing(exc: BaseException | str) -> bool:
+    text = str(exc)
+    return "Parent span" in text and "not found" in text
+
+
+def _recover_trace(run_id: str, root: Path) -> dict[str, Any]:
+    """Force re-init when root/parent span is gone; re-announce observe_url."""
+    data = init_run(run_id, root=root, force=True)
+    announce_observe_url(str(data.get("observe_url") or ""))
+    return data
 
 
 def span_start(
@@ -416,12 +431,12 @@ def span_start(
     if backend is None:
         return c
 
-    try:
-        parent_id = c.get("root_span_id") or ""
-        if parent_key and (c.get("open_spans") or {}).get(parent_key):
-            parent_id = c["open_spans"][parent_key]
+    def _do_start(ctx_data: dict[str, Any]) -> dict[str, Any]:
+        parent_id = ctx_data.get("root_span_id") or ""
+        if parent_key and (ctx_data.get("open_spans") or {}).get(parent_key):
+            parent_id = ctx_data["open_spans"][parent_key]
         elif kind.lower() == "tool":
-            parent_id = _active_parent_id(c) or parent_id
+            parent_id = _active_parent_id(ctx_data) or parent_id
 
         span_type = {"agent": "AGENT", "tool": "TOOL", "chain": "CHAIN"}.get(
             kind.lower(), "UNKNOWN"
@@ -432,7 +447,7 @@ def span_start(
 
         span_id = backend.start_span(
             name=name,
-            trace_id=c["trace_id"],
+            trace_id=ctx_data["trace_id"],
             parent_id=parent_id,
             span_type=span_type,
             inputs=truncate_io(inputs) if inputs is not None else None,
@@ -443,9 +458,21 @@ def span_start(
             opens = dict(data.get("open_spans") or {})
             opens[key] = span_id
             data["open_spans"] = opens
+            data.pop("last_error", None)
 
         return ctx.update_context(run_id, mut, root)
+
+    try:
+        return _do_start(c)
     except Exception as exc:
+        if _parent_span_missing(exc):
+            try:
+                recovered = _recover_trace(run_id, root)
+                if recovered.get("enabled"):
+                    return _do_start(recovered)
+            except Exception as exc2:
+                exc = exc2
+
         def mut_err(data: dict[str, Any]) -> None:
             data["last_error"] = truncate_io(exc, 500)
 
@@ -509,11 +536,12 @@ def stage(
 
     name = f"stage.{agent}.{event}"
     key = f"stage:{agent}/{event}:{int(time.time() * 1000)}"
-    try:
+
+    def _do_stage(ctx_data: dict[str, Any]) -> dict[str, Any]:
         span_id = backend.start_span(
             name=name,
-            trace_id=c["trace_id"],
-            parent_id=c["root_span_id"],
+            trace_id=ctx_data["trace_id"],
+            parent_id=ctx_data["root_span_id"],
             span_type="CHAIN",
             inputs={
                 "agent": agent,
@@ -524,13 +552,13 @@ def stage(
             attributes={"edw.run_id": run_id, "edw.agent": agent, "edw.event": event},
         )
         backend.end_span(
-            trace_id=c["trace_id"],
+            trace_id=ctx_data["trace_id"],
             span_id=span_id,
             outputs={"agent": agent, "event": event},
             status="OK",
         )
         try:
-            backend.log_metric(c["mlflow_run_id"], f"events_by_{agent}", 1.0)
+            backend.log_metric(ctx_data["mlflow_run_id"], f"events_by_{agent}", 1.0)
         except Exception:
             pass
 
@@ -538,17 +566,31 @@ def stage(
             detail_l = (detail or "").strip().lower()
             gate_pass = 0.0 if "fail" in detail_l else (1.0 if "pass" in detail_l else 0.0)
             try:
-                backend.log_metric(c["mlflow_run_id"], "gate_pass", gate_pass)
+                backend.log_metric(ctx_data["mlflow_run_id"], "gate_pass", gate_pass)
             except Exception:
                 pass
             return end_run(run_id, outputs={"gate": detail}, gate_pass=gate_pass, root=root)
+
+        def mut_ok(data: dict[str, Any]) -> None:
+            data.pop("last_error", None)
+
+        return ctx.update_context(run_id, mut_ok, root)
+
+    try:
+        return _do_stage(c)
     except Exception as exc:
+        if _parent_span_missing(exc):
+            try:
+                recovered = _recover_trace(run_id, root)
+                if recovered.get("enabled"):
+                    return _do_stage(recovered)
+            except Exception as exc2:
+                exc = exc2
+
         def mut_err(data: dict[str, Any]) -> None:
             data["last_error"] = truncate_io(exc, 500)
 
         return ctx.update_context(run_id, mut_err, root)
-
-    return c
 
 
 def log_metric_value(

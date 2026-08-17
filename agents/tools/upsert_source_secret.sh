@@ -31,12 +31,13 @@ fi
 databricks secrets create-scope "$DATABRICKS_SECRET_SCOPE" 2>/dev/null \
   || echo "[upsert_source_secret] scope ${DATABRICKS_SECRET_SCOPE} already exists (ok)"
 
-printf '%s' "$SOURCE_PASSWORD" | databricks secrets put-secret \
-  "$DATABRICKS_SECRET_SCOPE" source-password --string-from-stdin
+# Databricks CLI v0.2xx+: --string-value (stdin flag removed)
+databricks secrets put-secret \
+  "$DATABRICKS_SECRET_SCOPE" source-password --string-value "$SOURCE_PASSWORD"
 echo "[upsert_source_secret] stored source-password in ${DATABRICKS_SECRET_SCOPE}"
 
 if [ "$SOURCE_TYPE" = "sqlserver" ]; then
-  printf '%s' "$SOURCE_PASSWORD" | databricks secrets put-secret \
-    "$DATABRICKS_SECRET_SCOPE" azure-sql-password --string-from-stdin
+  databricks secrets put-secret \
+    "$DATABRICKS_SECRET_SCOPE" azure-sql-password --string-value "$SOURCE_PASSWORD"
   echo "[upsert_source_secret] stored azure-sql-password alias"
 fi

@@ -61,6 +61,12 @@ SELECT 'agent_event_ok' AS check_name, '${AGENT}' AS agent, '${EVENT}' AS event;
 "${REPO_ROOT}/agents/tools/run_sql.sh" --sql "$SQL"
 echo "[record_agent_event] ${AGENT}/${EVENT} run_id=${RUN_ID}"
 
+# Flush any buffered Cursor hook events so Control Plane stays current.
+FLUSH="${REPO_ROOT}/.cursor/hooks/_flush_events.sh"
+if [ -x "$FLUSH" ]; then
+  "$FLUSH" "$RUN_ID" >/dev/null 2>&1 || true
+fi
+
 # Dual-write stage span to MLflow (soft no-op if mlflow absent / tracking fails).
 OBSERVE="${REPO_ROOT}/agents/tools/mlflow_observe.py"
 if [ -f "$OBSERVE" ]; then

@@ -155,9 +155,10 @@ Everything for one run lives under `agents/out/<run_id>/` (also pointed at by `a
 
 After setup: `make print-urls` (Dashboard + Genie). After the coordinator mints a run: same command also prints **`observe_url`** when MLflow observe is ready (`make observe-setup`).
 
-- **Control Plane** — Gate, timeline, backlog, reconcile  
-- **Genie** — *Did the last run ship?* / *Why did the gate fail?*  
+- **Control Plane** — Gate, timeline, backlog, reconcile. Gate Hero stays empty until Gate; Inventory / Events / Backlog move earlier.  
+- **Genie** — *Did the last run ship?* / *Why did the gate fail?* (also useful mid-run on inventory/events)  
 - **MLflow** — live subagent/tool span tree while Convert runs (Cursor hooks dual-write every `edw-*` agent + shell/MCP/file tools). Soft no-op until `make observe-setup`.  
+- **Cursor chat** — `observe_status` after each stage (URLs pasted once at setup/mint).
 
 Deep dive: **[MLflow observability](mlflow.md)** (role, wiring, all subagents).
 

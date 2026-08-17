@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS __UC_CATALOG__.ops.migration_inventory (
   source_schema     STRING       NOT NULL,
   source_name       STRING       NOT NULL,
   landing_name      STRING,                  -- snake_case bronze name (tables)
-  skip              BOOLEAN      NOT NULL DEFAULT false,
+  skip              BOOLEAN      NOT NULL,  -- writers set false; avoid Delta column-default feature requirement
   skip_reason       STRING,
   discovered_at     TIMESTAMP    NOT NULL
 )

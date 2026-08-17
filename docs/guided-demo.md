@@ -49,9 +49,25 @@ Warehouse, Azure/Databricks login, and tools: the guide runs `./agents/tools/pre
    - Bootstrap free Azure SQL + WideWorldImporters sample (`make bootstrap`)  
    - Wire federation, dashboard, Genie (`make setup`)  
    - Drive the coordinator with checkpoints: Assess → **Convert wave** (≤5 in parallel) → merge → Test → Gate  
-5. When it prints URLs, open **Control Plane**, **Genie**, and **MLflow `observe_url`** (when present). Ask Genie: *Did the last run ship?* See [mlflow.md](mlflow.md).  
+5. Watch live (open links **once**, leave them open):
+   - Open **Control Plane**, **Genie**, and MLflow **`observe_url`** when the guide prints them (setup + mint).
+   - In chat, expect `observe_status` after each stage — not another URL dump.
+   - Assess / Convert / Test / Gate should run as Cursor **`edw-*`** agents (hooks feed the Dashboard + MLflow).
+   - Ask Genie mid-run about inventory/events; after Gate: *Did the last run ship?*  
+   Details: **[MLflow observability](mlflow.md)**.
 6. Demo acceptance (guide check, **not** a Gate rule): **≥10 tables** and **≥5 procedures** migrated (counts only).  
-7. When finished: ask the guide to tear down, menu **5**, or run `make teardown`.
+7. When finished: ask the guide to tear down, menu **5**, or run `make teardown`. Between demos without tearing down Azure: confirm `make reset-sink` when offered (stale dashboard from a prior demo).
+
+### Live acceptance checklist (`start` → **1** / **2** / **3**)
+
+During Assess/Convert you should see all of these for **this** `run_id`:
+
+1. Chat pastes `observe_status` counts moving after each stage  
+2. Control Plane **Latest Events** for this `run_id`  
+3. MLflow **AGENT** spans for assess/convert (and later test/gate)  
+4. Genie able to talk about inventory / events mid-run  
+
+Gate Hero stays empty until Gate — expected. Inventory / Events / Backlog should populate earlier.
 
 **Job wiring (plain English):** Gate checks that converted notebooks exist on disk. The medallion job runs a **checked-in** task list — for the WWI demo that already covers the sample. If the guide prints a job-wiring WARN on a custom conversion, it can propose/apply a safe YAML patch (`check_job_wiring.py --apply`) so the new notebook becomes a job task without exceeding Free Edition concurrency ([limits.md](limits.md)).
 
@@ -85,8 +101,8 @@ You can stop and celebrate when **all** of these are true:
 2. Genie can answer *Did the last run ship?*  
 3. Gate summary shows ship (empty blockers)  
 4. Demo acceptance counts: **≥10** bronze tables and **≥5** converted procs *(guide check, not Gate)*  
-5. **MLflow (recommended):** you ran `make observe-setup` once, and opened `observe_url` when the coordinator minted the run (setup-time print-urls may not have it yet)  
-6. You tore down Azure resources (`make teardown` / menu **5**) **or** consciously kept them for a follow-up  
+5. **MLflow (recommended):** you ran `make observe-setup` once, and opened `observe_url` **when minted** (watched during Convert, not only at the end)  
+6. You tore down Azure resources (`make teardown` / menu **5**) **or** consciously kept them / used `make reset-sink` for a follow-up  
 
 ---
 

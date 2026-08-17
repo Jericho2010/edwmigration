@@ -7,7 +7,11 @@ readonly: true
 
 # 01_assess.md — Assess (readonly)
 
-Inventory the connected source (Azure SQL or MySQL) and produce a migration backlog. Return JSON only; coordinator persists via `persist_backlog.py`.
+You are launched as Cursor subagent **`edw-assess`** so hooks dual-write live `ops.agent_events` + MLflow AGENT spans. Do not suppress lifecycle.
+
+You are **readonly**: return JSON only in your reply. Do **not** write `assess_raw.json` or any other files — the coordinator writes the raw file and runs `persist_backlog.py`.
+
+Inventory the connected source (Azure SQL or MySQL) and produce a migration backlog.
 
 ## Inputs
 
@@ -53,8 +57,8 @@ Inventory the connected source (Azure SQL or MySQL) and produce a migration back
 }
 ```
 
-Coordinator unwraps and runs:
+Coordinator unwraps the JSON from your reply, writes `agents/out/<run_id>/assess_raw.json`, and runs:
 
 ```bash
-python3 agents/tools/persist_backlog.py --run-id <run_id> --from-file <assess.json>
+python3 agents/tools/persist_backlog.py --run-id <run_id> --from-file agents/out/<run_id>/assess_raw.json
 ```

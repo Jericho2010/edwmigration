@@ -69,6 +69,8 @@ SPACE_ID="$(
     | jq -r --arg t "$TITLE" '.spaces // [] | map(select(.title == $t)) | .[0].space_id // empty'
 )"
 
+# serialized_space must be a JSON *string* whose contents are an object.
+# (Some workspace API builds disagree on object-vs-string; create/update can 400.)
 PAYLOAD="$(jq -n \
   --arg wid "$DATABRICKS_WAREHOUSE_ID" \
   --arg title "$TITLE" \
@@ -78,10 +80,15 @@ PAYLOAD="$(jq -n \
 
 if [ -n "$SPACE_ID" ]; then
   echo "[genie] updating existing space ${SPACE_ID} ('${TITLE}') ..."
-  databricks api patch "/api/2.0/genie/spaces/${SPACE_ID}" --json "$PAYLOAD" >/dev/null
+  if ! databricks api patch "/api/2.0/genie/spaces/${SPACE_ID}" --json "$PAYLOAD" >/dev/null; then
+    echo "[genie] WARN: update failed (API serialized_space quirk); keeping existing space ${SPACE_ID}" >&2
+  fi
 else
   echo "[genie] creating space '${TITLE}' ..."
-  SPACE_ID="$(databricks api post /api/2.0/genie/spaces --json "$PAYLOAD" | jq -r '.space_id // .id // empty')"
+  if ! SPACE_ID="$(databricks api post /api/2.0/genie/spaces --json "$PAYLOAD" | jq -r '.space_id // .id // empty')"; then
+    echo "[genie] ERROR: create failed" >&2
+    exit 1
+  fi
 fi
 
 if [ -z "$SPACE_ID" ]; then
