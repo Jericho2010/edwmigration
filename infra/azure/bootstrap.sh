@@ -175,6 +175,8 @@ fi
 # ---------------------------------------------------------------------------
 echo
 echo "[8/9] exporting proc source and reconcile fixtures ..."
+# Live dumps go to gitignored paths — never overwrite vendored legacy/procs/*.sql
+export PROC_EXPORT_DIR="${REPO_ROOT}/legacy/procs/.export"
 run "${REPO_ROOT}/legacy/procs/export_proc_source.sh"
 run "${REPO_ROOT}/legacy/fixtures/export_fixtures.sh"
 

@@ -31,3 +31,7 @@ __pycache__/
 # Local venv
 .venv/
 .venv
+
+# Live Azure SQL dumps — never commit; vendored Integration.*.sql stay tracked.
+legacy/procs/.export/
+legacy/fixtures/*.csv
