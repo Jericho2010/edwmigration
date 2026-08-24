@@ -26,7 +26,7 @@ All Mermaid diagrams in this repo share one palette (navy / teal / Azure blue / 
 | File | Description |
 |---|---|
 | [architecture.mmd](architecture.mmd) | Source → Federation → medallion → agents (convert fan-out) |
-| [agent_squad_roles.png](agent_squad_roles.png) | Agent squad + table/view/proc fate (README hero) — generated PNG, not Mermaid |
+| [agent_squad_roles.mmd](agent_squad_roles.mmd) · [agent_squad_roles.png](agent_squad_roles.png) | Agent team + table/view/proc fate (README hero) |
 | [agent_delegation.mmd](agent_delegation.mmd) | Guide / Coordinator with parallel Convert wave |
 | [enterprise_sod.mmd](enterprise_sod.mmd) | Segregation of duties swimlanes |
 | [demo_vs_enterprise.mmd](demo_vs_enterprise.mmd) | Demo anti-pattern vs enterprise controls |
@@ -47,6 +47,7 @@ All Mermaid diagrams in this repo share one palette (navy / teal / Azure blue / 
 ```bash
 # Optional PNG export (Node)
 npx -y @mermaid-js/mermaid-cli@11 -i docs/img/architecture.mmd -o docs/img/architecture.png
+npx -y @mermaid-js/mermaid-cli@11 -i docs/img/agent_squad_roles.mmd -o docs/img/agent_squad_roles.png -b white -s 2 -w 1400
 npx -y @mermaid-js/mermaid-cli@11 -i docs/img/agent_delegation.mmd -o docs/img/agent_delegation.png
 npx -y @mermaid-js/mermaid-cli@11 -i docs/img/enterprise_sod.mmd -o docs/img/enterprise_sod.png
 npx -y @mermaid-js/mermaid-cli@11 -i docs/img/demo_vs_enterprise.mmd -o docs/img/demo_vs_enterprise.png

@@ -101,7 +101,7 @@ flowchart TB
   class Assess,Test,Gate readonly
 ```
 
-Also: [`img/agent_squad_roles.png`](img/agent_squad_roles.png) (README squad: tables / views / procs) · [`img/agent_delegation.mmd`](img/agent_delegation.mmd) · [`img/architecture.mmd`](img/architecture.mmd)
+Also: [`img/agent_squad_roles.mmd`](img/agent_squad_roles.mmd) (README agent team: tables / views / procs) · [`img/agent_delegation.mmd`](img/agent_delegation.mmd) · [`img/architecture.mmd`](img/architecture.mmd)
 
 ---
 
