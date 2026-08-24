@@ -1,0 +1,47 @@
+%%{init: {"theme":"base","themeVariables":{"primaryColor":"#E8F1F8","primaryTextColor":"#0B3D5C","primaryBorderColor":"#0B3D5C","lineColor":"#5B7A8C","secondaryColor":"#E6F4F1","tertiaryColor":"#F7F3EA","background":"#FFFFFF","mainBkg":"#E8F1F8","clusterBkg":"#F7FAFC","clusterBorder":"#5B7A8C","titleColor":"#0B3D5C","edgeLabelBackground":"#FFFFFF"}}}%%
+flowchart LR
+  subgraph entry ["Entry"]
+    direction TB
+    You["You"] -->|"type start"| Start["edw-start"]
+    Start -->|"1"| Guide["edw-demo-guide"]
+    Start -->|"2 or 3"| Coord["edw-coordinator"]
+    Guide --> Coord
+  end
+
+  subgraph stages ["Migration stages"]
+    direction LR
+    Assess["edw-assess"] --> Convert["edw-convert max 5"] --> Test["edw-test"] --> Gate["edw-gate"]
+  end
+
+  Coord --> Assess
+  Gate --> Observe["Control Plane · Genie · MLflow"]
+
+  subgraph fate ["Source object fate"]
+    direction TB
+    Tables["Base tables"] -->|"Federation"| Bronze["bronze"]
+    Views["Source views"] -->|"not landed"| Skip["skip"]
+    Procs["Procs / routines"] -->|"Spark SQL notebooks"| SG["silver / gold"]
+  end
+
+  Observe ~~~ Tables
+
+  classDef user fill:#0B3D5C,stroke:#082C43,color:#fff
+  classDef agent fill:#1B7A6E,stroke:#145A51,color:#fff
+  classDef readonly fill:#6B7C8F,stroke:#4A5663,color:#fff
+  classDef azureC fill:#0078D4,stroke:#005A9E,color:#fff
+  classDef bronze fill:#C47B2D,stroke:#8F5A1F,color:#fff
+  classDef gold fill:#B8860B,stroke:#8A6508,color:#fff
+  classDef ops fill:#5B4B8A,stroke:#3F3460,color:#fff
+  classDef skip fill:#9AA5B1,stroke:#6B7C8F,color:#fff
+
+  class You user
+  class Start,Guide,Coord,Convert agent
+  class Assess,Test,Gate readonly
+  class Tables,Views,Procs azureC
+  class Bronze bronze
+  class SG gold
+  class Skip skip
+  class Observe ops
+
+  %% Keep fate panel to the right of Observe without a visible edge
+  linkStyle 7 stroke:#FFFFFF00,stroke-width:0px,color:#FFFFFF00
