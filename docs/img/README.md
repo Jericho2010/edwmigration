@@ -26,7 +26,7 @@ All Mermaid diagrams in this repo share one palette (navy / teal / Azure blue / 
 | File | Description |
 |---|---|
 | [architecture.mmd](architecture.mmd) | Source → Federation → medallion → agents (convert fan-out) |
-| [agent_squad_roles.png](agent_squad_roles.png) | Agent squad + table/view/proc fate (README hero) — generated PNG, not Mermaid |
+| [agent_squad_roles.html](agent_squad_roles.html) · [agent_squad_roles.png](agent_squad_roles.png) | README hero poster — comparison panels (agents + table/view/proc fate); HTML is the source, PNG is the render |
 | [agent_delegation.mmd](agent_delegation.mmd) | Guide / Coordinator with parallel Convert wave |
 | [enterprise_sod.mmd](enterprise_sod.mmd) | Segregation of duties swimlanes |
 | [demo_vs_enterprise.mmd](demo_vs_enterprise.mmd) | Demo anti-pattern vs enterprise controls |
@@ -50,6 +50,13 @@ npx -y @mermaid-js/mermaid-cli@11 -i docs/img/architecture.mmd -o docs/img/archi
 npx -y @mermaid-js/mermaid-cli@11 -i docs/img/agent_delegation.mmd -o docs/img/agent_delegation.png
 npx -y @mermaid-js/mermaid-cli@11 -i docs/img/enterprise_sod.mmd -o docs/img/enterprise_sod.png
 npx -y @mermaid-js/mermaid-cli@11 -i docs/img/demo_vs_enterprise.mmd -o docs/img/demo_vs_enterprise.png
+
+# README hero poster (HTML → PNG via Chrome headless)
+timeout 30 google-chrome --headless=new --disable-gpu --no-sandbox --hide-scrollbars \
+  --user-data-dir=/tmp/edw-poster-chrome \
+  --window-size=1600,1680 \
+  --screenshot=docs/img/agent_squad_roles.png \
+  "file://$PWD/docs/img/agent_squad_roles.html"
 ```
 
-Narrative pages embed Mermaid directly (GitHub renders them). PNGs are for slides/PDF.
+Narrative pages embed Mermaid directly (GitHub renders them). PNGs are for slides/PDF. The README hero is a hand-authored comparison poster (`agent_squad_roles.html`), not Mermaid — each agent and object fate gets its own architecture drawing.
