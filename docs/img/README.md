@@ -26,7 +26,7 @@ All Mermaid diagrams in this repo share one palette (navy / teal / Azure blue / 
 | File | Description |
 |---|---|
 | [architecture.mmd](architecture.mmd) | Source → Federation → medallion → agents (convert fan-out) |
-| [agent_squad_roles.png](agent_squad_roles.png) | Agent squad + table/view/proc fate (README hero) — generated PNG, not Mermaid |
+| [agent_squad_roles.png](agent_squad_roles.png) | README hero — LinkedIn-style AGENTS + MLFLOW poster (agent squad + Control Plane / Genie / MLflow span tree) |
 | [agent_delegation.mmd](agent_delegation.mmd) | Guide / Coordinator with parallel Convert wave |
 | [enterprise_sod.mmd](enterprise_sod.mmd) | Segregation of duties swimlanes |
 | [demo_vs_enterprise.mmd](demo_vs_enterprise.mmd) | Demo anti-pattern vs enterprise controls |
@@ -52,4 +52,4 @@ npx -y @mermaid-js/mermaid-cli@11 -i docs/img/enterprise_sod.mmd -o docs/img/ent
 npx -y @mermaid-js/mermaid-cli@11 -i docs/img/demo_vs_enterprise.mmd -o docs/img/demo_vs_enterprise.png
 ```
 
-Narrative pages embed Mermaid directly (GitHub renders them). PNGs are for slides/PDF.
+Narrative pages embed Mermaid directly (GitHub renders them). PNGs are for slides/PDF. The README hero (`agent_squad_roles.png`) is an illustrated comparison poster — same structure as architecture-type educational posters, with EDW agent content and a unique center schematic per role.
