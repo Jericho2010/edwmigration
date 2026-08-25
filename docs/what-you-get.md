@@ -101,7 +101,7 @@ flowchart TB
   class Assess,Test,Gate readonly
 ```
 
-Also: [`img/agent_squad_roles.png`](img/agent_squad_roles.png) (README comparison poster: types of EDW migration agents) · [`img/agent_delegation.mmd`](img/agent_delegation.mmd) · [`img/architecture.mmd`](img/architecture.mmd)
+Also: [`img/agent_squad_roles.png`](img/agent_squad_roles.png) (README comparison poster: agents + MLflow observe planes) · [`img/agent_delegation.mmd`](img/agent_delegation.mmd) · [`img/architecture.mmd`](img/architecture.mmd)
 
 ---
 

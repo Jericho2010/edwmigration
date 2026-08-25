@@ -12,7 +12,7 @@ You do not need to be a migration expert. You do not hand-write medallion SQL. O
 
 Type **`start`** — these agents do the rest:
 
-![TYPES OF EDW MIGRATION AGENTS — unique schematic per agent](docs/img/agent_squad_roles.png)
+![AGENTS + MLFLOW — EDW migration run with live observe planes](docs/img/agent_squad_roles.png)
 
 Pipeline detail (convert waves, merge, retries): [agent_delegation.png](docs/img/agent_delegation.png) · [What you get](docs/what-you-get.md) · [MLflow](docs/mlflow.md)
 
