@@ -97,7 +97,7 @@ sequenceDiagram
 
 You can stop and celebrate when **all** of these are true:
 
-1. Control Plane and Genie URLs open early (`announce_observability` / `make print-urls` at Provision/Setup)  
+1. Control Plane, Genie, and Catalog URLs open early (`announce_observability` / `make print-urls` at Provision/Setup); **Notebooks** (`edwmigration_YYYYMMDD`) after Land; **Job** after deploy  
 2. Genie can answer *Did the last run ship?*  
 3. Gate summary shows ship (empty blockers)  
 4. Demo acceptance counts: **≥10** bronze tables and **≥5** converted procs *(guide check, not Gate)*  

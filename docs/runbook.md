@@ -9,7 +9,7 @@ Short checklist for people who already know the story.
 
 1. Cursor → type **`start`** → choose **1** (or **`edw-demo-guide`** + kickoff phrase)  
 2. If preflight asks: `az login` / `databricks auth login --host <workspace>` / create serverless warehouse — then say continue  
-3. Open Control Plane + Genie URLs  
+3. Open Control Plane + Genie + Catalog URLs (Notebooks after Land; Job after deploy)  
 4. Teardown: `make teardown-databricks` (Databricks assets; keeps Azure SQL) and/or `make teardown` (Azure RG)  
 
 Scripted infra: `make materialize-demo && make demo`  
@@ -50,9 +50,9 @@ SqlPackage **not** required for `make setup`.
 | `make bootstrap` | Free Azure SQL + WWI |
 | `make setup` | Secrets + federation + deploy + genie + URLs |
 | `make observe-setup` | Create `.venv` + install MLflow observe deps |
-| `make print-urls` | Control Plane + Genie + MLflow `observe_url` (when a run exists) |
+| `make print-urls` | Control Plane + Genie + Catalog + Job + Notebooks + MLflow `observe_url` |
 | `make reset-sink` | Wipe Databricks managed sink + `agents/out` (**keeps Azure**) |
-| `make teardown-databricks` | Destroy job, dashboard, Genie, MLflow experiment, catalog, connection, secret scope (**keeps Azure SQL**) |
+| `make teardown-databricks` | Destroy job, dashboard, Genie, MLflow experiment, catalog, connection, secret scope, `edwmigration_*` notebooks (**keeps Azure SQL**) |
 | `make deploy` / `make run` | Bundle deploy / job |
 | `make teardown` | Delete demo Azure RG |
 | `make sync-prompts` | Regenerate Cursor + Copilot agents |

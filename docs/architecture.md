@@ -75,7 +75,7 @@ Observability is **live during the migration**, not only after Gate. Four planes
 
 **MLflow’s role:** live agent/tool span tree while the run executes. It does not replace Control Plane or Genie (those answer ship/fail from `ops.*`).
 
-Paste Control Plane + Genie at **Provision** (best-effort) and **Setup**, then `observe_url` at **mint** (`announce_observability` / `make print-urls`); keep them open during the run. Track A provision uses `track_a_provision.sh` in the visible session — not a mute Task. Gate Hero stays empty until Gate — expected. Inventory / backlog / tables-landed widgets move earlier. Stale dashboard: `make reset-sink`. Full Databricks wipe (keeps Azure SQL): `make teardown-databricks`.
+Paste Control Plane + Genie + Catalog at **Provision** (best-effort) and **Setup**, then `observe_url` at **mint**; **Notebooks** (`edwmigration_YYYYMMDD`) after Land; **Job** after deploy (`announce_observability` / `make print-urls`). Keep them open during the run. Track A provision uses `track_a_provision.sh` in the visible session — not a mute Task. Gate Hero stays empty until Gate — expected. Inventory / backlog / tables-landed widgets move earlier. Stale dashboard: `make reset-sink`. Full Databricks wipe (keeps Azure SQL): `make teardown-databricks`.
 
 Full wiring, hook table, setup, and operator checklist: **[MLflow observability](mlflow.md)**. Entry: type **`start`** — do not invent a migration outside the menu.
 

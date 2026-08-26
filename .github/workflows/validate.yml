@@ -214,6 +214,10 @@ jobs:
         run: |
           python3 -m unittest discover -s agents/tools -p 'test_mlflow_observe.py' -v
 
+      - name: Publish notebooks unit tests
+        run: |
+          python3 -m unittest discover -s agents/tools -p 'test_publish_run_notebooks.py' -v
+
       - name: MLflow observe setup artifacts present
         run: |
           test -f requirements-observe.txt

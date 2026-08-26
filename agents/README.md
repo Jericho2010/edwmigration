@@ -34,11 +34,13 @@ Portable prompts + contracts. Cursor and GitHub Copilot adapters are generated.
 | `track_a_provision.sh` | Track A materialize→bootstrap→setup with announce heartbeats |
 | `render_sql.sh` | Catalog/federation render (`SOURCE_TYPE`) → `_rendered/` |
 | `resolve_source_env.sh` | Map `SOURCE_*` / `AZ_SQL_*` |
-| `print_observability_urls.sh` | Control Plane + Genie + MLflow `observe_url` |
+| `print_observability_urls.sh` | Control Plane + Genie + Catalog + Job + Notebooks + MLflow `observe_url` |
+| `publish_run_notebooks.py` | Import SQL as Workspace notebooks under `edwmigration_YYYYMMDD` |
+| `databricks_cli_env.py` | Overlay CLI PAT from a profile whose host matches `DATABRICKS_HOST` |
 | `observe_status.sh` | Ops counts + URLs snapshot for stage checkpoints |
 | `dual_write_agent_lifecycle.sh` | UC + MLflow start/stop when hooks cannot fire (fallback; Convert: `--item-id` per item) |
 | `reset_databricks_sink.sh` | Wipe managed UC + views + `agents/out` (keeps Azure); `make reset-sink` |
-| `teardown_databricks.sh` | Destroy job/dashboard/Genie/MLflow/catalog/connection/scope; `make teardown-databricks` |
+| `teardown_databricks.sh` | Destroy job/dashboard/Genie/MLflow/catalog/connection/scope/notebooks; `make teardown-databricks` |
 | `record_agent_event.sh` | Insert ops.agent_events row (+ MLflow stage enqueue + force flush) |
 | `ensure_run_events.py` | `coordinator/started` + table-only `convert/skipped` (not assess); inits MLflow serve daemon |
 | `mlflow_observe.py` | Soft MLflow init / serve daemon / span queue / end-run / experiment-purge |

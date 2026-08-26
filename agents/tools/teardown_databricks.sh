@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # teardown_databricks.sh — Remove Databricks demo assets. Azure SQL is untouched.
 #
-# Default (no flags): bundle + genie + mlflow + catalog + federation + secrets.
+# Default (no flags): bundle + genie + mlflow + catalog + federation + secrets + notebooks.
 # Each flag is additive when any flag is passed; omit flags to run all of the
 # default set. --local is opt-in (keeps .env so the next setup can reuse Azure).
 #
@@ -19,6 +19,7 @@
 #   --catalog       DROP CATALOG ${DATABRICKS_CATALOG} CASCADE
 #   --federation    DROP FOREIGN CATALOG + CONNECTION
 #   --secrets       databricks secrets delete-scope
+#   --notebooks     delete Workspace /Users/<you>/edwmigration_* gallery
 #   --local         remove agents/out/* and databricks/_rendered (keeps .env)
 #   --local-env     also remove .env
 #   --yes           skip interactive confirm
@@ -32,6 +33,10 @@ if [ -f "${REPO_ROOT}/.env" ]; then
   # shellcheck disable=SC1091
   . "${REPO_ROOT}/.env" || true
   set +a
+fi
+
+if [ -f "${REPO_ROOT}/agents/tools/databricks_cli_env.py" ]; then
+  eval "$(python3 "${REPO_ROOT}/agents/tools/databricks_cli_env.py" --export 2>/dev/null || true)"
 fi
 
 if [ -f "${REPO_ROOT}/agents/tools/resolve_source_env.sh" ]; then
@@ -51,6 +56,7 @@ DO_MLFLOW=0
 DO_CATALOG=0
 DO_FEDERATION=0
 DO_SECRETS=0
+DO_NOTEBOOKS=0
 DO_LOCAL=0
 DO_LOCAL_ENV=0
 YES=0
@@ -64,11 +70,12 @@ while [ $# -gt 0 ]; do
     --catalog) DO_CATALOG=1; ANY_FLAG=1; shift ;;
     --federation) DO_FEDERATION=1; ANY_FLAG=1; shift ;;
     --secrets) DO_SECRETS=1; ANY_FLAG=1; shift ;;
+    --notebooks) DO_NOTEBOOKS=1; ANY_FLAG=1; shift ;;
     --local) DO_LOCAL=1; ANY_FLAG=1; shift ;;
     --local-env) DO_LOCAL=1; DO_LOCAL_ENV=1; ANY_FLAG=1; shift ;;
     --yes|-y) YES=1; shift ;;
     -h|--help)
-      sed -n '1,28p' "$0"
+      sed -n '1,32p' "$0"
       exit 0
       ;;
     *) echo "Unknown arg: $1" >&2; exit 1 ;;
@@ -82,6 +89,7 @@ if [ "$ANY_FLAG" -eq 0 ]; then
   DO_CATALOG=1
   DO_FEDERATION=1
   DO_SECRETS=1
+  DO_NOTEBOOKS=1
 fi
 
 echo
@@ -93,6 +101,7 @@ echo "  catalog=${DATABRICKS_CATALOG}  foreign=${FOREIGN_CATALOG}  connection=${
 [ "$DO_CATALOG" -eq 1 ] && echo "  [x] DROP CATALOG ${DATABRICKS_CATALOG} CASCADE"
 [ "$DO_FEDERATION" -eq 1 ] && echo "  [x] DROP CATALOG ${FOREIGN_CATALOG} CASCADE + DROP CONNECTION ${CONNECTION_NAME}"
 [ "$DO_SECRETS" -eq 1 ] && echo "  [x] secret scope ${DATABRICKS_SECRET_SCOPE}"
+[ "$DO_NOTEBOOKS" -eq 1 ] && echo "  [x] Workspace edwmigration_* notebooks (this user)"
 [ "$DO_LOCAL" -eq 1 ] && echo "  [x] local agents/out + databricks/_rendered"
 [ "$DO_LOCAL_ENV" -eq 1 ] && echo "  [x] local .env"
 echo "  KEEPS: Azure resource group / SQL server / WideWorldImportersDW"
@@ -112,7 +121,14 @@ fail() { echo "[teardown-databricks] WARN: $*" >&2; }
 
 if [ "$DO_BUNDLE" -eq 1 ]; then
   echo "[teardown-databricks] bundle destroy -t dev ..."
-  if ! databricks bundle destroy -t dev --auto-approve; then
+  # databricks.yml requires warehouse_id; .env HOST without TOKEN also breaks CLI auth.
+  export BUNDLE_VAR_warehouse_id="${DATABRICKS_WAREHOUSE_ID:-}"
+  export BUNDLE_VAR_catalog="${DATABRICKS_CATALOG:-edw_migration}"
+  destroy_args=(-t dev --auto-approve)
+  if [ -n "${DATABRICKS_WAREHOUSE_ID:-}" ]; then
+    destroy_args+=(--var "warehouse_id=${DATABRICKS_WAREHOUSE_ID}")
+  fi
+  if ! databricks bundle destroy "${destroy_args[@]}"; then
     fail "bundle destroy failed (job/dashboard may already be gone)"
   fi
 fi
@@ -122,7 +138,7 @@ if [ "$DO_GENIE" -eq 1 ]; then
   SPACE_ID="$(
     databricks api get /api/2.0/genie/spaces 2>/dev/null \
       | jq -r --arg t "$GENIE_TITLE" '.spaces // [] | map(select(.title == $t)) | .[0].space_id // empty'
-  )"
+  )" || SPACE_ID=""
   if [ -n "$SPACE_ID" ]; then
     if ! databricks api delete "/api/2.0/genie/spaces/${SPACE_ID}"; then
       fail "Genie DELETE failed for ${SPACE_ID}"
@@ -173,6 +189,12 @@ if [ "$DO_SECRETS" -eq 1 ]; then
   if ! databricks secrets delete-scope "${DATABRICKS_SECRET_SCOPE}"; then
     fail "secrets delete-scope failed (may already be gone)"
   fi
+fi
+
+if [ "$DO_NOTEBOOKS" -eq 1 ]; then
+  echo "[teardown-databricks] deleting Workspace edwmigration_* notebooks ..."
+  python3 "${REPO_ROOT}/agents/tools/publish_run_notebooks.py" --delete-published \
+    || fail "notebook folder delete failed"
 fi
 
 if [ "$DO_LOCAL" -eq 1 ]; then

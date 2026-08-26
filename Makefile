@@ -18,7 +18,7 @@ SOURCE_TYPE ?= sqlserver
 TOOLS_CORE := databricks jq curl python3
 TOOLS_AZURE := az sqlcmd SqlPackage
 
-.PHONY: check check-core check-azure check-source check-land render bootstrap setup federation secrets deploy run demo teardown teardown-databricks reset-sink genie materialize-demo sync-prompts discover print-urls observe-setup provision-track-a
+.PHONY: check check-core check-azure check-source check-land render bootstrap setup federation secrets deploy run demo teardown teardown-databricks reset-sink genie materialize-demo sync-prompts discover print-urls observe-setup provision-track-a publish-notebooks
 
 check: check-source
 
@@ -86,8 +86,11 @@ federation: secrets render ## UC federation + ops
 	./agents/tools/run_sql.sh --file databricks/_rendered/uc/03_ops_and_views.sql
 	./agents/tools/run_sql.sh --file databricks/_rendered/uc/02_federation_smoke.sql
 
-print-urls: check-core ## Print Control Plane + Genie + MLflow observe_url
+print-urls: check-core ## Print Control Plane + Genie + Catalog + Job + Notebooks + MLflow
 	./agents/tools/print_observability_urls.sh
+
+publish-notebooks: ## Import SQL as Workspace notebooks (RUN_ID= or CURRENT_RUN)
+	python3 agents/tools/publish_run_notebooks.py $(if $(RUN_ID),--run-id $(RUN_ID),)
 
 provision-track-a: ## Track A materialize→bootstrap→setup with observability banners
 	./agents/tools/track_a_provision.sh

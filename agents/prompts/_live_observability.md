@@ -2,7 +2,7 @@
 
 Shared by `edw-demo-guide`, `edw-coordinator`, and stage agents. Observability is **live while migration runs**, not only after Gate. Provision banners are **automatic** via scripts — do not wait until Gate.
 
-## Four planes
+## Planes
 
 | Plane | Updates live |
 |---|---|
@@ -10,6 +10,8 @@ Shared by `edw-demo-guide`, `edw-coordinator`, and stage agents. Observability i
 | **MLflow** | AGENT/TOOL spans from hooks + milestones (`observe_url` at mint) |
 | **Control Plane** | `ops.*` widgets as inventory/events/backlog land |
 | **Genie** | Same `ops.*` as rows appear |
+| **Workspace notebooks** | `edwmigration_YYYYMMDD` gallery after Land (`publish_run_notebooks.py`) |
+| **Catalog / Job** | Explorer + medallion job URLs in the same banner |
 
 ## Provision (before mint) — mandatory
 
@@ -32,7 +34,7 @@ That wrapper announces **Provision → Bootstrap → Setup**, runs materialize/b
 
 Stages for announce / observe_status: `Provision`, `Bootstrap`, `Setup`, `PreMint`, `Mint`, `Discover`, `Land`, `Assess`, `Convert`, `Job`, `Test`, `Gate`, `Done`.
 
-**URLs:** paste Control Plane + Genie at **Provision** (best-effort if a prior deploy exists) and again at **Setup**; add `observe_url` at **Mint**. Do not re-paste long URL essays every later stage — use:
+**URLs:** paste Control Plane + Genie + **Catalog** at **Provision** (best-effort if a prior deploy exists) and again at **Setup**; add `observe_url` at **Mint**; add **Notebooks** at **Land** (`publish_run_notebooks.py`); add **Job** after `make deploy`. Do not re-paste long URL essays every later stage — use:
 
 ```bash
 ./agents/tools/observe_status.sh --stage <Name>
@@ -74,7 +76,7 @@ Prefer Task only with `subagent_type` in `{edw-assess,edw-convert,edw-test,edw-g
 "$(./agents/tools/resolve_python.sh)" agents/tools/mlflow_observe.py end-run --run-id <run_id>
 ```
 
-Paste `observe_url` **immediately** (part of the URL banner). Soft no-op if observe is not ready — still paste Control Plane + Genie.
+Paste `observe_url` **immediately** (part of the URL banner). Soft no-op if observe is not ready — still paste Control Plane + Genie + Catalog. Notebooks join at Land; Job after deploy.
 
 Gate Hero stays empty until Gate — expected. Inventory / Events / Backlog should move as stages complete; tables-landed from `load_control` should move at Land.
 

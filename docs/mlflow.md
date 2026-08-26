@@ -115,7 +115,7 @@ Convert fan-out appears as **parallel child AGENT spans** under the run root. Sh
 
 ### 5. Announce URLs
 
-`make print-urls` / `print_observability_urls.sh` prints Control Plane + Genie + MLflow `observe_url` when context exists. Setup-time print-urls often lack `observe_url` until the coordinator mints a run.
+`make print-urls` / `print_observability_urls.sh` prints Control Plane + Genie + Catalog + Job + Notebooks (`edwmigration_YYYYMMDD`) + MLflow `observe_url` when each exists. Setup-time print-urls often lack `observe_url` until mint, and lack **Notebooks** until Land (`publish_run_notebooks.py`). Catalog is printable after setup. Job appears after `make deploy`.
 
 ---
 
@@ -137,7 +137,7 @@ Soft status / preflight **WARN** if observe is not ready; they do **not** block 
 2. Run `make observe-setup` once per machine.  
 3. Type **`start`** → choose menu **1 / 2 / 3** (agents must not invent a migration on bare `start`).  
 4. If offered `make reset-sink` before mint (stale dashboard from a prior demo): answer yes/no once — never expect auto-reset.  
-5. When setup/mint prints Control Plane + Genie + `observe_url`, **open them once** and leave them open.  
+5. When setup/mint prints Control Plane + Genie + Catalog + `observe_url`, **open them once** and leave them open. After Land, open **Notebooks**; after deploy, open **Job**.  
 6. After each stage, chat should show `observe_status` counts (not another URL essay).  
 7. Mid-run: Events for this `run_id`, MLflow AGENT spans, Genie on inventory/events. Gate Hero stays empty until Gate — expected.
 
@@ -162,6 +162,8 @@ Soft status / preflight **WARN** if observe is not ready; they do **not** block 
 | `agents/tools/ensure_run_events.py` | Milestone rows + idempotent MLflow init (starts serve) |
 | `agents/tools/check_mlflow_observe.sh` | venv + `mlflow≥3.8` + host readiness |
 | `agents/tools/observe_status.sh` | Ops counts + URLs snapshot for stage checkpoints |
+| `agents/tools/print_observability_urls.sh` | Control Plane + Genie + Catalog + Job + Notebooks + observe_url |
+| `agents/tools/publish_run_notebooks.py` | SQL → Workspace `edwmigration_YYYYMMDD` notebooks |
 | `agents/tools/reset_databricks_sink.sh` | Wipe managed sink + views + `agents/out` (keeps Azure) |
 | `agents/tools/teardown_databricks.sh` | Destroy Databricks demo assets (keeps Azure SQL) |
 

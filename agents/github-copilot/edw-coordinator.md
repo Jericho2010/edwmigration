@@ -11,7 +11,7 @@ Read `SOURCE_TYPE` from `.env` (`sqlserver` default, or `mysql`). Demo-guide pat
 
 Shared memory is **disk only** under `agents/out/<run_id>/` (orchestrator-worker artifact pattern). Subagents do not share chat context.
 
-**Live observability:** follow [`agents/prompts/_live_observability.md`](_live_observability.md) for the whole run (chat + MLflow + Control Plane + Genie **during** stages, not only after Gate).
+**Live observability:** follow [`agents/prompts/_live_observability.md`](_live_observability.md) for the whole run (chat + MLflow + Control Plane + Genie + **Notebooks / Catalog / Job** **during** stages, not only after Gate).
 
 ## Responsibilities
 
@@ -29,7 +29,7 @@ Shared memory is **disk only** under `agents/out/<run_id>/` (orchestrator-worker
    make print-urls
    ```
 
-   **Immediately paste** Control Plane + Genie + any `observe_url:` / `Observed by MLflow:` lines. Tell the user to **keep those tabs open** while the run continues. Soft no-op if mlflow is absent — continue Discover either way.
+   **Immediately paste** Control Plane + Genie + Catalog + any `observe_url:` / `Observed by MLflow:` lines (Notebooks after Land; Job after deploy). Tell the user to **keep those tabs open** while the run continues. Soft no-op if mlflow is absent — continue Discover either way.
    Then: `./agents/tools/observe_status.sh --stage Mint` and paste the output.
 
 2. **Discover everything** (parent/coordinator shells OK):
@@ -47,9 +47,10 @@ Shared memory is **disk only** under `agents/out/<run_id>/` (orchestrator-worker
    ./agents/tools/run_sql.sh --file databricks/_rendered/generated/load_inventory.sql
    python3 agents/tools/ensure_run_events.py --run-id <run_id>
    make genie GENIE_STRICT=1
+   python3 agents/tools/publish_run_notebooks.py --run-id <run_id>
    ```
-   (`ensure_run_events` records `coordinator/started` and `convert/skipped` for table-only — **not** `assess/completed`. It inits MLflow via `resolve_python` (spawns the serve daemon) and force-flushes hook buffer. If `observe_url:` appears and you have not shown it yet, paste it now. `make genie GENIE_STRICT=1` after land so gold/silver tables join the space — fail loud on PATCH errors. Setup-time `make genie` is WARN-only so Track A is not blocked.)
-   Then: `./agents/tools/observe_status.sh --stage Land` — Control Plane should show inventory + ≥1 agent_events **now**. Tables-landed (`ops.load_control`) should move at Land; Gate Hero stays empty until Gate.
+   (`ensure_run_events` records `coordinator/started` and `convert/skipped` for table-only — **not** `assess/completed`. It inits MLflow via `resolve_python` (spawns the serve daemon) and force-flushes hook buffer. If `observe_url:` appears and you have not shown it yet, paste it now. `make genie GENIE_STRICT=1` after land so gold/silver tables join the space — fail loud on PATCH errors. Setup-time `make genie` is WARN-only so Track A is not blocked. `publish_run_notebooks` imports SQL as Workspace notebooks under `edwmigration_YYYYMMDD` — paste the **Notebooks** + **Catalog** + **Job** lines from `make print-urls`.)
+   Then: `./agents/tools/observe_status.sh --stage Land` — Control Plane should show inventory + ≥1 agent_events **now**. Tables-landed (`ops.load_control`) should move at Land; Gate Hero stays empty until Gate. Workspace should show the dated notebooks folder.
 
 4. **Delegate Assess** — launch Cursor subagent type **`edw-assess`** (required; hooks must fire). `edw-assess` is **readonly**: it returns JSON in the subagent reply only — it must **not** write files. Do **not** run Assess yourself in the parent chat and do **not** use opaque `generalPurpose` Task. Pass `run_id` and paths to `context.json` + `inventory.json`.
 
@@ -94,6 +95,7 @@ Shared memory is **disk only** under `agents/out/<run_id>/` (orchestrator-worker
    e. After the wave finishes (result files present or clearly missing), merge:
       ```bash
       python3 agents/tools/merge_convert_results.py --run-id <run_id>
+      python3 agents/tools/publish_run_notebooks.py --run-id <run_id>
       ```
       If `agents/out/<run_id>/merge_failed.json` exists: **stop**, show the error, do not rewrite backlog or continue deploy until ops upsert succeeds (re-run merge after fixing auth/warehouse).
 
@@ -117,8 +119,9 @@ Shared memory is **disk only** under `agents/out/<run_id>/` (orchestrator-worker
    Tell the user Gate can still pass notebooks the job does not run until wiring is applied (see `docs/limits.md`). Prefer `--apply` over hand-editing; humans may still tighten `depends_on` afterward.
    ```bash
    make deploy && make run
+   python3 agents/tools/publish_run_notebooks.py --run-id <run_id>
    ```
-   Then: `./agents/tools/observe_status.sh --stage Job`.
+   Then: `./agents/tools/observe_status.sh --stage Job`. Paste **Job** + **Notebooks** URLs if they were not already in the banner.
 
 7. **Delegate Test** — launch Cursor subagent type **`edw-test`** (required). `edw-test` is **readonly**: returns reconcile JSON in the reply only — must **not** write files. Coordinator writes `agents/out/<run_id>/reconcile_raw.json` from that reply, then:
    ```bash
@@ -163,4 +166,4 @@ If the user pastes MySQL fields, write/update `.env` (`SOURCE_TYPE=mysql`, `SOUR
 
 ## Final message
 
-Print: run_id, `SOURCE_TYPE`, gate, tables_landed/tables_total, procs_converted/procs_total (0/0 OK if routines skipped), reconcile pass/fail, path to manifest, any job-wiring WARN, **Dashboard URL**, **Genie URL**, and **observe_url** (MLflow traces) from `make print-urls`.
+Print: run_id, `SOURCE_TYPE`, gate, tables_landed/tables_total, procs_converted/procs_total (0/0 OK if routines skipped), reconcile pass/fail, path to manifest, any job-wiring WARN, **Dashboard URL**, **Genie URL**, **Notebooks URL**, **Catalog URL**, **Job URL**, and **observe_url** (MLflow traces) from `make print-urls`.

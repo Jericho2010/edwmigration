@@ -33,7 +33,7 @@ fi
 echo
 echo "=== Observability · ${STAGE} ==="
 echo "Keep these open during the run."
-echo "Open Control Plane + Genie (+ MLflow observe_url when present) and leave the tabs open."
+echo "Open Control Plane + Genie + Catalog (+ Notebooks after Land, Job after deploy, MLflow observe_url when present) and leave the tabs open."
 echo
 
 # URL banner (never fail provision/setup)

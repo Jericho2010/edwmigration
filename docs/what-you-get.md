@@ -113,7 +113,7 @@ You are not expected to stare at terminals the whole time. Typical pauses:
 2. **Convert wave** — up to five `edw-convert` agents writing notebooks in parallel  
 3. **Merge** — `convert_summary.json` with converted / blocked counts  
 4. **Job → Test → Gate** — medallion run, bronze reconcile, ship / no-ship  
-5. **URLs** — Control Plane + Genie appear at **Provision** (best-effort if a prior deploy exists) and again at **Setup** via `announce_observability` / `make print-urls`. MLflow `observe_url` joins at **Mint**. Open them when printed and leave them open — not only at Gate.
+5. **URLs** — Control Plane + Genie + Catalog appear at **Provision** (best-effort) and **Setup**. MLflow `observe_url` joins at **Mint**. **Notebooks** (`edwmigration_YYYYMMDD`) after Land; **Job** after deploy. Open them when printed and leave them open — not only at Gate.
 
 ```mermaid
 %%{init: {"theme":"base","themeVariables":{"primaryColor":"#E8F1F8","primaryTextColor":"#0B3D5C","primaryBorderColor":"#0B3D5C","lineColor":"#5B7A8C","secondaryColor":"#E6F4F1","tertiaryColor":"#F7F3EA","background":"#FFFFFF","mainBkg":"#E8F1F8","clusterBkg":"#F7FAFC","clusterBorder":"#5B7A8C","titleColor":"#0B3D5C","edgeLabelBackground":"#FFFFFF"}}}%%
