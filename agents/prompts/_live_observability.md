@@ -1,25 +1,42 @@
 # Live observability contract (during the run)
 
-Shared by `edw-demo-guide`, `edw-coordinator`, and stage agents. Observability is **live while migration runs**, not only after Gate.
+Shared by `edw-demo-guide`, `edw-coordinator`, and stage agents. Observability is **live while migration runs**, not only after Gate. Provision banners are **automatic** via scripts — do not wait until Gate.
 
 ## Four planes
 
 | Plane | Updates live |
 |---|---|
-| **Cursor chat** | `observe_status` after each stage |
+| **Cursor chat** | `announce_observability` / `observe_status` after each stage |
 | **MLflow** | AGENT/TOOL spans from hooks + milestones (`observe_url` at mint) |
 | **Control Plane** | `ops.*` widgets as inventory/events/backlog land |
 | **Genie** | Same `ops.*` as rows appear |
 
-**URLs once:** at setup and/or mint, paste Control Plane + Genie + `observe_url` with: *Keep these open during the run.* Do not re-paste long URL essays every stage.
+## Provision (before mint) — mandatory
 
-**Every stage:** paste only:
+**First action after menu 1 + catalog** (and before any long `make`):
+
+```bash
+./agents/tools/announce_observability.sh --stage Provision
+```
+
+Paste that output into chat immediately (*Keep these open during the run.*). Prefer the full Track A path:
+
+```bash
+./agents/tools/track_a_provision.sh
+# or: make provision-track-a
+```
+
+That wrapper announces **Provision → Bootstrap → Setup**, runs materialize/bootstrap/setup, and prints `[edw]` heartbeats. **Paste each announce block** into the user-visible chat.
+
+**Forbidden:** one opaque Cursor `Task` that owns materialize→bootstrap→setup with no intermediate paste. Mute Task handoffs look like “nothing is happening” and users interrupt. Run provision in the **parent/visible session**; use `edw-*` Tasks only from Assess onward (hooks).
+
+Stages for announce / observe_status: `Provision`, `Bootstrap`, `Setup`, `PreMint`, `Mint`, `Discover`, `Land`, `Assess`, `Convert`, `Job`, `Test`, `Gate`, `Done`.
+
+**URLs:** paste Control Plane + Genie at **Provision** (best-effort if a prior deploy exists) and again at **Setup**; add `observe_url` at **Mint**. Do not re-paste long URL essays every later stage — use:
 
 ```bash
 ./agents/tools/observe_status.sh --stage <Name>
 ```
-
-Stages: `PreMint`, `Mint`, `Discover`, `Land`, `Assess`, `Convert`, `Job`, `Test`, `Gate`, `Done`.
 
 Gate Hero stays empty until Gate — expected. Inventory / Events / Backlog should move as stages complete.
 
@@ -32,7 +49,7 @@ Gate Hero stays empty until Gate — expected. Inventory / Events / Backlog shou
 | Test | `edw-test` | No (readonly) — JSON in reply; coordinator writes `reconcile_raw.json` |
 | Gate | `edw-gate` | No (readonly) — JSON in reply; coordinator writes `manifest_raw.json` |
 
-Parent/coordinator may own Discover, Land, job wiring, `make deploy`/`make run`.
+Parent/coordinator may own Discover, Land, job wiring, `make deploy`/`make run`, and **all Track A provision**.
 
 **Forbidden:** opaque Task / `generalPurpose` for Assess/Convert/Test/Gate **unless** dual-write (Convert: **per item**):
 
@@ -49,7 +66,7 @@ Prefer Task only with `subagent_type` in `{edw-assess,edw-convert,edw-test,edw-g
 "$(./agents/tools/resolve_python.sh)" agents/tools/mlflow_observe.py init --run-id <run_id>
 ```
 
-Paste `observe_url` **immediately** (part of the one-time URL banner). Soft no-op if observe is not ready — still paste Control Plane + Genie.
+Paste `observe_url` **immediately** (part of the URL banner). Soft no-op if observe is not ready — still paste Control Plane + Genie.
 
 ## Dirty catalog (one chat choice)
 

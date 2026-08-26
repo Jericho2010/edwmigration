@@ -30,6 +30,8 @@ Portable prompts + contracts. Cursor and GitHub Copilot adapters are generated.
 | `check_land_ready.sh` | Fail if bronze land SQL is missing/placeholder (`make run`) |
 | `smoke_path_guards.sh` | CI/local path-coupling + merge smoke |
 | `materialize_demo_env.sh` | Build `.env` from logins |
+| `announce_observability.sh` | Paste-ready Control Plane + Genie + observe_url banner (`--stage`) |
+| `track_a_provision.sh` | Track A materialize→bootstrap→setup with announce heartbeats |
 | `render_sql.sh` | Catalog/federation render (`SOURCE_TYPE`) → `_rendered/` |
 | `resolve_source_env.sh` | Map `SOURCE_*` / `AZ_SQL_*` |
 | `print_observability_urls.sh` | Control Plane + Genie + MLflow `observe_url` |

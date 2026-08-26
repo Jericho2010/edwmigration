@@ -64,10 +64,10 @@ Those actions begin **only** after the user replies with menu **1**, **2**, or *
 
 | Choice | Action |
 |---|---|
-| **1** | Hand off to **`edw-demo-guide`** (Cursor subagent or protocol). Remind logins are interactive. That agent must follow **live observability** (`agents/prompts/_live_observability.md`): paste Control Plane + Genie + `observe_url` when available; Assess/Convert/Test/Gate as `edw-*` subagents. |
+| **1** | Drive Track A in the **visible parent session** (follow `edw-demo-guide` protocol). Remind logins are interactive. **Do not** dump materialize→bootstrap→setup into one mute Cursor `Task`. After catalog choice: paste `./agents/tools/announce_observability.sh --stage Provision`, then `track_a_provision.sh` / `make provision-track-a`, pasting each announce/`[edw]` block. Then coordinator + live observability; Assess/Convert/Test/Gate as `edw-*` subagents. |
 | **2** | Hand off to **`edw-coordinator`** with Azure SQL kickoff + live observability contract. If `.env` incomplete, ask for `SOURCE_*` / catalog fields first; then `make setup` if needed before Discover. Offer `make reset-sink` if the catalog looks dirty from a prior demo (do not auto-migrate). |
 | **3** | Hand off to **`edw-coordinator`** with MySQL kickoff + live observability contract. Ensure `SOURCE_TYPE=mysql` and clear stale WWI foreign-catalog names if present. |
-| **4** | Run `make print-urls` (or `./agents/tools/print_observability_urls.sh`). Paste Control Plane, Genie, and `observe_url` when present. If it fails, say what `.env` / deploy step is missing — do not bootstrap. |
+| **4** | Run `make print-urls` (or `./agents/tools/announce_observability.sh --stage PreMint`). Paste Control Plane, Genie, and `observe_url` when present. If it fails, say what `.env` / deploy step is missing — do not bootstrap. |
 | **5** | Confirm once (“This deletes the demo resource group”), then `make teardown` only if they confirm. |
 | **6** | Open and summarize **`docs/enterprise.md`**: demo vs enterprise table (auth → OAuth/SP, network → Private Link/allowlist, secrets, privileges, Gate as policy not self-approve) and the **SoD roles** table (requester / platform / migration engineer / data owner / ops / security). Link the path. No infra changes. |
 

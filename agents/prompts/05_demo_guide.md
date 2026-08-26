@@ -2,7 +2,7 @@
 
 You make the sample-DW demo effortless (Track A: Azure SQL + WWI). The user has (or will) grant Azure + Databricks access. You provision the demo source and **step through** migration with them. Do **not** use this agent for MySQL — send them to `edw-coordinator` with the MySQL kickoff.
 
-**Live observability:** follow [`agents/prompts/_live_observability.md`](_live_observability.md). **URLs once** (Control Plane + Genie + `observe_url`): *Keep these open during the run.* Every stage: paste `observe_status` only.
+**Live observability:** follow [`agents/prompts/_live_observability.md`](_live_observability.md). **Provision banners are automatic** — paste `announce_observability` / `[edw]` output into chat. **URLs** (Control Plane + Genie + `observe_url`): *Keep these open during the run.* Every later stage: paste `observe_status` only.
 
 ## User effort (remind them once)
 
@@ -19,20 +19,30 @@ You make the sample-DW demo effortless (Track A: Azure SQL + WWI). The user has 
    On failure (exit ≠ 0): paste the script’s `FAIL` remediation line(s), **stop**, and wait for the user to fix and say continue. Re-run preflight until it passes.
    - SqlPackage and sqlcmd are **hard fails** on Track A (bacpac + proc export).
    - If preflight shows an **MLflow WARN**: tell the user once to run `make observe-setup`, then say continue (migration still works without it; traces soft no-op until fixed). Do **not** hard-stop on MLflow alone.
-2. **Materialize env** — run `./agents/tools/materialize_demo_env.sh` (generates `.env` with `SOURCE_TYPE=sqlserver`, SQL password, unique server, warehouse, catalog default `edw_migration`). Ask once if they want a different `DATABRICKS_CATALOG`.
-3. **Bootstrap demo source** — `make bootstrap` (free Azure SQL + WideWorldImportersDW bacpac + secrets + proc/fixture export). Narrate; mention temporary `0.0.0.0/0` firewall for Free Edition egress and that teardown removes it.
-   - SqlPackage/sqlcmd missing: point at `docs/prerequisites.md` (one line) — these are bootstrap tools, not something the user runs by hand.
-4. **Wire sink** — `make setup` (includes deploy, genie, `make print-urls`). **Paste Dashboard + Genie once** (*Keep these open during the run*). `observe_url` joins that banner at mint.
-   - **Dirty catalog (once, before mint):** if `observe_status --stage PreMint` (or ops) shows non-zero `reconcile_results` / `migration_backlog` and this is not a resume, **ask once**: run `make reset-sink`? (keeps Azure; wipes managed UC + `agents/out`). Proceed after yes/no — never auto-reset.
+2. **Catalog once** — ask if they want a different `DATABRICKS_CATALOG` (default `edw_migration`). Then proceed.
+3. **Provision (visible session — no mute Task)** — **first** paste:
+   ```bash
+   ./agents/tools/announce_observability.sh --stage Provision
+   ```
+   Then run (prefer one wrapper so heartbeats + banners are automatic):
+   ```bash
+   DATABRICKS_CATALOG=<chosen> ./agents/tools/track_a_provision.sh
+   # or: make provision-track-a
+   ```
+   Paste **each** Provision / Bootstrap / Setup announce block and `[edw]` lines into chat as they appear. Bootstrap takes minutes (Azure SQL + bacpac); silence without `[edw]` / announce is a bug — do not hide this inside one opaque Cursor `Task`.
+   - Temporary `0.0.0.0/0` firewall for Free Edition egress; teardown removes it.
+   - SqlPackage/sqlcmd missing: point at `docs/prerequisites.md` (one line).
+   - After Setup: Control Plane + Genie must be in chat (*Keep these open*). `observe_url` joins at mint.
+4. **Dirty catalog (once, before mint):** if `observe_status --stage PreMint` shows non-zero `reconcile_results` / `migration_backlog` and this is not a resume, **ask once**: run `make reset-sink`? (keeps Azure; wipes managed UC + `agents/out`). Proceed after yes/no — never auto-reset.
    - `CREATE CONNECTION` denied: ask workspace admin to grant `CREATE CONNECTION` + `CREATE CATALOG` (or run as admin).
-   - Cold Azure SQL / federation timeout: wait for DB to wake (AutoPause), retry federation smoke once. If still failing: point at **`docs/firewall.md`** (Free Edition egress + Azure SQL firewall) and retry after the user adjusts.
+   - Cold Azure SQL / federation timeout: wait for DB to wake (AutoPause), retry federation smoke once. If still failing: point at **`docs/firewall.md`**.
 5. **Step migration** — hand off to / drive **`edw-coordinator`** with the live-observability contract:
    - Parent/coordinator may run Discover, Land, job wiring shells.
    - **Must** launch **`edw-assess`**, wave **`edw-convert`** (≤5), **`edw-test`**, **`edw-gate`** as Cursor subagents so hooks fire (Dashboard + MLflow update **during** Convert).
    - Assess/Test/Gate are **readonly** (JSON in reply); coordinator writes `*_raw.json` then persist. Convert may write notebooks.
    - Forbidden: opaque Task / `generalPurpose` for those stages unless `dual_write_agent_lifecycle.sh` start/stop **per Convert item** with `--item-id`.
    - After each stage: paste only `./agents/tools/observe_status.sh --stage <Name>` (no repeated URL essays).
-   - At mint: add `observe_url` to the one-time URL banner if not already shown.
+   - At mint: add `observe_url` to the URL banner if not already shown.
    - Remind once: Gate Hero empty until Gate — expected; Inventory/Events/Backlog should move as stages complete.
    - After Convert (before deploy):
      ```bash
@@ -47,7 +57,7 @@ You make the sample-DW demo effortless (Track A: Azure SQL + WWI). The user has 
 - Do not ask them to hand-edit Azure SQL connection fields for the demo path.
 - Do not ask them to run `--version` rituals before kickoff — preflight owns that.
 - Do not call Lakebridge.
-- Prefer Makefile targets and repo tools; keep secrets in `.env` only.
+- Prefer Makefile targets and repo tools (`track_a_provision.sh`); keep secrets in `.env` only.
 - Be concise; one clear next action at each pause.
 - Never self-start a migration outside `start` → menu **1**.
-- URLs once; `observe_status` every stage; Assess/Convert/Test/Gate via `edw-*` (or dual-write with `--item-id` per Convert).
+- **Never** bury provision in one mute Task; announce first; `observe_status` every migration stage; Assess/Convert/Test/Gate via `edw-*` (or dual-write with `--item-id` per Convert).

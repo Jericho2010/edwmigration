@@ -18,12 +18,23 @@ if [ -f "${REPO_ROOT}/.env" ]; then
   done < "${REPO_ROOT}/.env"
 fi
 
-: "${DATABRICKS_HOST:?DATABRICKS_HOST required}"
-HOST="${DATABRICKS_HOST%/}"
 SEARCH_HINT="EDW Migration Control Plane"
 
 echo
 echo "=== Observability ==="
+echo "Keep these open during the run."
+
+if [ -z "${DATABRICKS_HOST:-}" ]; then
+  echo "Control Plane: not ready yet — appears after make setup (deploy + genie)."
+  echo "Genie: not ready yet — appears after make setup."
+  echo "MLflow traces: appear after mint (mlflow_observe init / ensure_run_events)."
+  echo "Until then: watch chat for [edw] heartbeats (track_a_provision / bootstrap)."
+  echo "================="
+  echo
+  exit 0
+fi
+
+HOST="${DATABRICKS_HOST%/}"
 
 DASH_ID=""
 DASH_LABEL=""
@@ -73,7 +84,7 @@ if [ -n "${DASH_ID:-}" ]; then
   echo "Control Plane: ${HOST}/dashboardsv3/${DASH_ID}"
   echo "  name: ${DASH_LABEL}"
 else
-  echo "Control Plane: open Databricks → Dashboards → search '${SEARCH_HINT}'"
+  echo "Control Plane: not ready yet — open Databricks → Dashboards → search '${SEARCH_HINT}' after make setup"
   echo "  (deploy may still be propagating; re-run: make print-urls)"
 fi
 
@@ -88,7 +99,7 @@ fi
 if [ -n "${GENIE_ID:-}" ]; then
   echo "Genie: ${HOST}/genie/rooms/${GENIE_ID}"
 else
-  echo "Genie: run make genie (or search Genie for EDW Migration Copilot)"
+  echo "Genie: not ready yet — run make genie (or search Genie for EDW Migration Copilot) after make setup"
 fi
 
 echo "Trust checklist: inventory.json → bronze reconcile pass → Gate blockers empty"

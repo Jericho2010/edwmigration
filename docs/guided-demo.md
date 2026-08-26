@@ -50,7 +50,7 @@ Warehouse, Azure/Databricks login, and tools: the guide runs `./agents/tools/pre
    - Wire federation, dashboard, Genie (`make setup`)  
    - Drive the coordinator with checkpoints: Assess → **Convert wave** (≤5 in parallel) → merge → Test → Gate  
 5. Watch live (open links **once**, leave them open):
-   - Open **Control Plane**, **Genie**, and MLflow **`observe_url`** when the guide prints them (setup + mint).
+   - Open **Control Plane**, **Genie**, and MLflow **`observe_url`** when the guide prints them (**Provision** best-effort, **Setup**, then **Mint** for `observe_url`). Leave tabs open; watch chat `[edw]` heartbeats during bootstrap.
    - In chat, expect `observe_status` after each stage — not another URL dump.
    - Assess / Convert / Test / Gate should run as Cursor **`edw-*`** agents (hooks feed the Dashboard + MLflow).
    - Ask Genie mid-run about inventory/events; after Gate: *Did the last run ship?*  
@@ -97,7 +97,7 @@ sequenceDiagram
 
 You can stop and celebrate when **all** of these are true:
 
-1. Control Plane and Genie URLs open (`make print-urls`)  
+1. Control Plane and Genie URLs open early (`announce_observability` / `make print-urls` at Provision/Setup)  
 2. Genie can answer *Did the last run ship?*  
 3. Gate summary shows ship (empty blockers)  
 4. Demo acceptance counts: **≥10** bronze tables and **≥5** converted procs *(guide check, not Gate)*  
@@ -112,10 +112,10 @@ If you prefer Makefile over chat for infra only:
 
 ```bash
 make materialize-demo
-make demo
+make provision-track-a   # or: make demo (announce → bootstrap → setup)
 ```
 
-Then still open Cursor, type **`start`** → **1**, or use **`edw-demo-guide`** / **`edw-coordinator`** for the migration walkthrough. Prefer the guide’s preflight for first runs.
+Then still open Cursor, type **`start`** → **1**, and continue the migration walkthrough in the **visible** chat (Assess/Convert/Test/Gate as `edw-*`). Prefer the guide’s preflight for first runs.
 
 ---
 

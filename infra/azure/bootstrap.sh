@@ -79,7 +79,7 @@ echo "============================================================"
 # 0. Tool checks
 # ---------------------------------------------------------------------------
 echo
-echo "[0/9] checking tools ..."
+echo "[edw] Bootstrap step=tools [0/9] checking tools ..."
 for tool in az sqlcmd SqlPackage databricks jq curl; do
   if ! command -v "$tool" >/dev/null 2>&1; then
     echo "ERROR: required tool not found on PATH: $tool" >&2
@@ -93,28 +93,28 @@ echo "  all tools present."
 # 1. Azure login + subscription
 # ---------------------------------------------------------------------------
 echo
-echo "[1/9] setting Azure subscription ..."
+echo "[edw] Bootstrap step=subscription [1/9] setting Azure subscription ..."
 run "az account set --subscription '${AZ_SUBSCRIPTION_ID}'"
 
 # ---------------------------------------------------------------------------
 # 2. Resource group
 # ---------------------------------------------------------------------------
 echo
-echo "[2/9] creating resource group '${AZ_RG}' ..."
+echo "[edw] Bootstrap step=rg [2/9] creating resource group '${AZ_RG}' ..."
 run "az group create --name '${AZ_RG}' --location '${AZ_LOCATION}'"
 
 # ---------------------------------------------------------------------------
 # 3. SQL logical server
 # ---------------------------------------------------------------------------
 echo
-echo "[3/9] creating SQL logical server '${AZ_SQL_SERVER}' ..."
+echo "[edw] Bootstrap step=server [3/9] creating SQL logical server '${AZ_SQL_SERVER}' ..."
 run "az sql server create --name '${AZ_SQL_SERVER}' --resource-group '${AZ_RG}' --location '${AZ_LOCATION}' --admin-user '${AZ_SQL_ADMIN}' --admin-password '${AZ_SQL_PASSWORD}' --enable-public-network true"
 
 # ---------------------------------------------------------------------------
 # 4. Free-offer database
 # ---------------------------------------------------------------------------
 echo
-echo "[4/9] creating free-offer database '${AZ_SQL_DB}' (AutoPause on limit) ..."
+echo "[edw] Bootstrap step=database [4/9] creating free-offer database '${AZ_SQL_DB}' (AutoPause on limit) ..."
 # Free-limit DBs require the platform default auto-pause delay (do not pass --auto-pause-delay).
 run "az sql db create --resource-group '${AZ_RG}' --server '${AZ_SQL_SERVER}' --name '${AZ_SQL_DB}' --edition GeneralPurpose --compute-model Serverless --family Gen5 --capacity 1 --min-capacity 0.5 --max-size 32GB --use-free-limit true --free-limit-exhaustion-behavior AutoPause"
 
@@ -122,7 +122,7 @@ run "az sql db create --resource-group '${AZ_RG}' --server '${AZ_SQL_SERVER}' --
 # 5. Firewall rules
 # ---------------------------------------------------------------------------
 echo
-echo "[5/9] creating firewall rules ..."
+echo "[edw] Bootstrap step=firewall [5/9] creating firewall rules ..."
 CLIENT_IP="$(curl -s https://api.ipify.org || true)"
 if [ -n "$CLIENT_IP" ]; then
   echo "  your client IP: ${CLIENT_IP}"
@@ -142,7 +142,7 @@ run "az sql server firewall-rule create --resource-group '${AZ_RG}' --server '${
 # 6. Import bacpac
 # ---------------------------------------------------------------------------
 echo
-echo "[6/9] importing WideWorldImportersDW bacpac via SqlPackage ..."
+echo "[edw] Bootstrap step=bacpac [6/9] importing WideWorldImportersDW bacpac via SqlPackage ..."
 if [ ! -s "$BACPAC_PATH" ]; then
   echo "  bacpac not found at ${BACPAC_PATH}; downloading ..."
   run "${REPO_ROOT}/legacy/wideworldimportersdw/download_bacpac.sh"
@@ -154,7 +154,7 @@ run "SqlPackage /a:Import /sf:'${BACPAC_PATH}' /tcs:'${CONN_STR}'"
 # 7. Warmup the (now-cold) serverless DB
 # ---------------------------------------------------------------------------
 echo
-echo "[7/9] warming up the serverless DB (auto-paused after import) ..."
+echo "[edw] Bootstrap step=warmup [7/9] warming up the serverless DB (auto-paused after import) ..."
 SERVER_ARG="tcp:${AZ_SQL_SERVER}.database.windows.net,1433"
 if [ "$DRY_RUN" -eq 0 ]; then
   echo "  polling DB status until Online ..."
@@ -174,7 +174,7 @@ fi
 # 8. Export proc source + fixtures
 # ---------------------------------------------------------------------------
 echo
-echo "[8/9] exporting proc source and reconcile fixtures ..."
+echo "[edw] Bootstrap step=export [8/9] exporting proc source and reconcile fixtures ..."
 # Live dumps go to gitignored paths — never overwrite vendored legacy/procs/*.sql
 export PROC_EXPORT_DIR="${REPO_ROOT}/legacy/procs/.export"
 run "${REPO_ROOT}/legacy/procs/export_proc_source.sh"
@@ -184,7 +184,7 @@ run "${REPO_ROOT}/legacy/fixtures/export_fixtures.sh"
 # 9. Smoke test + Databricks secrets scope
 # ---------------------------------------------------------------------------
 echo
-echo "[9/9] smoke test + Databricks secrets scope ..."
+echo "[edw] Bootstrap step=secrets [9/9] smoke test + Databricks secrets scope ..."
 if [ "$DRY_RUN" -eq 0 ]; then
   echo "  smoke: row count + proc list ..."
   sqlcmd -S "$SERVER_ARG" -U "$AZ_SQL_ADMIN" -P "$AZ_SQL_PASSWORD" -d "$AZ_SQL_DB" -C -l 60 -Q "SELECT COUNT(*) AS fact_sale_count FROM Fact.Sale; SELECT name FROM sys.procedures WHERE schema_id = SCHEMA_ID('Integration') ORDER BY name;" -s "," -W
@@ -209,6 +209,7 @@ fi
 
 echo
 echo "============================================================"
+echo "[edw] Bootstrap step=complete"
 echo " Bootstrap complete."
 echo " Next: databricks bundle deploy && databricks bundle run edw_migration_medallion"
 echo " Teardown: ./infra/azure/teardown.sh"

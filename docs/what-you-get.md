@@ -113,21 +113,27 @@ You are not expected to stare at terminals the whole time. Typical pauses:
 2. **Convert wave** — up to five `edw-convert` agents writing notebooks in parallel  
 3. **Merge** — `convert_summary.json` with converted / blocked counts  
 4. **Job → Test → Gate** — medallion run, bronze reconcile, ship / no-ship  
-5. **URLs** — Control Plane + Genie + MLflow `observe_url` (`make print-urls`). Setup-time print-urls may lack `observe_url` until the coordinator mints a run; open the live link when it appears.
+5. **URLs** — Control Plane + Genie appear at **Provision** (best-effort if a prior deploy exists) and again at **Setup** via `announce_observability` / `make print-urls`. MLflow `observe_url` joins at **Mint**. Open them when printed and leave them open — not only at Gate.
 
 ```mermaid
 %%{init: {"theme":"base","themeVariables":{"primaryColor":"#E8F1F8","primaryTextColor":"#0B3D5C","primaryBorderColor":"#0B3D5C","lineColor":"#5B7A8C","secondaryColor":"#E6F4F1","tertiaryColor":"#F7F3EA","background":"#FFFFFF","mainBkg":"#E8F1F8","clusterBkg":"#F7FAFC","clusterBorder":"#5B7A8C","titleColor":"#0B3D5C","edgeLabelBackground":"#FFFFFF"}}}%%
 sequenceDiagram
   participant You
-  participant Coord as edw-coordinator
+  participant Guide as provision_visible
+  participant Coord as edw_coordinator
   participant Wave as Convert_wave_max_5
   participant DBX as Databricks
-  You->>Coord: Kickoff
+  You->>Guide: Menu1 plus catalog
+  Guide-->>You: Control Plane Genie banner Provision
+  Guide->>DBX: bootstrap and setup
+  Guide-->>You: banner Setup
+  Guide->>Coord: mint run
+  Coord-->>You: observe_url at Mint
   Coord->>DBX: Discover and land bronze
   Coord->>Wave: Fan-out edw-convert
   Wave-->>Coord: convert result JSON files
   Coord->>DBX: Job then Test then Gate
-  Coord-->>You: Dashboard Genie and observe_url
+  Coord-->>You: observe_status Done snapshot
 ```
 
 ---

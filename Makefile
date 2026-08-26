@@ -18,7 +18,7 @@ SOURCE_TYPE ?= sqlserver
 TOOLS_CORE := databricks jq curl python3
 TOOLS_AZURE := az sqlcmd SqlPackage
 
-.PHONY: check check-core check-azure check-source check-land render bootstrap setup federation secrets deploy run demo teardown reset-sink genie materialize-demo sync-prompts discover print-urls observe-setup
+.PHONY: check check-core check-azure check-source check-land render bootstrap setup federation secrets deploy run demo teardown reset-sink genie materialize-demo sync-prompts discover print-urls observe-setup provision-track-a
 
 check: check-source
 
@@ -89,13 +89,18 @@ federation: secrets render ## UC federation + ops
 print-urls: check-core ## Print Control Plane + Genie + MLflow observe_url
 	./agents/tools/print_observability_urls.sh
 
+provision-track-a: ## Track A materialize→bootstrap→setup with observability banners
+	./agents/tools/track_a_provision.sh
+
 setup: check-source federation deploy genie print-urls ## Wire sink + dashboard + genie
 	@echo
 	@echo "Setup complete. Catalog=$(DATABRICKS_CATALOG) SOURCE_TYPE=$(SOURCE_TYPE)"
 	@echo "Next: launch edw-coordinator (or edw-demo-guide for the full walkthrough)."
+	@./agents/tools/announce_observability.sh --stage Setup || true
 
 deploy: render ## Bundle validate --strict + deploy
 	@test -n "$(DATABRICKS_WAREHOUSE_ID)" || { echo "DATABRICKS_WAREHOUSE_ID required" >&2; exit 1; }
+	@echo "[edw] Setup step=deploy — bundle validate + deploy"
 	databricks bundle validate --strict -t dev
 	@USER=$$(databricks current-user me --output json | jq -r .userName); \
 	databricks workspace mkdirs "/Workspace/Users/$$USER/.bundle/edw_migration/dev/resources" 2>/dev/null || true
@@ -107,11 +112,18 @@ check-land: ## Fail if bronze land SQL is missing or still the placeholder
 run: check-land ## Run medallion job (requires generated land SQL)
 	databricks bundle run edw_migration_medallion -t dev
 
-demo: check-azure bootstrap setup ## Scripted demo path (non-interactive)
+demo: check-azure ## Scripted demo path (announce → bootstrap → setup)
+	@./agents/tools/announce_observability.sh --stage Provision || true
+	@echo "[edw] demo: bootstrap starting…"
+	$(MAKE) bootstrap
+	@./agents/tools/announce_observability.sh --stage Bootstrap || true
+	@echo "[edw] demo: setup starting…"
+	$(MAKE) setup
 	@echo
 	@echo "Demo infra ready. Open Cursor and launch edw-demo-guide or edw-coordinator."
 
 genie: check-core ## Create/update Genie control-plane space
+	@echo "[edw] Setup step=genie"
 	./databricks/genie/create_genie_space.sh
 
 teardown: check-azure ## Delete Azure resource group
