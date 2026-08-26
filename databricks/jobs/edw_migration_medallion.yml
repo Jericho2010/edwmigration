@@ -124,7 +124,7 @@ resources:
               path: ../_rendered/tests/13_stage_fixture_expectations.sql
             warehouse_id: ${var.warehouse_id}
 
-        - task_key: reconcile
+        - task_key: silver_24_migrate_city
           depends_on:
             - task_key: gold_daily_sales
             - task_key: gold_stock_movements
@@ -133,6 +133,96 @@ resources:
             - task_key: gold_stock_holding
             - task_key: stage_fixtures
             - task_key: metric_daily_sales
+          timeout_seconds: 1800
+          sql_task:
+            file:
+              path: ../_rendered/silver/24_migrate_city.sql
+            warehouse_id: ${var.warehouse_id}
+
+        - task_key: silver_25_migrate_customer
+          depends_on:
+            - task_key: silver_24_migrate_city
+          timeout_seconds: 1800
+          sql_task:
+            file:
+              path: ../_rendered/silver/25_migrate_customer.sql
+            warehouse_id: ${var.warehouse_id}
+
+        - task_key: silver_26_migrate_employee
+          depends_on:
+            - task_key: silver_25_migrate_customer
+          timeout_seconds: 1800
+          sql_task:
+            file:
+              path: ../_rendered/silver/26_migrate_employee.sql
+            warehouse_id: ${var.warehouse_id}
+
+        - task_key: silver_27_migrate_stock_item
+          depends_on:
+            - task_key: silver_26_migrate_employee
+          timeout_seconds: 1800
+          sql_task:
+            file:
+              path: ../_rendered/silver/27_migrate_stock_item.sql
+            warehouse_id: ${var.warehouse_id}
+
+        - task_key: silver_28_migrate_supplier
+          depends_on:
+            - task_key: silver_27_migrate_stock_item
+          timeout_seconds: 1800
+          sql_task:
+            file:
+              path: ../_rendered/silver/28_migrate_supplier.sql
+            warehouse_id: ${var.warehouse_id}
+
+        - task_key: silver_29_migrate_sale
+          depends_on:
+            - task_key: silver_28_migrate_supplier
+          timeout_seconds: 1800
+          sql_task:
+            file:
+              path: ../_rendered/silver/29_migrate_sale.sql
+            warehouse_id: ${var.warehouse_id}
+
+        - task_key: gold_36_migrate_order
+          depends_on:
+            - task_key: silver_29_migrate_sale
+          timeout_seconds: 1800
+          sql_task:
+            file:
+              path: ../_rendered/gold/36_migrate_order.sql
+            warehouse_id: ${var.warehouse_id}
+
+        - task_key: gold_37_migrate_movement
+          depends_on:
+            - task_key: gold_36_migrate_order
+          timeout_seconds: 1800
+          sql_task:
+            file:
+              path: ../_rendered/gold/37_migrate_movement.sql
+            warehouse_id: ${var.warehouse_id}
+
+        - task_key: gold_38_migrate_purchase
+          depends_on:
+            - task_key: gold_37_migrate_movement
+          timeout_seconds: 1800
+          sql_task:
+            file:
+              path: ../_rendered/gold/38_migrate_purchase.sql
+            warehouse_id: ${var.warehouse_id}
+
+        - task_key: gold_39_migrate_stock_holding
+          depends_on:
+            - task_key: gold_38_migrate_purchase
+          timeout_seconds: 1800
+          sql_task:
+            file:
+              path: ../_rendered/gold/39_migrate_stock_holding.sql
+            warehouse_id: ${var.warehouse_id}
+
+        - task_key: reconcile
+          depends_on:
+            - task_key: gold_39_migrate_stock_holding
           timeout_seconds: 900
           sql_task:
             file:

@@ -55,6 +55,7 @@ UNION ALL SELECT 'migration_backlog', COUNT(*) FROM ${CATALOG}.ops.migration_bac
 UNION ALL SELECT 'reconcile_results', COUNT(*) FROM ${CATALOG}.ops.reconcile_results
 UNION ALL SELECT 'migration_manifest_current', COUNT(*) FROM ${CATALOG}.ops.migration_manifest_current
 UNION ALL SELECT 'proc_conversion_map', COUNT(*) FROM ${CATALOG}.ops.proc_conversion_map
+UNION ALL SELECT 'load_control', COUNT(*) FROM ${CATALOG}.ops.load_control
 " 2>/dev/null || true)"
   echo "ops counts:"
   if [ -n "$COUNTS" ]; then
@@ -118,7 +119,8 @@ if url:
 PY
 fi
 
-echo "Note: Gate Hero stays empty until Gate writes migration_manifest_current."
+echo "Note: Gate Hero (gate counters) stays empty until Gate writes migration_manifest_current."
+echo "Note: Tables-landed (load_control) should move at Land. Latest-run widgets prefer agent_events then manifest."
 echo "Note: Inventory/Events/Backlog should move as stages complete — empty during a run means hooks/edw-* missing or need make reset-sink."
 echo "===================="
 echo

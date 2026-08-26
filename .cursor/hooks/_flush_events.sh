@@ -8,6 +8,16 @@ HOOK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$("${HOOK_DIR}/_repo_root.sh")"
 BUF_FILE="${REPO_ROOT}/agents/out/${RUN_ID}/events.buf.jsonl"
 RUN_SQL="${REPO_ROOT}/agents/tools/run_sql.sh"
+mkdir -p "$(dirname "$BUF_FILE")"
+
+# Reclaim snapshots left behind when a previous flush was killed mid-flight
+# (events.buf.jsonl.flushing.<pid>).
+shopt -s nullglob
+for orphan in "$(dirname "$BUF_FILE")"/events.buf.jsonl.flushing.*; do
+  cat "$orphan" >> "$BUF_FILE" || true
+  rm -f "$orphan"
+done
+shopt -u nullglob
 
 if [ ! -s "$BUF_FILE" ]; then
   exit 0
@@ -33,14 +43,20 @@ fi
 # truncated away after the INSERT.
 SNAP_FILE="${BUF_FILE}.flushing.$$"
 mv "$BUF_FILE" "$SNAP_FILE"
+FLUSHED=0
 
 restore_snapshot() {
   # Put unflushed events back into the buffer (best effort).
+  if [ "${FLUSHED}" = "1" ]; then
+    return 0
+  fi
   if [ -s "$SNAP_FILE" ]; then
     cat "$SNAP_FILE" >> "$BUF_FILE"
   fi
   rm -f "$SNAP_FILE"
 }
+
+trap restore_snapshot EXIT
 
 if ! SQL="$(python3 - "$SNAP_FILE" "$UC_TABLE" <<'PY'
 import json, sys
@@ -79,6 +95,7 @@ PY
 fi
 
 if [ -z "${SQL:-}" ]; then
+  FLUSHED=1
   rm -f "$SNAP_FILE"
   exit 0
 fi
@@ -90,6 +107,7 @@ if [ ! -x "$RUN_SQL" ]; then
 fi
 
 if "$RUN_SQL" --sql "$SQL" >/dev/null 2>&1; then
+  FLUSHED=1
   rm -f "$SNAP_FILE"
   echo "[_flush_events] flushed ${RUN_ID} to ${UC_TABLE}." >&2
 else

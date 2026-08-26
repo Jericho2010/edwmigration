@@ -56,7 +56,7 @@ Warehouse, Azure/Databricks login, and tools: the guide runs `./agents/tools/pre
    - Ask Genie mid-run about inventory/events; after Gate: *Did the last run ship?*  
    Details: **[MLflow observability](mlflow.md)**.
 6. Demo acceptance (guide check, **not** a Gate rule): **≥10 tables** and **≥5 procedures** migrated (counts only).  
-7. When finished: ask the guide to tear down, menu **5**, or run `make teardown`. Between demos without tearing down Azure: confirm `make reset-sink` when offered (stale dashboard from a prior demo).
+7. When finished: ask the guide to tear down. Databricks-only (keeps Azure SQL): `make teardown-databricks`. Azure RG: menu **5** or `make teardown`. Between demos without tearing down Azure: confirm `make reset-sink` when offered (stale dashboard from a prior demo).
 
 ### Live acceptance checklist (`start` → **1** / **2** / **3**)
 
@@ -102,7 +102,7 @@ You can stop and celebrate when **all** of these are true:
 3. Gate summary shows ship (empty blockers)  
 4. Demo acceptance counts: **≥10** bronze tables and **≥5** converted procs *(guide check, not Gate)*  
 5. **MLflow (recommended):** you ran `make observe-setup` once, and opened `observe_url` **when minted** (watched during Convert, not only at the end)  
-6. You tore down Azure resources (`make teardown` / menu **5**) **or** consciously kept them / used `make reset-sink` for a follow-up  
+6. You tore down Databricks (`make teardown-databricks`) and/or Azure (`make teardown` / menu **5**) **or** consciously kept them / used `make reset-sink` for a follow-up  
 
 ---
 

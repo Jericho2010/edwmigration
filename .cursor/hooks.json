@@ -10,6 +10,11 @@
     ],
     "subagentStop": [
       {
+        "command": ".cursor/hooks/log_event.sh",
+        "failClosed": false,
+        "timeout": 15
+      },
+      {
         "command": ".cursor/hooks/on_subagent_stop.sh",
         "failClosed": true,
         "timeout": 60,

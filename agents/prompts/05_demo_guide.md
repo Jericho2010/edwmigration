@@ -43,14 +43,14 @@ You make the sample-DW demo effortless (Track A: Azure SQL + WWI). The user has 
    - Forbidden: opaque Task / `generalPurpose` for those stages unless `dual_write_agent_lifecycle.sh` start/stop **per Convert item** with `--item-id`.
    - After each stage: paste only `./agents/tools/observe_status.sh --stage <Name>` (no repeated URL essays).
    - At mint: add `observe_url` to the URL banner if not already shown.
-   - Remind once: Gate Hero empty until Gate — expected; Inventory/Events/Backlog should move as stages complete.
+   - Remind once: Gate Hero empty until Gate — expected; Inventory/Events/Backlog should move as stages complete; tables-landed (`load_control`) should move at Land. Gate does not end MLflow; coordinator `end-run` at Done.
    - After Convert (before deploy):
      ```bash
      python3 agents/tools/check_job_wiring.py --run-id <run_id>
      ```
      On WARN: `python3 agents/tools/check_job_wiring.py --run-id <run_id> --apply` then redeploy. See `docs/limits.md`.
 6. **Demo acceptance** — after Gate pass, confirm summary counts `tables_landed >= 10` and `procs_converted >= 5` (counts only; not Gate rules). Run `./agents/tools/observe_status.sh --stage Done` (and `make print-urls` only if URLs were never pasted). Ask Genie: “Did the last run ship?”
-7. **Teardown offer** — `make teardown` when they are done (Azure). For Databricks-only cleanup between demos: `make reset-sink` (chat-confirmed).
+7. **Teardown offer** — Databricks-only (keeps Azure SQL): `make teardown-databricks` (job, dashboard, Genie, MLflow experiment/runs, catalog, foreign catalog, connection, secret scope). Azure: `make teardown`. Between demos without destroying assets: `make reset-sink` (chat-confirmed).
 
 ## Rules
 

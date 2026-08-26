@@ -7,6 +7,32 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 CONFIG="${SCRIPT_DIR}/space_config.json"
 RUN_SQL="${REPO_ROOT}/agents/tools/run_sql.sh"
 
+STRICT=0
+for arg in "$@"; do
+  case "$arg" in
+    --strict) STRICT=1 ;;
+    -h|--help)
+      echo "Usage: $0 [--strict]"
+      echo "  --strict  fail on create/PATCH errors (use after Land)."
+      echo "  Default is WARN so make setup is not blocked."
+      exit 0
+      ;;
+  esac
+done
+if [ "${GENIE_STRICT:-}" = "1" ]; then
+  STRICT=1
+fi
+
+fail_or_warn() {
+  local msg="$1"
+  if [ "$STRICT" = "1" ]; then
+    echo "[genie] ERROR: ${msg}" >&2
+    echo "[genie] Re-run make genie GENIE_STRICT=1 after land; do not keep a stale space silently." >&2
+    exit 1
+  fi
+  echo "[genie] WARN: ${msg} (continuing; re-run make genie GENIE_STRICT=1 after Land)" >&2
+}
+
 if [ -f "${REPO_ROOT}/.env" ]; then
   set -a
   # shellcheck disable=SC1091
@@ -81,19 +107,19 @@ PAYLOAD="$(jq -n \
 if [ -n "$SPACE_ID" ]; then
   echo "[genie] updating existing space ${SPACE_ID} ('${TITLE}') ..."
   if ! databricks api patch "/api/2.0/genie/spaces/${SPACE_ID}" --json "$PAYLOAD" >/dev/null; then
-    echo "[genie] WARN: update failed (API serialized_space quirk); keeping existing space ${SPACE_ID}" >&2
+    fail_or_warn "update failed for space ${SPACE_ID} (serialized_space API quirk)."
   fi
 else
   echo "[genie] creating space '${TITLE}' ..."
   if ! SPACE_ID="$(databricks api post /api/2.0/genie/spaces --json "$PAYLOAD" | jq -r '.space_id // .id // empty')"; then
-    echo "[genie] ERROR: create failed" >&2
-    exit 1
+    fail_or_warn "create failed"
+    SPACE_ID=""
   fi
 fi
 
 if [ -z "$SPACE_ID" ]; then
-  echo "[genie] ERROR: no space_id returned" >&2
-  exit 1
+  fail_or_warn "no space_id returned"
+  exit 0
 fi
 
 echo "[genie] done. Open: ${DATABRICKS_HOST%/}/genie/rooms/${SPACE_ID}"

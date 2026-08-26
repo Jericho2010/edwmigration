@@ -43,21 +43,20 @@ flowchart LR
 ```mermaid
 %%{init: {"theme":"base","themeVariables":{"primaryColor":"#E8F1F8","primaryTextColor":"#0B3D5C","primaryBorderColor":"#0B3D5C","lineColor":"#5B7A8C","secondaryColor":"#E6F4F1","tertiaryColor":"#F7F3EA","background":"#FFFFFF","mainBkg":"#E8F1F8","clusterBkg":"#F7FAFC","clusterBorder":"#5B7A8C","titleColor":"#0B3D5C","edgeLabelBackground":"#FFFFFF"}}}%%
 flowchart TD
-  Mint[Coordinator mints run_id] --> Init["mlflow_observe.py init"]
+  Mint[Coordinator mints run_id] --> Init["mlflow_observe.py init → serve daemon"]
   Init --> Ctx[mlflow_context.json + observe_url]
   Init --> Root[Root span edw.run]
-  CursorHooks[Cursor hooks · log_event.sh] --> Spans
-  Record[record_agent_event.sh] --> Stage[Stage spans]
-  Ensure[ensure_run_events.py] --> Init
-  Spans[AGENT / TOOL spans] --> Tree[One shared trace tree]
-  Stage --> Tree
+  CursorHooks[Cursor hooks · log_event.sh] --> Queue[spans.buf.jsonl]
+  Record[record_agent_event.sh] --> Queue
+  Queue --> Serve[serve process · one per run_id]
+  Serve --> Tree[One shared trace tree]
   Root --> Tree
   Tree --> DBX[Databricks Experiments · observe_url]
   classDef agent fill:#1B7A6E,stroke:#145A51,color:#fff
   classDef ops fill:#5B4B8A,stroke:#3F3460,color:#fff
   classDef azureC fill:#0078D4,stroke:#005A9E,color:#fff
-  class Mint,Init,Ensure,CursorHooks,Record agent
-  class Ctx,Root,Spans,Stage,Tree ops
+  class Mint,Init,CursorHooks,Record,Serve,Queue agent
+  class Ctx,Root,Tree ops
   class DBX azureC
 ```
 
@@ -69,9 +68,9 @@ After `run_id` is created, the coordinator runs (prefer repo `.venv`):
 "$(./agents/tools/resolve_python.sh)" agents/tools/mlflow_observe.py init --run-id <run_id>
 ```
 
-It must paste `observe_url:` / `Observed by MLflow:` to the user **immediately** so they can open live traces while Convert continues. `ensure_run_events.py` re-inits idempotently (same URL if already enabled) and **force-flushes** the Cursor hook buffer into `ops.agent_events`.
+It must paste `observe_url:` / `Observed by MLflow:` to the user **immediately** so they can open live traces while Convert continues. `init` spawns a **single-writer `serve` daemon** that owns the MLflow run and trace. `ensure_run_events.py` re-inits idempotently (same URL if already enabled) and **force-flushes** the Cursor hook buffer into `ops.agent_events`.
 
-If `mlflow_context.json` shows `last_error` with `Parent span ... not found`, observe auto-re-inits with `--force` and re-announces the URL. Empty tree after a pasted `observe_url` is a bug — re-init, do not wait until Gate.
+Do **not** `--force` re-init because a span failed — that created one orphaned RUNNING run per hook. Empty tree after a pasted `observe_url` means the serve daemon is down; re-run `init` (it will restart serve if the PID is dead).
 
 Bare `python3 agents/tools/mlflow_observe.py …` still re-execs into `.venv` when mlflow is missing, but demos should call `resolve_python.sh` explicitly.
 
@@ -86,11 +85,13 @@ With the **repository root** open in **Cursor** (not VS Code alone), [`.cursor/h
 | `afterMCPExecution` | TOOL (`tool.mcp`) | MCP tool name in attributes |
 | `afterFileEdit` | TOOL (`tool.file_edit`) | Path/detail truncated |
 
-Hooks resolve `run_id` via `CURRENT_RUN` / `_resolve_run_id.sh`, then dual-write to MLflow using shared `mlflow_context.json` so separate hook processes attach to **one** tree (`parent_id` via open spans). Tool spans prefer an open subagent span as parent when present.
+Hooks resolve `run_id` via `CURRENT_RUN` / `_resolve_run_id.sh`, then append span records to `agents/out/<run_id>/spans.buf.jsonl`. The serve daemon (started at mint) is the only process that calls MLflow, so AGENT/TOOL spans nest under one trace. Tool spans prefer an open subagent span as parent when present.
 
-**Flush:** default `AGENT_EVENT_FLUSH_THRESHOLD=1` so each hook event lands in `ops.agent_events` (Control Plane timeline). Milestone helpers (`record_agent_event.sh`, `ensure_run_events.py`) also force-flush. Checkpoint helper: `./agents/tools/observe_status.sh --stage <Name>`.
+**Flush:** default `AGENT_EVENT_FLUSH_THRESHOLD=1`. The 15s Cursor hook **does not wait** on warehouse INSERT — it `flock`s `flush.lock` and runs `_flush_events.sh` in the background. Milestone helpers (`record_agent_event.sh`, `ensure_run_events.py`, `on_subagent_stop.sh`) still force-flush synchronously. Checkpoint helper: `./agents/tools/observe_status.sh --stage <Name>`.
 
-**Stale sink:** dashboard widgets are catalog-scoped, not run-scoped. Prior-run reconcile/backlog poisons the Control Plane until `make reset-sink` (Databricks only; keeps Azure).
+**MLflow lifecycle:** `stage(gate, completed)` logs `gate_pass` and does **not** end the run (retries stay live). Coordinator calls `mlflow_observe.py end-run` at **Done**.
+
+**Stale sink:** dashboard widgets that filter by `run_id` prefer the latest `ops.agent_events` row, then `migration_manifest_current`. Prior-run backlog/load_control still need `make reset-sink` (tables/rows) or `make teardown-databricks` (full Databricks wipe; keeps Azure).
 
 ### 3. Milestone dual-write
 
@@ -153,15 +154,16 @@ Soft status / preflight **WARN** if observe is not ready; they do **not** block 
 | Path | Role |
 |---|---|
 | `agents/prompts/_live_observability.md` | Shared live-during contract |
-| `agents/tools/mlflow_observe.py` | init / span-start / span-end / stage / metric / end-run / trace-url |
+| `agents/tools/mlflow_observe.py` | init / serve / span queue / stage / metric / end-run / trace-url / experiment-purge |
 | `agents/tools/mlflow_context.py` | Locked read/write of `mlflow_context.json` |
-| `.cursor/hooks.json` + `.cursor/hooks/log_event.sh` | Cursor lifecycle → UC buffer + MLflow spans |
-| `agents/tools/record_agent_event.sh` | UC row + MLflow stage span + force flush |
+| `.cursor/hooks.json` + `.cursor/hooks/log_event.sh` | Cursor lifecycle → UC buffer + span queue |
+| `agents/tools/record_agent_event.sh` | UC row + MLflow stage enqueue + force flush |
 | `agents/tools/dual_write_agent_lifecycle.sh` | Fallback UC + MLflow start/stop when hooks cannot fire (Convert: `--item-id` per worker) |
-| `agents/tools/ensure_run_events.py` | Milestone rows + idempotent MLflow init |
+| `agents/tools/ensure_run_events.py` | Milestone rows + idempotent MLflow init (starts serve) |
 | `agents/tools/check_mlflow_observe.sh` | venv + `mlflow≥3.8` + host readiness |
 | `agents/tools/observe_status.sh` | Ops counts + URLs snapshot for stage checkpoints |
-| `agents/tools/reset_databricks_sink.sh` | Wipe managed sink + `agents/out` (keeps Azure) |
+| `agents/tools/reset_databricks_sink.sh` | Wipe managed sink + views + `agents/out` (keeps Azure) |
+| `agents/tools/teardown_databricks.sh` | Destroy Databricks demo assets (keeps Azure SQL) |
 
 ---
 

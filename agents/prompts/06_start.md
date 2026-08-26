@@ -46,8 +46,9 @@ Those actions begin **only** after the user replies with menu **1**, **2**, or *
    4. Print Control Plane, Genie, and MLflow observe URLs.
       → make print-urls
 
-   5. Tear down the demo Azure resources.
-      → make teardown (Track A cleanup)
+   5. Tear down demo resources.
+      → make teardown-databricks (Databricks; keeps Azure SQL)
+      → make teardown (Azure RG)
 
    6. Show me the enterprise / SoD notes.
       → Point at docs/enterprise.md (no infra changes)
@@ -63,7 +64,7 @@ Those actions begin **only** after the user replies with menu **1**, **2**, or *
 | **2** | Hand off to **`edw-coordinator`** with Azure SQL kickoff + live observability contract. If `.env` incomplete, ask for `SOURCE_*` / catalog fields first; then `make setup` if needed before Discover. Offer `make reset-sink` if the catalog looks dirty from a prior demo (do not auto-migrate). |
 | **3** | Hand off to **`edw-coordinator`** with MySQL kickoff + live observability contract. Ensure `SOURCE_TYPE=mysql` and clear stale WWI foreign-catalog names if present. |
 | **4** | Run `make print-urls` (or `./agents/tools/announce_observability.sh --stage PreMint`). Paste Control Plane, Genie, and `observe_url` when present. If it fails, say what `.env` / deploy step is missing — do not bootstrap. |
-| **5** | Confirm once (“This deletes the demo resource group”), then `make teardown` only if they confirm. |
+| **5** | Confirm once, then offer both: `make teardown-databricks` (Databricks catalog/jobs/Genie/MLflow/secrets; keeps Azure SQL) and/or `make teardown` (Azure RG). Do not run either until they confirm. |
 | **6** | Open and summarize **`docs/enterprise.md`**: demo vs enterprise table (auth → OAuth/SP, network → Private Link/allowlist, secrets, privileges, Gate as policy not self-approve) and the **SoD roles** table (requester / platform / migration engineer / data owner / ops / security). Link the path. No infra changes. |
 
 If the reply is unclear, re-print the menu once.

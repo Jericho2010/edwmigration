@@ -4,7 +4,9 @@
       "name": "gate_hero",
       "displayName": "Gate Hero",
       "queryLines": [
-        "SELECT run_id, gate, tables_landed, tables_total, procs_converted, procs_total, updated_at ",
+        "SELECT run_id, gate, ",
+        "CASE WHEN lower(gate) = 'ship' THEN 1 ELSE 0 END AS gate_pass, ",
+        "tables_landed, tables_total, procs_converted, procs_total, updated_at ",
         "FROM ops.migration_manifest_current ",
         "ORDER BY updated_at DESC LIMIT 1 "
       ]
@@ -13,9 +15,15 @@
       "name": "inventory_counts",
       "displayName": "Inventory",
       "queryLines": [
+        "WITH latest AS ( ",
+        "  SELECT COALESCE( ",
+        "    (SELECT run_id FROM ops.agent_events ORDER BY ts DESC LIMIT 1), ",
+        "    (SELECT run_id FROM ops.migration_manifest_current ORDER BY updated_at DESC LIMIT 1) ",
+        "  ) AS run_id ",
+        ") ",
         "SELECT object_type, COUNT(*) AS n ",
-        "FROM ops.migration_inventory ",
-        "WHERE skip = false ",
+        "FROM ops.migration_inventory i CROSS JOIN latest ",
+        "WHERE i.skip = false AND i.run_id = latest.run_id ",
         "GROUP BY object_type "
       ]
     },
@@ -23,8 +31,15 @@
       "name": "reconcile_status",
       "displayName": "Reconcile",
       "queryLines": [
+        "WITH latest AS ( ",
+        "  SELECT COALESCE( ",
+        "    (SELECT run_id FROM ops.agent_events ORDER BY ts DESC LIMIT 1), ",
+        "    (SELECT run_id FROM ops.migration_manifest_current ORDER BY updated_at DESC LIMIT 1) ",
+        "  ) AS run_id ",
+        ") ",
         "SELECT result, COUNT(*) AS checks ",
-        "FROM ops.reconcile_results ",
+        "FROM ops.reconcile_results r CROSS JOIN latest ",
+        "WHERE r.run_id = latest.run_id ",
         "GROUP BY result "
       ]
     },
@@ -38,21 +53,53 @@
       ]
     },
     {
+      "name": "tables_landed",
+      "displayName": "Tables Landed",
+      "queryLines": [
+        "SELECT table_name, COALESCE(row_count, 0) AS row_count, status, started_at ",
+        "FROM ops.load_control ",
+        "ORDER BY started_at "
+      ]
+    },
+    {
+      "name": "convert_tracker",
+      "displayName": "Convert Tracker",
+      "queryLines": [
+        "SELECT legacy_proc, target_path, status, updated_at ",
+        "FROM ops.proc_conversion_map ",
+        "ORDER BY updated_at DESC "
+      ]
+    },
+    {
       "name": "event_summary",
       "displayName": "Event Summary",
       "queryLines": [
+        "WITH latest AS ( ",
+        "  SELECT COALESCE( ",
+        "    (SELECT run_id FROM ops.agent_events ORDER BY ts DESC LIMIT 1), ",
+        "    (SELECT run_id FROM ops.migration_manifest_current ORDER BY updated_at DESC LIMIT 1) ",
+        "  ) AS run_id ",
+        ") ",
         "SELECT COUNT(*) AS total_events, ",
-        "COUNT(DISTINCT run_id) AS runs, ",
-        "COUNT(DISTINCT agent) AS agents ",
-        "FROM ops.agent_events "
+        "COUNT(DISTINCT e.run_id) AS runs, ",
+        "COUNT(DISTINCT e.agent) AS agents ",
+        "FROM ops.agent_events e CROSS JOIN latest ",
+        "WHERE e.run_id = latest.run_id "
       ]
     },
     {
       "name": "events_by_agent",
       "displayName": "Events By Agent",
       "queryLines": [
+        "WITH latest AS ( ",
+        "  SELECT COALESCE( ",
+        "    (SELECT run_id FROM ops.agent_events ORDER BY ts DESC LIMIT 1), ",
+        "    (SELECT run_id FROM ops.migration_manifest_current ORDER BY updated_at DESC LIMIT 1) ",
+        "  ) AS run_id ",
+        ") ",
         "SELECT agent, COUNT(*) AS events ",
-        "FROM ops.agent_events ",
+        "FROM ops.agent_events e CROSS JOIN latest ",
+        "WHERE e.run_id = latest.run_id ",
         "GROUP BY agent ",
         "ORDER BY events DESC "
       ]
@@ -61,9 +108,16 @@
       "name": "events_over_time",
       "displayName": "Events Over Time",
       "queryLines": [
+        "WITH latest AS ( ",
+        "  SELECT COALESCE( ",
+        "    (SELECT run_id FROM ops.agent_events ORDER BY ts DESC LIMIT 1), ",
+        "    (SELECT run_id FROM ops.migration_manifest_current ORDER BY updated_at DESC LIMIT 1) ",
+        "  ) AS run_id ",
+        ") ",
         "SELECT date_trunc('MINUTE', ts) AS minute, agent, COUNT(*) AS events ",
-        "FROM ops.agent_events ",
-        "WHERE ts >= current_timestamp() - INTERVAL 24 HOURS ",
+        "FROM ops.agent_events e CROSS JOIN latest ",
+        "WHERE e.ts >= current_timestamp() - INTERVAL 24 HOURS ",
+        "AND e.run_id = latest.run_id ",
         "GROUP BY 1, 2 ",
         "ORDER BY 1 "
       ]
@@ -72,8 +126,15 @@
       "name": "latest_events",
       "displayName": "Latest Events",
       "queryLines": [
-        "SELECT run_id, agent, event, tool, detail, ts ",
-        "FROM ops.agent_events ",
+        "WITH latest AS ( ",
+        "  SELECT COALESCE( ",
+        "    (SELECT run_id FROM ops.agent_events ORDER BY ts DESC LIMIT 1), ",
+        "    (SELECT run_id FROM ops.migration_manifest_current ORDER BY updated_at DESC LIMIT 1) ",
+        "  ) AS run_id ",
+        ") ",
+        "SELECT e.run_id, agent, event, tool, detail, ts ",
+        "FROM ops.agent_events e CROSS JOIN latest ",
+        "WHERE e.run_id = latest.run_id ",
         "ORDER BY ts DESC ",
         "LIMIT 100 "
       ]
@@ -104,6 +165,126 @@
         },
         {
           "widget": {
+            "name": "gate-pass",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "gate_hero",
+                  "fields": [
+                    {
+                      "name": "gate_pass",
+                      "expression": "`gate_pass`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "gate_pass",
+                  "displayName": "Gate (1=ship)"
+                }
+              },
+              "frame": {
+                "title": "Gate",
+                "showTitle": true
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 1,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "tables-landed-count",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "gate_hero",
+                  "fields": [
+                    {
+                      "name": "tables_landed",
+                      "expression": "`tables_landed`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "tables_landed",
+                  "displayName": "Tables Landed"
+                }
+              },
+              "frame": {
+                "title": "Tables Landed",
+                "showTitle": true
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 1,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "procs-converted-count",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "gate_hero",
+                  "fields": [
+                    {
+                      "name": "procs_converted",
+                      "expression": "`procs_converted`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "procs_converted",
+                  "displayName": "Procs Converted"
+                }
+              },
+              "frame": {
+                "title": "Procs Converted",
+                "showTitle": true
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 1,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
             "name": "total-events",
             "queries": [
               {
@@ -130,30 +311,82 @@
                 }
               },
               "frame": {
-                "title": "Total Events",
+                "title": "Events (this run)",
+                "showTitle": true
+              }
+            }
+          },
+          "position": {
+            "x": 9,
+            "y": 1,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "inventory-bar",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "inventory_counts",
+                  "fields": [
+                    {
+                      "name": "object_type",
+                      "expression": "`object_type`"
+                    },
+                    {
+                      "name": "n",
+                      "expression": "`n`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "object_type",
+                  "displayName": "Type"
+                },
+                "y": {
+                  "fieldName": "n",
+                  "displayName": "Count"
+                }
+              },
+              "frame": {
+                "title": "Inventory (Discover)",
                 "showTitle": true
               }
             }
           },
           "position": {
             "x": 0,
-            "y": 1,
-            "width": 4,
-            "height": 3
+            "y": 4,
+            "width": 6,
+            "height": 6
           }
         },
         {
           "widget": {
-            "name": "total-runs",
+            "name": "backlog-bar",
             "queries": [
               {
                 "name": "main_query",
                 "query": {
-                  "datasetName": "event_summary",
+                  "datasetName": "backlog_status",
                   "fields": [
                     {
-                      "name": "runs",
-                      "expression": "`runs`"
+                      "name": "status",
+                      "expression": "`status`"
+                    },
+                    {
+                      "name": "items",
+                      "expression": "`items`"
                     }
                   ],
                   "disaggregated": true
@@ -161,39 +394,47 @@
               }
             ],
             "spec": {
-              "version": 2,
-              "widgetType": "counter",
+              "version": 3,
+              "widgetType": "bar",
               "encodings": {
-                "value": {
-                  "fieldName": "runs",
-                  "displayName": "Runs"
+                "x": {
+                  "fieldName": "status",
+                  "displayName": "Status"
+                },
+                "y": {
+                  "fieldName": "items",
+                  "displayName": "Items"
                 }
               },
               "frame": {
-                "title": "Runs",
+                "title": "Backlog (Assess / Convert)",
                 "showTitle": true
               }
             }
           },
           "position": {
-            "x": 4,
-            "y": 1,
-            "width": 4,
-            "height": 3
+            "x": 6,
+            "y": 4,
+            "width": 6,
+            "height": 6
           }
         },
         {
           "widget": {
-            "name": "total-agents",
+            "name": "reconcile-bar",
             "queries": [
               {
                 "name": "main_query",
                 "query": {
-                  "datasetName": "event_summary",
+                  "datasetName": "reconcile_status",
                   "fields": [
                     {
-                      "name": "agents",
-                      "expression": "`agents`"
+                      "name": "result",
+                      "expression": "`result`"
+                    },
+                    {
+                      "name": "checks",
+                      "expression": "`checks`"
                     }
                   ],
                   "disaggregated": true
@@ -201,25 +442,143 @@
               }
             ],
             "spec": {
-              "version": 2,
-              "widgetType": "counter",
+              "version": 3,
+              "widgetType": "bar",
               "encodings": {
-                "value": {
-                  "fieldName": "agents",
-                  "displayName": "Agents"
+                "x": {
+                  "fieldName": "result",
+                  "displayName": "Result"
+                },
+                "y": {
+                  "fieldName": "checks",
+                  "displayName": "Checks"
                 }
               },
               "frame": {
-                "title": "Agents",
+                "title": "Reconcile (Test)",
                 "showTitle": true
               }
             }
           },
           "position": {
-            "x": 8,
-            "y": 1,
-            "width": 4,
-            "height": 3
+            "x": 0,
+            "y": 10,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "tables-landed-bar",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "tables_landed",
+                  "fields": [
+                    {
+                      "name": "table_name",
+                      "expression": "`table_name`"
+                    },
+                    {
+                      "name": "row_count",
+                      "expression": "`row_count`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "table_name",
+                  "displayName": "Table"
+                },
+                "y": {
+                  "fieldName": "row_count",
+                  "displayName": "Rows"
+                }
+              },
+              "frame": {
+                "title": "Tables Landed (load_control)",
+                "showTitle": true
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 10,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "convert-tracker-table",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "convert_tracker",
+                  "fields": [
+                    {
+                      "name": "legacy_proc",
+                      "expression": "`legacy_proc`"
+                    },
+                    {
+                      "name": "target_path",
+                      "expression": "`target_path`"
+                    },
+                    {
+                      "name": "status",
+                      "expression": "`status`"
+                    },
+                    {
+                      "name": "updated_at",
+                      "expression": "`updated_at`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "legacy_proc",
+                    "displayName": "Legacy proc"
+                  },
+                  {
+                    "fieldName": "status",
+                    "displayName": "Status"
+                  },
+                  {
+                    "fieldName": "target_path",
+                    "displayName": "Target"
+                  },
+                  {
+                    "fieldName": "updated_at",
+                    "displayName": "Updated"
+                  }
+                ]
+              },
+              "frame": {
+                "title": "Convert tracker",
+                "showTitle": true
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 16,
+            "width": 12,
+            "height": 6
           }
         },
         {
@@ -265,7 +624,7 @@
           },
           "position": {
             "x": 0,
-            "y": 4,
+            "y": 22,
             "width": 6,
             "height": 6
           }
@@ -321,7 +680,7 @@
           },
           "position": {
             "x": 6,
-            "y": 4,
+            "y": 22,
             "width": 6,
             "height": 6
           }
@@ -396,14 +755,14 @@
                 ]
               },
               "frame": {
-                "title": "Latest Events",
+                "title": "Latest Events (this run)",
                 "showTitle": true
               }
             }
           },
           "position": {
             "x": 0,
-            "y": 10,
+            "y": 28,
             "width": 12,
             "height": 8
           }

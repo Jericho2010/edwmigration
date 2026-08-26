@@ -24,6 +24,7 @@ echo "[teardown] deletion initiated (async). Monitor with:"
 echo "  az group exists --name '${AZ_RG}'   # returns false when fully deleted"
 
 echo
-echo "[teardown] NOTE: the Databricks secrets scope '${DATABRICKS_SECRET_SCOPE:-edw-migration}'"
-echo "[teardown] was NOT deleted (it is outside Azure). To remove it:"
-echo "  databricks secrets delete-scope ${DATABRICKS_SECRET_SCOPE:-edw-migration}"
+echo "[teardown] NOTE: Databricks assets (catalog, jobs, Genie, MLflow, secret scope) are"
+echo "[teardown] outside Azure. Remove them with:"
+echo "  make teardown-databricks"
+echo "  # or: ./agents/tools/teardown_databricks.sh --yes"

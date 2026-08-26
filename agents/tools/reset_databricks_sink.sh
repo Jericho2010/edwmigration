@@ -26,7 +26,7 @@ echo
 echo "=== reset-sink (Databricks only) ==="
 echo "  catalog=${CATALOG}"
 echo "  KEEPS: Azure SQL, .env SOURCE_*, foreign catalog/connection, Genie/dashboard defs"
-echo "  WIPES: ${CATALOG}.ops.* rows, bronze/silver/gold managed tables, agents/out/<run_id>"
+echo "  WIPES: ${CATALOG}.ops.* rows, bronze/silver/gold tables+views, agents/out/<run_id>"
 echo
 
 RUN_SQL="${REPO_ROOT}/agents/tools/run_sql.sh"
@@ -52,19 +52,20 @@ OPS_SQL+="SELECT 'ops_cleared' AS check_name;"
 echo "[reset-sink] clearing ops.* ..."
 "$RUN_SQL" --sql "$OPS_SQL"
 
-# Drop managed bronze/silver/gold tables (never touch foreign catalogs).
-echo "[reset-sink] listing bronze/silver/gold managed tables ..."
+# Drop bronze/silver/gold managed tables AND views (views survive a
+# table-only wipe and dangle against dropped base tables).
+echo "[reset-sink] listing bronze/silver/gold tables and views ..."
 LIST_OUT="$("$RUN_SQL" --sql "
-SELECT table_schema, table_name
+SELECT table_schema, table_name, table_type
 FROM ${CATALOG}.information_schema.tables
 WHERE table_schema IN ('bronze','silver','gold')
-  AND table_type = 'MANAGED'
+  AND table_type IN ('MANAGED', 'BASE TABLE', 'VIEW', 'MATERIALIZED_VIEW')
 ORDER BY table_schema, table_name;
 " 2>/dev/null || true)"
 
 DROP_SQL=""
 DROP_COUNT=0
-while IFS=$'\t' read -r schema name; do
+while IFS=$'\t' read -r schema name ttype; do
   [ -z "${schema:-}" ] && continue
   [ "$schema" = "table_schema" ] && continue
   case "$schema" in
@@ -76,16 +77,23 @@ while IFS=$'\t' read -r schema name; do
     echo "[reset-sink] WARN: skip unsafe identifier ${schema}.${name}" >&2
     continue
   fi
-  DROP_SQL+="DROP TABLE IF EXISTS ${CATALOG}.${schema}.${name};"$'\n'
+  case "${ttype:-}" in
+    VIEW|MATERIALIZED_VIEW)
+      DROP_SQL+="DROP VIEW IF EXISTS ${CATALOG}.${schema}.${name};"$'\n'
+      ;;
+    *)
+      DROP_SQL+="DROP TABLE IF EXISTS ${CATALOG}.${schema}.${name};"$'\n'
+      ;;
+  esac
   DROP_COUNT=$((DROP_COUNT + 1))
 done <<<"$LIST_OUT"
 
 if [ "$DROP_COUNT" -gt 0 ]; then
-  echo "[reset-sink] dropping ${DROP_COUNT} managed table(s) ..."
+  echo "[reset-sink] dropping ${DROP_COUNT} table/view(s) ..."
   DROP_SQL+="SELECT 'medallion_dropped' AS check_name, ${DROP_COUNT} AS n;"
   "$RUN_SQL" --sql "$DROP_SQL"
 else
-  echo "[reset-sink] no bronze/silver/gold managed tables to drop"
+  echo "[reset-sink] no bronze/silver/gold tables or views to drop"
 fi
 
 # Local run artifacts

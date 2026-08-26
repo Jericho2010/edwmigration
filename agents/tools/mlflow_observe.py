@@ -2,22 +2,34 @@
 """MLflow observation for EDW subagents (additive live traces).
 
 Soft dependency: missing mlflow or tracking failure → no-op (exit 0).
-Uses MlflowClient start_trace / start_span / end_span with explicit parent_id
-so Cursor hooks (separate processes) can share one tree via mlflow_context.json.
+
+Cross-process Cursor hooks cannot share an in-memory MLflow trace. CLI
+span/stage/metric/end-run calls therefore *enqueue* JSON records to
+agents/out/<run_id>/spans.buf.jsonl. A single `serve` process per run_id
+owns the MLflow run + trace and applies those records in-process so
+spans actually nest.
+
+Direct Python APIs (init_run, span_start, …) still talk to the backend
+in-process — used by the serve loop and by unit tests.
 
 CLI:
   python3 agents/tools/mlflow_observe.py init --run-id UUID
+  python3 agents/tools/mlflow_observe.py serve --run-id UUID
   python3 agents/tools/mlflow_observe.py span-start --run-id UUID --key K --name N --kind agent|tool|chain
   python3 agents/tools/mlflow_observe.py span-end --run-id UUID --key K [--status OK]
   python3 agents/tools/mlflow_observe.py stage --run-id UUID --agent A --event E [--detail D]
   python3 agents/tools/mlflow_observe.py metric --run-id UUID --key K --value V
   python3 agents/tools/mlflow_observe.py end-run --run-id UUID [--gate-pass 0|1]
   python3 agents/tools/mlflow_observe.py trace-url --run-id UUID
+  python3 agents/tools/mlflow_observe.py experiment-purge [--delete-experiment]
 """
 from __future__ import annotations
 
 import argparse
+import json
 import os
+import re
+import subprocess
 import sys
 import time
 import uuid
@@ -102,13 +114,56 @@ class MemoryBackend:
     def __init__(self) -> None:
         self.metrics: list[tuple[str, float, int | None]] = []
         self.ended_runs: list[str] = []
+        self.deleted_runs: list[str] = []
+        self.runs: list[dict[str, Any]] = []
         self._spans: dict[str, dict[str, Any]] = {}
+        self.experiment_id = "mem-exp-1"
+        self.experiment_deleted = False
 
     def get_or_create_experiment(self, name: str) -> str:
-        return "mem-exp-1"
+        return self.experiment_id
+
+    def get_experiment_by_name(self, name: str) -> str | None:
+        return self.experiment_id
 
     def create_run(self, experiment_id: str, run_name: str, tags: dict[str, str]) -> str:
-        return f"mem-run-{uuid.uuid4().hex[:12]}"
+        rid = f"mem-run-{uuid.uuid4().hex[:12]}"
+        self.runs.append(
+            {
+                "id": rid,
+                "experiment_id": experiment_id,
+                "name": run_name,
+                "tags": dict(tags),
+                "status": "RUNNING",
+            }
+        )
+        return rid
+
+    def search_runs(
+        self, experiment_id: str, filter_string: str = "", max_results: int = 1000
+    ) -> list[dict[str, Any]]:
+        out: list[dict[str, Any]] = []
+        wanted_tag = ""
+        m = re.search(r"tags\.edw_run_id\s*=\s*'([^']*)'", filter_string or "")
+        if m:
+            wanted_tag = m.group(1)
+        for r in self.runs:
+            if r["experiment_id"] != experiment_id:
+                continue
+            if wanted_tag and r.get("tags", {}).get("edw_run_id") != wanted_tag:
+                continue
+            out.append(r)
+            if len(out) >= max_results:
+                break
+        return out
+
+    def delete_run(self, run_id: str) -> None:
+        self.deleted_runs.append(run_id)
+        self.runs = [r for r in self.runs if r["id"] != run_id]
+
+    def delete_experiment(self, experiment_id: str) -> None:
+        self.experiment_deleted = True
+        self.runs = [r for r in self.runs if r["experiment_id"] != experiment_id]
 
     def start_trace(
         self,
@@ -157,8 +212,11 @@ class MemoryBackend:
     def log_metric(self, run_id: str, key: str, value: float, step: int | None = None) -> None:
         self.metrics.append((key, float(value), step))
 
-    def set_terminated(self, run_id: str) -> None:
+    def set_terminated(self, run_id: str, status: str = "FINISHED") -> None:
         self.ended_runs.append(run_id)
+        for r in self.runs:
+            if r["id"] == run_id:
+                r["status"] = status or "FINISHED"
 
 
 class MlflowBackend:
@@ -259,8 +317,53 @@ class MlflowBackend:
         else:
             self.client.log_metric(run_id, key, float(value), step=step)
 
-    def set_terminated(self, run_id: str) -> None:
-        self.client.set_terminated(run_id)
+    def get_experiment_by_name(self, name: str) -> str | None:
+        try:
+            exp = self.client.get_experiment_by_name(name)
+        except Exception:
+            return None
+        if exp is None:
+            return None
+        return str(exp.experiment_id)
+
+    def search_runs(
+        self, experiment_id: str, filter_string: str = "", max_results: int = 1000
+    ) -> list[Any]:
+        out: list[Any] = []
+        page_token = None
+        remaining = max(1, max_results)
+        pages = 0
+        while remaining > 0 and pages < 20:
+            kwargs: dict[str, Any] = {
+                "experiment_ids": [experiment_id],
+                "max_results": min(100, remaining),
+            }
+            if filter_string:
+                kwargs["filter_string"] = filter_string
+            if page_token:
+                kwargs["page_token"] = page_token
+            page = self.client.search_runs(**kwargs)
+            batch = list(page) if page is not None else []
+            out.extend(batch)
+            remaining = max_results - len(out)
+            pages += 1
+            page_token = getattr(page, "token", None) or None
+            if not page_token or not batch:
+                break
+        return out
+
+    def delete_run(self, run_id: str) -> None:
+        self.client.delete_run(run_id)
+
+    def delete_experiment(self, experiment_id: str) -> None:
+        self.client.delete_experiment(experiment_id)
+
+    def set_terminated(self, run_id: str, status: str = "FINISHED") -> None:
+        # MlflowClient.set_terminated(run_id, status=..., end_time=...)
+        try:
+            self.client.set_terminated(run_id, status=status)
+        except TypeError:
+            self.client.set_terminated(run_id)
 
 
 _MEMORY_SINGLETON: MemoryBackend | None = None
@@ -317,13 +420,290 @@ def reset_memory_backend() -> None:
     _MEMORY_SINGLETON = None
 
 
+def _run_id_of(run_obj: Any) -> str:
+    if isinstance(run_obj, dict):
+        return str(run_obj.get("id") or "")
+    info = getattr(run_obj, "info", None)
+    if info is not None:
+        return str(getattr(info, "run_id", "") or "")
+    return str(getattr(run_obj, "run_id", "") or "")
+
+
+def _run_status_of(run_obj: Any) -> str:
+    if isinstance(run_obj, dict):
+        return str(run_obj.get("status") or "")
+    info = getattr(run_obj, "info", None)
+    if info is not None:
+        return str(getattr(info, "status", "") or "")
+    return str(getattr(run_obj, "status", "") or "")
+
+
+def _terminate_quietly(backend: Any, mlflow_run_id: str, status: str = "KILLED") -> None:
+    if not mlflow_run_id:
+        return
+    try:
+        backend.set_terminated(mlflow_run_id, status=status)
+    except TypeError:
+        try:
+            backend.set_terminated(mlflow_run_id)
+        except Exception:
+            pass
+    except Exception:
+        pass
+
+
+# ---------------------------------------------------------------------------
+# Span queue (cross-process → single writer)
+# ---------------------------------------------------------------------------
+
+
+def spans_buf_path(run_id: str, root: Path | None = None) -> Path:
+    return ctx.run_dir(run_id, root) / "spans.buf.jsonl"
+
+
+def serve_pid_path(run_id: str, root: Path | None = None) -> Path:
+    return ctx.run_dir(run_id, root) / "mlflow_serve.pid"
+
+
+def enqueue(run_id: str, record: dict[str, Any], root: Path | None = None) -> Path:
+    """Append one JSON record to the per-run span queue. Fast; no MLflow I/O."""
+    root = root or ROOT
+    path = spans_buf_path(run_id, root)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    rec = dict(record)
+    rec.setdefault("ts", time.time())
+    payload = json.dumps(rec, separators=(",", ":")) + "\n"
+    lock = Path(str(path) + ".lock")
+
+    def _write() -> None:
+        with open(path, "a", encoding="utf-8") as fh:
+            fh.write(payload)
+
+    ctx._with_lock(lock, _write)
+    return path
+
+
+def _inline_cli() -> bool:
+    """True when CLI should apply spans in-process (tests / memory backend)."""
+    flag = (os.environ.get("EDW_MLFLOW_INLINE") or "").strip().lower()
+    if flag in ("1", "true", "yes"):
+        return True
+    return resolve_tracking_uri() == "memory"
+
+
+def _should_spawn_serve() -> bool:
+    if (os.environ.get("EDW_MLFLOW_NO_SERVE") or "").strip().lower() in ("1", "true", "yes"):
+        return False
+    if _inline_cli():
+        return False
+    if resolve_tracking_uri() in (None, "memory"):
+        return False
+    return True
+
+
+def is_serve_alive(run_id: str, root: Path | None = None) -> bool:
+    path = serve_pid_path(run_id, root)
+    if not path.is_file():
+        return False
+    try:
+        pid = int(path.read_text(encoding="utf-8").strip())
+    except (OSError, ValueError):
+        return False
+    if pid <= 0:
+        return False
+    try:
+        os.kill(pid, 0)
+        return True
+    except OSError:
+        return False
+
+
+def spawn_serve_daemon(run_id: str, root: Path | None = None, force: bool = False) -> int | None:
+    """Start `serve` in the background. Returns PID or None."""
+    root = root or ROOT
+    if is_serve_alive(run_id, root):
+        try:
+            return int(serve_pid_path(run_id, root).read_text(encoding="utf-8").strip())
+        except (OSError, ValueError):
+            return None
+    rundir = ctx.run_dir(run_id, root)
+    rundir.mkdir(parents=True, exist_ok=True)
+    log = rundir / "mlflow_serve.log"
+    cmd = [sys.executable, str(Path(__file__).resolve()), "serve", "--run-id", run_id]
+    if force:
+        cmd.append("--force")
+    env = os.environ.copy()
+    env["EDW_SKIP_VENV_REEXEC"] = "1"
+    with open(log, "a", encoding="utf-8") as lf:
+        proc = subprocess.Popen(
+            cmd,
+            cwd=str(root),
+            stdout=lf,
+            stderr=subprocess.STDOUT,
+            start_new_session=True,
+            env=env,
+        )
+    serve_pid_path(run_id, root).write_text(str(proc.pid) + "\n", encoding="utf-8")
+    return proc.pid
+
+
+def wait_for_context(
+    run_id: str, root: Path | None = None, timeout: float = 15.0
+) -> dict[str, Any]:
+    root = root or ROOT
+    deadline = time.time() + timeout
+    last: dict[str, Any] | None = None
+    while time.time() < deadline:
+        last = ctx.load_context(run_id, root)
+        if last and last.get("enabled") and last.get("trace_id"):
+            return last
+        time.sleep(0.2)
+    return last or ctx.empty_context(run_id)
+
+
+def apply_queue_record(run_id: str, rec: dict[str, Any], root: Path | None = None) -> str:
+    """Apply one queued record in-process. Returns op name (or 'shutdown')."""
+    op = str(rec.get("op") or "")
+    if op == "span-start":
+        span_start(
+            run_id,
+            key=str(rec.get("key") or ""),
+            name=str(rec.get("name") or "span"),
+            kind=str(rec.get("kind") or "agent"),
+            inputs=rec.get("detail") or rec.get("inputs"),
+            attributes={"edw.agent": rec["agent"]} if rec.get("agent") else None,
+            parent_key=rec.get("parent_key"),
+            root=root,
+        )
+    elif op == "span-end":
+        span_end(
+            run_id,
+            key=str(rec.get("key") or ""),
+            outputs=rec.get("detail") or rec.get("outputs"),
+            status=str(rec.get("status") or "OK"),
+            root=root,
+        )
+    elif op == "stage":
+        stage(
+            run_id,
+            agent=str(rec.get("agent") or ""),
+            event=str(rec.get("event") or ""),
+            detail=str(rec.get("detail") or ""),
+            tool=str(rec.get("tool") or ""),
+            root=root,
+        )
+    elif op == "metric":
+        step = rec.get("step")
+        log_metric_value(
+            run_id,
+            key=str(rec.get("key") or ""),
+            value=float(rec.get("value") or 0),
+            step=int(step) if step is not None else None,
+            root=root,
+        )
+    elif op in ("end-run", "shutdown"):
+        gp = rec.get("gate_pass")
+        end_run(
+            run_id,
+            outputs=rec.get("detail") or rec.get("outputs"),
+            gate_pass=float(gp) if gp is not None else None,
+            root=root,
+        )
+        return "shutdown"
+    return op
+
+
+def drain_queue(run_id: str, root: Path | None = None) -> str | None:
+    """Move pending spans.buf.jsonl records into the live trace.
+
+    Returns 'shutdown' if an end-run/shutdown record was applied,
+    'drained' if any records were applied, or None if the queue was empty.
+    """
+    root = root or ROOT
+    buf = spans_buf_path(run_id, root)
+    if not buf.is_file() or buf.stat().st_size == 0:
+        return None
+    consumed = ctx.run_dir(run_id, root) / "spans.consumed.jsonl"
+    lock = Path(str(buf) + ".lock")
+    records: list[dict[str, Any]] = []
+
+    def _locked() -> None:
+        try:
+            lines = buf.read_text(encoding="utf-8").splitlines()
+        except OSError:
+            return
+        buf.write_text("", encoding="utf-8")
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                rec = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if isinstance(rec, dict):
+                records.append(rec)
+
+    ctx._with_lock(lock, _locked)
+    if not records:
+        return None
+    shutdown = False
+    for rec in records:
+        result = apply_queue_record(run_id, rec, root)
+        with open(consumed, "a", encoding="utf-8") as fh:
+            fh.write(json.dumps(rec, separators=(",", ":")) + "\n")
+        if result == "shutdown":
+            shutdown = True
+    if shutdown:
+        return "shutdown"
+    return "drained"
+
+
+def serve_loop(
+    run_id: str,
+    root: Path | None = None,
+    force: bool = True,
+    once: bool = False,
+    idle_timeout: float | None = None,
+    poll_interval: float = 0.2,
+) -> dict[str, Any]:
+    """Own the MLflow trace for this run_id and apply queued span records.
+
+    Always force-init: InMemoryTraceManager is per-process, so a respawned
+    daemon cannot attach to a previous process's root span.
+    """
+    root = root or ROOT
+    data = init_run(run_id, root=root, force=True)
+    idle = 0.0
+    while True:
+        result = drain_queue(run_id, root)
+        if result == "shutdown":
+            return ctx.load_context(run_id, root) or data
+        if result is None:
+            if once:
+                return ctx.load_context(run_id, root) or data
+            if idle_timeout is not None and idle >= idle_timeout:
+                return ctx.load_context(run_id, root) or data
+            time.sleep(poll_interval)
+            idle += poll_interval
+        else:
+            idle = 0.0
+            if once:
+                return ctx.load_context(run_id, root) or data
+
+
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
 
 
 def init_run(run_id: str, root: Path | None = None, force: bool = False) -> dict[str, Any]:
-    """Start MLflow run + root span; write mlflow_context.json."""
+    """Start MLflow run + root span; write mlflow_context.json.
+
+    Idempotent: reuses existing enabled context unless force=True.
+    On force, terminates the previous MLflow run so it does not stay RUNNING.
+    Never creates a second live run for the same edw_run_id tag.
+    """
     root = root or ROOT
     existing = ctx.load_context(run_id, root)
     if existing and existing.get("enabled") and existing.get("trace_id") and not force:
@@ -339,6 +719,20 @@ def init_run(run_id: str, root: Path | None = None, force: bool = False) -> dict
     try:
         exp_name = ctx.DEFAULT_EXPERIMENT
         experiment_id = backend.get_or_create_experiment(exp_name)
+        # Kill any leftover RUNNING runs tagged with this edw_run_id.
+        try:
+            for run_obj in backend.search_runs(
+                experiment_id, filter_string=f"tags.edw_run_id = '{run_id}'"
+            ):
+                rid = _run_id_of(run_obj)
+                status = _run_status_of(run_obj).upper()
+                if rid and status in ("", "RUNNING"):
+                    _terminate_quietly(backend, rid, "KILLED")
+        except Exception:
+            pass
+        if force and existing and existing.get("mlflow_run_id"):
+            _terminate_quietly(backend, str(existing["mlflow_run_id"]), "KILLED")
+
         mlflow_run_id = backend.create_run(
             experiment_id,
             run_name=f"edw-{run_id[:8]}",
@@ -377,13 +771,13 @@ def init_run(run_id: str, root: Path | None = None, force: bool = False) -> dict
 
 
 def ensure_init(run_id: str, root: Path | None = None) -> dict[str, Any]:
-    """Lazy-init when context.json exists for this run."""
+    """Lazy-init when context.json exists for this run.
+
+    Parent-span-missing is *not* treated as corruption — never mint a new run.
+    """
     root = root or ROOT
     existing = ctx.load_context(run_id, root)
     if existing and existing.get("enabled") and existing.get("trace_id"):
-        err = str(existing.get("last_error") or "")
-        if _parent_span_missing(err):
-            return _recover_trace(run_id, root)
         return existing
     context_json = ctx.run_dir(run_id, root) / "context.json"
     if not context_json.is_file() and run_id == "unknown":
@@ -403,13 +797,6 @@ def _active_parent_id(c: dict[str, Any]) -> str:
 def _parent_span_missing(exc: BaseException | str) -> bool:
     text = str(exc)
     return "Parent span" in text and "not found" in text
-
-
-def _recover_trace(run_id: str, root: Path) -> dict[str, Any]:
-    """Force re-init when root/parent span is gone; re-announce observe_url."""
-    data = init_run(run_id, root=root, force=True)
-    announce_observe_url(str(data.get("observe_url") or ""))
-    return data
 
 
 def span_start(
@@ -465,14 +852,8 @@ def span_start(
     try:
         return _do_start(c)
     except Exception as exc:
-        if _parent_span_missing(exc):
-            try:
-                recovered = _recover_trace(run_id, root)
-                if recovered.get("enabled"):
-                    return _do_start(recovered)
-            except Exception as exc2:
-                exc = exc2
-
+        # Never mint a new run on parent-missing — the serve process owns the
+        # trace. Record the error and leave the existing run in place.
         def mut_err(data: dict[str, Any]) -> None:
             data["last_error"] = truncate_io(exc, 500)
 
@@ -562,6 +943,8 @@ def stage(
         except Exception:
             pass
 
+        # Log gate_pass but do NOT end the run — retries must keep the daemon.
+        # Coordinator calls end-run at Done.
         if agent == "gate" and event == "completed":
             detail_l = (detail or "").strip().lower()
             gate_pass = 0.0 if "fail" in detail_l else (1.0 if "pass" in detail_l else 0.0)
@@ -569,7 +952,6 @@ def stage(
                 backend.log_metric(ctx_data["mlflow_run_id"], "gate_pass", gate_pass)
             except Exception:
                 pass
-            return end_run(run_id, outputs={"gate": detail}, gate_pass=gate_pass, root=root)
 
         def mut_ok(data: dict[str, Any]) -> None:
             data.pop("last_error", None)
@@ -579,14 +961,6 @@ def stage(
     try:
         return _do_stage(c)
     except Exception as exc:
-        if _parent_span_missing(exc):
-            try:
-                recovered = _recover_trace(run_id, root)
-                if recovered.get("enabled"):
-                    return _do_stage(recovered)
-            except Exception as exc2:
-                exc = exc2
-
         def mut_err(data: dict[str, Any]) -> None:
             data["last_error"] = truncate_io(exc, 500)
 
@@ -601,8 +975,8 @@ def log_metric_value(
     root: Path | None = None,
 ) -> dict[str, Any]:
     root = root or ROOT
-    c = ensure_init(run_id, root)
-    if not c.get("enabled"):
+    c = ctx.load_context(run_id, root) or ctx.empty_context(run_id)
+    if not c.get("enabled") or not c.get("mlflow_run_id"):
         return c
     backend = get_backend()
     if backend is None:
@@ -644,12 +1018,20 @@ def end_run(
             backend.end_trace(
                 c["trace_id"],
                 outputs=truncate_io(outputs) if outputs is not None else None,
-                status="OK",
+                status="OK" if (gate_pass is None or float(gate_pass) >= 1.0) else "ERROR",
             )
         except Exception:
             pass
+        term_status = "FINISHED"
+        if gate_pass is not None and float(gate_pass) < 1.0:
+            term_status = "FAILED"
         try:
-            backend.set_terminated(c["mlflow_run_id"])
+            backend.set_terminated(c["mlflow_run_id"], status=term_status)
+        except TypeError:
+            try:
+                backend.set_terminated(c["mlflow_run_id"])
+            except Exception:
+                pass
         except Exception:
             pass
     except Exception:
@@ -682,6 +1064,179 @@ def announce_observe_url(url: str, stream=None) -> None:
     print(f"Observed by MLflow: {u}", file=out, flush=True)
 
 
+def _rest_headers(token: str) -> dict[str, str]:
+    return {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+
+
+def _rest_json(method: str, url: str, token: str, body: dict[str, Any] | None = None) -> dict[str, Any]:
+    import urllib.error
+    import urllib.request
+
+    data = None if body is None else json.dumps(body).encode()
+    req = urllib.request.Request(url, data=data, method=method, headers=_rest_headers(token))
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            raw = resp.read().decode() or "{}"
+            return json.loads(raw)
+    except urllib.error.HTTPError as exc:
+        err = exc.read().decode(errors="replace")[:400]
+        raise RuntimeError(f"{method} {url} -> {exc.code} {err}") from exc
+
+
+def _databricks_rest_purge(delete_experiment: bool = False) -> dict[str, Any] | None:
+    """Parallel REST delete. Returns None if host/token missing (caller falls back)."""
+    host = (os.environ.get("DATABRICKS_HOST") or "").rstrip("/")
+    token = os.environ.get("DATABRICKS_TOKEN") or ""
+    if not host or not token:
+        return None
+    import urllib.parse
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+
+    exp = None
+    for name in (ctx.DEFAULT_EXPERIMENT, ctx.FALLBACK_EXPERIMENT):
+        q = urllib.parse.quote(name, safe="")
+        print(f"[mlflow_observe] experiment-purge: REST lookup {name}", flush=True)
+        try:
+            exp = _rest_json(
+                "GET",
+                f"{host}/api/2.0/mlflow/experiments/get-by-name?experiment_name={q}",
+                token,
+            )
+        except Exception as exc:
+            print(f"[mlflow_observe] lookup failed for {name}: {truncate_io(exc, 200)}", flush=True)
+            exp = None
+        if exp and exp.get("experiment"):
+            break
+    if not exp or not exp.get("experiment"):
+        return {"purged": 0, "enabled": True, "error": "experiment not found"}
+
+    eid = str(exp["experiment"]["experiment_id"])
+    print(f"[mlflow_observe] experiment-purge: experiment_id={eid} listing runs…", flush=True)
+    ids: list[str] = []
+    try:
+        page = None
+        while True:
+            body: dict[str, Any] = {"experiment_ids": [eid], "max_results": 100}
+            if page:
+                body["page_token"] = page
+            out = _rest_json("POST", f"{host}/api/2.0/mlflow/runs/search", token, body)
+            for run in out.get("runs") or []:
+                rid = (run.get("info") or {}).get("run_id")
+                if rid:
+                    ids.append(str(rid))
+            page = out.get("next_page_token")
+            if not page:
+                break
+    except Exception as exc:
+        return {"purged": 0, "experiment_id": eid, "error": truncate_io(exc, 500)}
+    print(f"[mlflow_observe] experiment-purge: {len(ids)} run(s) to delete (parallel)", flush=True)
+
+    purged = 0
+    errors: list[str] = []
+
+    def _del(rid: str) -> str | None:
+        try:
+            _rest_json("POST", f"{host}/api/2.0/mlflow/runs/delete", token, {"run_id": rid})
+            return None
+        except Exception as exc:
+            return f"{rid}: {truncate_io(exc, 120)}"
+
+    if ids:
+        workers = min(16, len(ids))
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            futs = {pool.submit(_del, rid): rid for rid in ids}
+            done = 0
+            for fut in as_completed(futs):
+                done += 1
+                err = fut.result()
+                if err:
+                    errors.append(err)
+                else:
+                    purged += 1
+                if done % 25 == 0 or done == len(ids):
+                    print(f"[mlflow_observe] deleted {purged}/{len(ids)}", flush=True)
+
+    deleted_exp = False
+    if delete_experiment:
+        try:
+            _rest_json(
+                "POST",
+                f"{host}/api/2.0/mlflow/experiments/delete",
+                token,
+                {"experiment_id": eid},
+            )
+            deleted_exp = True
+            print("[mlflow_observe] experiment deleted", flush=True)
+        except Exception as exc:
+            errors.append(f"experiment: {truncate_io(exc, 200)}")
+    return {
+        "purged": purged,
+        "experiment_id": eid,
+        "experiment_deleted": deleted_exp,
+        "errors": errors,
+    }
+
+
+def experiment_purge(delete_experiment: bool = False) -> dict[str, Any]:
+    """Delete all runs in /Shared/edw-migration (and optionally the experiment)."""
+    print("[mlflow_observe] experiment-purge: starting", flush=True)
+    uri = resolve_tracking_uri()
+    if uri not in (None, "memory"):
+        rest = _databricks_rest_purge(delete_experiment=delete_experiment)
+        if rest is not None:
+            return rest
+    backend = get_backend()
+    if backend is None:
+        return {"purged": 0, "enabled": False, "error": "no backend"}
+    exp_id = None
+    getter = getattr(backend, "get_experiment_by_name", None)
+    names = [ctx.DEFAULT_EXPERIMENT, ctx.FALLBACK_EXPERIMENT]
+    for name in names:
+        print(f"[mlflow_observe] experiment-purge: lookup {name}", flush=True)
+        try:
+            if getter is not None:
+                exp_id = getter(name)
+            else:
+                exp_id = backend.get_or_create_experiment(name)
+        except Exception as exc:
+            print(f"[mlflow_observe] lookup failed for {name}: {truncate_io(exc, 200)}", flush=True)
+            exp_id = None
+        if exp_id:
+            break
+    if not exp_id:
+        return {"purged": 0, "enabled": True, "error": "experiment not found"}
+    print(f"[mlflow_observe] experiment-purge: experiment_id={exp_id} listing runs…", flush=True)
+    purged = 0
+    errors: list[str] = []
+    try:
+        runs = backend.search_runs(str(exp_id), filter_string="")
+    except Exception as exc:
+        return {"purged": 0, "experiment_id": str(exp_id), "error": truncate_io(exc, 500)}
+    print(f"[mlflow_observe] experiment-purge: {len(runs)} run(s) to delete", flush=True)
+    for run_obj in runs:
+        rid = _run_id_of(run_obj)
+        if not rid:
+            continue
+        try:
+            backend.delete_run(rid)
+            purged += 1
+        except Exception as exc:
+            errors.append(f"{rid}: {truncate_io(exc, 120)}")
+    deleted_exp = False
+    if delete_experiment:
+        try:
+            backend.delete_experiment(str(exp_id))
+            deleted_exp = True
+        except Exception as exc:
+            errors.append(f"experiment: {truncate_io(exc, 200)}")
+    return {
+        "purged": purged,
+        "experiment_id": str(exp_id),
+        "experiment_deleted": deleted_exp,
+        "errors": errors,
+    }
+
+
 # ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
@@ -689,7 +1244,11 @@ def announce_observe_url(url: str, stream=None) -> None:
 
 def _cmd_init(args: argparse.Namespace) -> int:
     load_env()
-    data = init_run(args.run_id, force=bool(args.force))
+    if _should_spawn_serve() and not getattr(args, "no_serve", False):
+        spawn_serve_daemon(args.run_id, force=bool(args.force))
+        data = wait_for_context(args.run_id, timeout=20.0)
+    else:
+        data = init_run(args.run_id, force=bool(args.force))
     announce_observe_url(str(data.get("observe_url") or ""))
     print(
         f"[mlflow_observe] init run_id={args.run_id} enabled={data.get('enabled')}",
@@ -698,45 +1257,102 @@ def _cmd_init(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_serve(args: argparse.Namespace) -> int:
+    load_env()
+    pid_path = serve_pid_path(args.run_id)
+    pid_path.parent.mkdir(parents=True, exist_ok=True)
+    pid_path.write_text(str(os.getpid()) + "\n", encoding="utf-8")
+    idle = args.idle_timeout if getattr(args, "idle_timeout", None) is not None else None
+    try:
+        print(
+            f"[mlflow_observe] serve start run_id={args.run_id} pid={os.getpid()}",
+            flush=True,
+        )
+        serve_loop(
+            args.run_id,
+            force=bool(args.force),
+            once=bool(args.once),
+            idle_timeout=idle,
+        )
+        print(f"[mlflow_observe] serve stop run_id={args.run_id}", flush=True)
+    finally:
+        try:
+            if pid_path.is_file() and pid_path.read_text(encoding="utf-8").strip() == str(
+                os.getpid()
+            ):
+                pid_path.unlink()
+        except OSError:
+            pass
+    return 0
+
+
 def _cmd_span_start(args: argparse.Namespace) -> int:
     load_env()
-    attrs = {}
-    if args.agent:
-        attrs["edw.agent"] = args.agent
-    span_start(
-        args.run_id,
-        key=args.key,
-        name=args.name,
-        kind=args.kind,
-        inputs=args.detail or args.tool or None,
-        attributes=attrs,
-        parent_key=args.parent_key,
-    )
+    rec = {
+        "op": "span-start",
+        "key": args.key,
+        "name": args.name,
+        "kind": args.kind,
+        "agent": args.agent or "",
+        "detail": args.detail or args.tool or "",
+        "parent_key": args.parent_key,
+    }
+    if _inline_cli():
+        apply_queue_record(args.run_id, rec)
+    else:
+        enqueue(args.run_id, rec)
     return 0
 
 
 def _cmd_span_end(args: argparse.Namespace) -> int:
     load_env()
-    span_end(args.run_id, key=args.key, outputs=args.detail, status=args.status)
+    rec = {
+        "op": "span-end",
+        "key": args.key,
+        "detail": args.detail,
+        "status": args.status,
+    }
+    if _inline_cli():
+        apply_queue_record(args.run_id, rec)
+    else:
+        enqueue(args.run_id, rec)
     return 0
 
 
 def _cmd_stage(args: argparse.Namespace) -> int:
     load_env()
-    stage(args.run_id, args.agent, args.event, detail=args.detail or "", tool=args.tool or "")
+    rec = {
+        "op": "stage",
+        "agent": args.agent,
+        "event": args.event,
+        "detail": args.detail or "",
+        "tool": args.tool or "",
+    }
+    if _inline_cli():
+        apply_queue_record(args.run_id, rec)
+    else:
+        enqueue(args.run_id, rec)
     return 0
 
 
 def _cmd_metric(args: argparse.Namespace) -> int:
     load_env()
-    log_metric_value(args.run_id, args.key, float(args.value), step=args.step)
+    rec = {"op": "metric", "key": args.key, "value": float(args.value), "step": args.step}
+    if _inline_cli():
+        apply_queue_record(args.run_id, rec)
+    else:
+        enqueue(args.run_id, rec)
     return 0
 
 
 def _cmd_end_run(args: argparse.Namespace) -> int:
     load_env()
     gp = None if args.gate_pass is None else float(args.gate_pass)
-    end_run(args.run_id, outputs=args.detail, gate_pass=gp)
+    rec = {"op": "end-run", "detail": args.detail, "gate_pass": gp}
+    if _inline_cli():
+        apply_queue_record(args.run_id, rec)
+    else:
+        enqueue(args.run_id, rec)
     url = trace_url(args.run_id)
     if url:
         print(f"observe_url: {url}", flush=True)
@@ -751,6 +1367,23 @@ def _cmd_trace_url(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_experiment_purge(args: argparse.Namespace) -> int:
+    print("[mlflow_observe] experiment-purge starting", flush=True)
+    load_env()
+    result = experiment_purge(delete_experiment=bool(args.delete_experiment))
+    print(
+        f"[mlflow_observe] experiment-purge purged={result.get('purged')} "
+        f"experiment_id={result.get('experiment_id')} "
+        f"experiment_deleted={result.get('experiment_deleted')}",
+        flush=True,
+    )
+    for err in result.get("errors") or []:
+        print(f"[mlflow_observe] WARN: {err}", file=sys.stderr)
+    if result.get("error"):
+        print(f"[mlflow_observe] WARN: {result['error']}", file=sys.stderr)
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(description="EDW MLflow observe (soft no-op)")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -758,7 +1391,20 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("init")
     p.add_argument("--run-id", required=True)
     p.add_argument("--force", action="store_true")
+    p.add_argument("--no-serve", action="store_true")
     p.set_defaults(func=_cmd_init)
+
+    p = sub.add_parser("serve")
+    p.add_argument("--run-id", required=True)
+    p.add_argument("--force", action="store_true")
+    p.add_argument("--once", action="store_true", help="Drain the queue once and exit")
+    p.add_argument(
+        "--idle-timeout",
+        type=float,
+        default=None,
+        help="Exit after this many idle seconds (tests)",
+    )
+    p.set_defaults(func=_cmd_serve)
 
     p = sub.add_parser("span-start")
     p.add_argument("--run-id", required=True)
@@ -802,6 +1448,14 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("trace-url")
     p.add_argument("--run-id", required=True)
     p.set_defaults(func=_cmd_trace_url)
+
+    p = sub.add_parser("experiment-purge")
+    p.add_argument(
+        "--delete-experiment",
+        action="store_true",
+        help="Also delete the /Shared/edw-migration experiment itself",
+    )
+    p.set_defaults(func=_cmd_experiment_purge)
 
     return ap
 

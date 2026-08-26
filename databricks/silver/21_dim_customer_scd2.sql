@@ -11,7 +11,8 @@ SELECT
   `Bill To Customer` AS bill_to_customer_id,
   `Category` AS category,
   `Buying Group` AS buying_group_id,
-  `City` AS city_id,
+  -- WWI Standard bacpac Dimension.Customer has no City column.
+  CAST(NULL AS STRING) AS city_id,
   `Valid From` AS valid_from,
   `Valid To` AS valid_to,
   CASE

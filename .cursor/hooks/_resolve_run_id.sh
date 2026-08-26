@@ -19,19 +19,23 @@ if [ -f "$CURRENT" ]; then
   fi
 fi
 
-# Portable newest context.json (no GNU find -printf)
+# Fallback: newest run dir touched in the last 2 hours. Do not pick a stale
+# prior-demo context just because CURRENT_RUN is missing.
 if command -v python3 >/dev/null 2>&1; then
   NEWEST="$(python3 - "$REPO_ROOT" <<'PY'
-import sys
+import sys, time
 from pathlib import Path
 root = Path(sys.argv[1]) / "agents" / "out"
 best = None
 best_mtime = -1.0
+cutoff = time.time() - 7200
 if root.is_dir():
-    for ctx in root.glob("*/context.json"):
+    for ctx in list(root.glob("*/mlflow_context.json")) + list(root.glob("*/context.json")):
         try:
             m = ctx.stat().st_mtime
         except OSError:
+            continue
+        if m < cutoff:
             continue
         if m > best_mtime:
             best_mtime = m

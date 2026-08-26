@@ -87,6 +87,19 @@ def run_ops_sql(sql: str) -> None:
         raise RuntimeError(proc.stderr or proc.stdout or "run_sql failed")
 
 
+def _enqueue_metric(run_id: str, key: str, value: float) -> None:
+    observe = ROOT / "agents" / "tools" / "mlflow_observe.py"
+    if not observe.is_file():
+        return
+    subprocess.run(
+        [sys.executable, str(observe), "metric", "--run-id", run_id, "--key", key, "--value", str(value)],
+        cwd=str(ROOT),
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+
 def upsert_proc_map(catalog: str, rows: list[dict]) -> None:
     if not rows:
         return
@@ -240,12 +253,16 @@ def merge(run_id: str, skip_ops: bool = False) -> dict:
         try:
             catalog = load_context_catalog(run_dir)
             upsert_proc_map(catalog, map_rows)
+            sys.path.insert(0, str(ROOT / "agents" / "tools"))
+            from persist_backlog import upsert_ops as upsert_backlog
+
+            upsert_backlog(catalog, backlog)
         except Exception as exc:  # noqa: BLE001 — surface ops failure to marker
             marker = {
                 "run_id": run_id,
                 "error": str(exc),
                 "failed_at": datetime.now(timezone.utc).isoformat(),
-                "note": "ops.proc_conversion_map upsert failed; backlog not updated",
+                "note": "ops.proc_conversion_map / migration_backlog upsert failed; backlog not updated",
                 "pending_summary": summary,
             }
             failed_path.write_text(json.dumps(marker, indent=2) + "\n")
@@ -261,6 +278,9 @@ def merge(run_id: str, skip_ops: bool = False) -> dict:
     summary_path.write_text(json.dumps(summary, indent=2) + "\n")
     if failed_path.is_file():
         failed_path.unlink()
+
+    _enqueue_metric(run_id, "procs_converted", float(converted))
+    _enqueue_metric(run_id, "procs_blocked", float(blocked))
 
     print(
         f"[merge_convert_results] run_id={run_id} converted={converted} "

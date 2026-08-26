@@ -37,10 +37,11 @@ Portable prompts + contracts. Cursor and GitHub Copilot adapters are generated.
 | `print_observability_urls.sh` | Control Plane + Genie + MLflow `observe_url` |
 | `observe_status.sh` | Ops counts + URLs snapshot for stage checkpoints |
 | `dual_write_agent_lifecycle.sh` | UC + MLflow start/stop when hooks cannot fire (fallback; Convert: `--item-id` per item) |
-| `reset_databricks_sink.sh` | Wipe managed UC + `agents/out` (keeps Azure); `make reset-sink` |
-| `record_agent_event.sh` | Insert ops.agent_events row (+ MLflow stage span + force flush) |
-| `ensure_run_events.py` | `coordinator/started` + table-only `convert/skipped` (not assess); inits MLflow run |
-| `mlflow_observe.py` | Soft MLflow init / spans / stage / end-run / trace-url (prefers `.venv`) |
+| `reset_databricks_sink.sh` | Wipe managed UC + views + `agents/out` (keeps Azure); `make reset-sink` |
+| `teardown_databricks.sh` | Destroy job/dashboard/Genie/MLflow/catalog/connection/scope; `make teardown-databricks` |
+| `record_agent_event.sh` | Insert ops.agent_events row (+ MLflow stage enqueue + force flush) |
+| `ensure_run_events.py` | `coordinator/started` + table-only `convert/skipped` (not assess); inits MLflow serve daemon |
+| `mlflow_observe.py` | Soft MLflow init / serve daemon / span queue / end-run / experiment-purge |
 | `mlflow_context.py` | `agents/out/<run_id>/mlflow_context.json` helpers |
 | `resolve_python.sh` | Prefer `.venv/bin/python` for observe tools/hooks |
 | `check_mlflow_observe.sh` | Health: venv + mlflow≥3.8 + DATABRICKS_HOST (`--strict` for preflight WARN) |

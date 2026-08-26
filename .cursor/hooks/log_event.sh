@@ -61,82 +61,69 @@ PY
 BUF_DIR="${REPO_ROOT}/agents/out/${RUN_ID}"
 mkdir -p "$BUF_DIR"
 BUF_FILE="${BUF_DIR}/events.buf.jsonl"
+SPAN_Q="${BUF_DIR}/spans.buf.jsonl"
+ENQUEUE="${REPO_ROOT}/agents/tools/enqueue_span.py"
 TS="$(date -u +%Y-%m-%dT%H:%M:%S.000Z)"
 
-python3 - "$BUF_FILE" "$RUN_ID" "$AGENT" "$EVENT" "$TOOL" "$DETAIL" "$TS" <<'PY'
+python3 "$ENQUEUE" "$BUF_FILE" "$(python3 -c "
 import json, sys
-path, run_id, agent, event, tool, detail, ts = sys.argv[1:]
-with open(path, "a") as f:
-    f.write(json.dumps({
-        "run_id": run_id, "agent": agent, "event": event,
-        "tool": tool, "detail": detail, "ts": ts,
-    }) + "\n")
-PY
+print(json.dumps({
+    'run_id': sys.argv[1], 'agent': sys.argv[2], 'event': sys.argv[3],
+    'tool': sys.argv[4], 'detail': sys.argv[5], 'ts': sys.argv[6],
+}))
+" "$RUN_ID" "$AGENT" "$EVENT" "$TOOL" "$DETAIL" "$TS")"
 
-# Dual-write MLflow spans (soft no-op; never fail the hook).
-OBSERVE="${REPO_ROOT}/agents/tools/mlflow_observe.py"
-PY="$("${REPO_ROOT}/agents/tools/resolve_python.sh" 2>/dev/null || true)"
-if [ -f "$OBSERVE" ] && [ -n "${PY:-}" ] && [ "$RUN_ID" != "unknown" ]; then
-  case "$EVENT" in
-    subagentStart)
-      KEY="subagent:${SUB_ID:-$AGENT}"
-      "$PY" "$OBSERVE" span-start \
-        --run-id "$RUN_ID" --key "$KEY" --name "agent.${AGENT}" \
-        --kind agent --agent "$AGENT" --detail "$DETAIL" >/dev/null 2>&1 || true
-      ;;
-    subagentStop)
-      KEY="subagent:${SUB_ID:-$AGENT}"
-      STATUS="OK"
-      case "${EXIT_CODE}" in
-        error|failed|fail|1) STATUS="ERROR" ;;
-      esac
-      "$PY" "$OBSERVE" span-end \
-        --run-id "$RUN_ID" --key "$KEY" --detail "$DETAIL" --status "$STATUS" \
-        >/dev/null 2>&1 || true
-      ;;
-    afterShellExecution)
-      KEY="tool:shell:$(date +%s%N)"
-      "$PY" "$OBSERVE" span-start \
-        --run-id "$RUN_ID" --key "$KEY" --name "tool.shell" \
-        --kind tool --tool "$TOOL" --detail "$DETAIL" >/dev/null 2>&1 || true
-      SHELL_STATUS="OK"
-      case "${EXIT_CODE}" in
-        0|"") SHELL_STATUS="OK" ;;
-        *) SHELL_STATUS="ERROR" ;;
-      esac
-      "$PY" "$OBSERVE" span-end \
-        --run-id "$RUN_ID" --key "$KEY" --detail "$DETAIL" --status "$SHELL_STATUS" \
-        >/dev/null 2>&1 || true
-      if [ "$SHELL_STATUS" = "OK" ]; then
-        "$PY" "$OBSERVE" metric --run-id "$RUN_ID" --key shell_success --value 1 >/dev/null 2>&1 || true
-      else
-        "$PY" "$OBSERVE" metric --run-id "$RUN_ID" --key shell_failure --value 1 >/dev/null 2>&1 || true
-      fi
-      ;;
-    afterMCPExecution)
-      KEY="tool:mcp:$(date +%s%N)"
-      "$PY" "$OBSERVE" span-start \
-        --run-id "$RUN_ID" --key "$KEY" --name "tool.mcp" \
-        --kind tool --tool "$TOOL" --detail "$DETAIL" >/dev/null 2>&1 || true
-      "$PY" "$OBSERVE" span-end \
-        --run-id "$RUN_ID" --key "$KEY" --detail "$DETAIL" --status OK \
-        >/dev/null 2>&1 || true
-      ;;
-    afterFileEdit)
-      KEY="tool:file:$(date +%s%N)"
-      "$PY" "$OBSERVE" span-start \
-        --run-id "$RUN_ID" --key "$KEY" --name "tool.file_edit" \
-        --kind tool --detail "$DETAIL" >/dev/null 2>&1 || true
-      "$PY" "$OBSERVE" span-end \
-        --run-id "$RUN_ID" --key "$KEY" --detail "$DETAIL" --status OK \
-        >/dev/null 2>&1 || true
-      ;;
-  esac
+# Dual-write MLflow spans via locked JSONL (serve daemon owns the trace).
+if [ "$RUN_ID" != "unknown" ] && [ -f "$ENQUEUE" ]; then
+  python3 - "$ENQUEUE" "$SPAN_Q" "$EVENT" "$AGENT" "$SUB_ID" "$DETAIL" "$TOOL" "$EXIT_CODE" <<'PY' || true
+import json, subprocess, sys, time
+
+enqueue, span_q, event, agent, sub_id, detail, tool, exit_code = sys.argv[1:9]
+records = []
+now = str(int(time.time() * 1e9))
+
+def rec(**kwargs):
+    records.append(kwargs)
+
+if event == "subagentStart":
+    rec(op="span-start", key=f"subagent:{sub_id or agent}", name=f"agent.{agent}",
+        kind="agent", agent=agent, detail=detail)
+elif event == "subagentStop":
+    status = "ERROR" if str(exit_code).lower() in ("error", "failed", "fail", "1") else "OK"
+    rec(op="span-end", key=f"subagent:{sub_id or agent}", detail=detail, status=status)
+elif event == "afterShellExecution":
+    key = f"tool:shell:{now}"
+    status = "OK" if str(exit_code) in ("0", "") else "ERROR"
+    rec(op="span-start", key=key, name="tool.shell", kind="tool", detail=detail or tool)
+    rec(op="span-end", key=key, detail=detail, status=status)
+    rec(op="metric", key="shell_success" if status == "OK" else "shell_failure", value=1)
+elif event == "afterMCPExecution":
+    key = f"tool:mcp:{now}"
+    rec(op="span-start", key=key, name="tool.mcp", kind="tool", detail=detail or tool)
+    rec(op="span-end", key=key, detail=detail, status="OK")
+elif event == "afterFileEdit":
+    key = f"tool:file:{now}"
+    rec(op="span-start", key=key, name="tool.file_edit", kind="tool", detail=detail)
+    rec(op="span-end", key=key, detail=detail, status="OK")
+
+if records:
+    payload = "\n".join(json.dumps(r, separators=(",", ":")) for r in records) + "\n"
+    subprocess.run([sys.executable, enqueue, span_q], input=payload, text=True, check=False)
+PY
 fi
 
 COUNT="$(wc -l < "$BUF_FILE" | tr -d ' ')"
 if [ "$COUNT" -ge "$FLUSH_THRESHOLD" ]; then
-  "${HOOK_DIR}/_flush_events.sh" "$RUN_ID" || true
+  # Do not block the 15s hook on warehouse INSERT. One flush at a time.
+  nohup bash -c '
+    HOOK_DIR="$1"; RUN_ID="$2"; LOCK="$3"
+    if command -v flock >/dev/null 2>&1; then
+      exec 9>"$LOCK"
+      flock -n 9 || exit 0
+    fi
+    "${HOOK_DIR}/_flush_events.sh" "$RUN_ID"
+  ' _ "$HOOK_DIR" "$RUN_ID" "${BUF_DIR}/flush.lock" >/dev/null 2>&1 &
+  disown $! 2>/dev/null || true
 fi
 
 echo '{}'

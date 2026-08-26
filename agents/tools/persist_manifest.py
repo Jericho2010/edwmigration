@@ -64,6 +64,19 @@ def run_ops_sql(sql: str) -> None:
         raise RuntimeError(proc.stderr or proc.stdout or "run_sql failed")
 
 
+def _enqueue_metric(run_id: str, key: str, value: float) -> None:
+    observe = ROOT / "agents" / "tools" / "mlflow_observe.py"
+    if not observe.is_file():
+        return
+    subprocess.run(
+        [sys.executable, str(observe), "metric", "--run-id", run_id, "--key", key, "--value", str(value)],
+        cwd=str(ROOT),
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+
 def upsert_ops(catalog: str, doc: dict) -> None:
     summary = doc.get("summary") or {}
     run_id = esc_sql(str(doc["run_id"]))
@@ -136,6 +149,15 @@ def main() -> int:
             return 1
 
     out_path.write_text(json.dumps(doc, indent=2) + "\n")
+
+    summary = doc.get("summary") or {}
+    gate = str(doc.get("gate") or "")
+    _enqueue_metric(args.run_id, "tables_landed", float(summary.get("tables_landed") or 0))
+    _enqueue_metric(args.run_id, "tables_total", float(summary.get("tables_total") or 0))
+    _enqueue_metric(args.run_id, "procs_converted", float(summary.get("procs_converted") or 0))
+    _enqueue_metric(args.run_id, "procs_total", float(summary.get("procs_total") or 0))
+    _enqueue_metric(args.run_id, "gate_pass", 1.0 if gate.lower() == "ship" else 0.0)
+
     print(
         f"[persist_manifest] run_id={args.run_id} gate={doc.get('gate')} "
         f"path={out_path} ops={'skipped' if args.skip_ops else 'ok'}"

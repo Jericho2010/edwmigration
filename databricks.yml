@@ -29,6 +29,11 @@ include:
   - databricks/jobs/edw_migration_medallion.yml
   - databricks/jobs/dashboard.yml
 
+# Rendered SQL is gitignored locally but required on the workspace for job sql_task paths.
+sync:
+  include:
+    - databricks/_rendered
+
 targets:
   # dev: the normal self-serve path (docs/runbook.md). Development mode —
   # resources are prefixed [dev] and owned by the deploying user.

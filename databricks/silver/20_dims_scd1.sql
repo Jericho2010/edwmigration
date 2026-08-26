@@ -36,7 +36,8 @@ SELECT
   `Month` AS month_name,
   `Calendar Year` AS calendar_year,
   `Calendar Month Number` AS calendar_month_number,
-  `Calendar Quarter` AS calendar_quarter
+  -- WWI Standard bacpac has no Calendar Quarter column; derive from month.
+  CAST(CEIL(`Calendar Month Number` / 3.0) AS INT) AS calendar_quarter
 FROM __UC_CATALOG__.bronze.dim_date;
 
 SELECT 'silver_dims_scd1_ok' AS check_name,

@@ -1,6 +1,7 @@
 -- 31_mart_stock_movements.sql
 -- Gold: mart_stock_movements — current stockholding snapshot.
 -- Join Fact.Stockholding.`Stock Item Key` to silver.dim_stock_item.stock_item_key.
+-- WWI Standard bacpac: no Quantity Allocated / Last Edited When on Fact.Stock Holding.
 
 CREATE OR REPLACE TABLE __UC_CATALOG__.gold.mart_stock_movements AS
 SELECT
@@ -11,17 +12,16 @@ SELECT
   s.size,
   s.lead_time_days,
   sh.quantity_on_hand,
-  sh.quantity_allocated,
-  (sh.quantity_on_hand - sh.quantity_allocated) AS quantity_available
+  CAST(0 AS INT) AS quantity_allocated,
+  sh.quantity_on_hand AS quantity_available
 FROM __UC_CATALOG__.silver.dim_stock_item s
 LEFT JOIN (
   SELECT
     `Stock Item Key` AS stock_item_key,
     `Quantity On Hand` AS quantity_on_hand,
-    `Quantity Allocated` AS quantity_allocated,
     row_number() OVER (
       PARTITION BY `Stock Item Key`
-      ORDER BY `Last Edited When` DESC
+      ORDER BY `Stock Holding Key` DESC
     ) AS rn
   FROM __UC_CATALOG__.bronze.fact_stock_holding
 ) sh

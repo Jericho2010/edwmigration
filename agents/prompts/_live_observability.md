@@ -38,7 +38,7 @@ Stages for announce / observe_status: `Provision`, `Bootstrap`, `Setup`, `PreMin
 ./agents/tools/observe_status.sh --stage <Name>
 ```
 
-Gate Hero stays empty until Gate — expected. Inventory / Events / Backlog should move as stages complete.
+Gate Hero (gate counters on `migration_manifest_current`) stays empty until Gate — expected. Inventory / Events / Backlog should move as stages complete. **Tables-landed** (`ops.load_control`) should move at Land. Latest-run widgets prefer `ops.agent_events` then the manifest, so mid-demo screens follow the live run rather than a prior Gate row.
 
 ## Subagent policy (mandatory)
 
@@ -66,8 +66,18 @@ Prefer Task only with `subagent_type` in `{edw-assess,edw-convert,edw-test,edw-g
 "$(./agents/tools/resolve_python.sh)" agents/tools/mlflow_observe.py init --run-id <run_id>
 ```
 
+`init` starts a **single-writer `serve` daemon** for this `run_id`. Hooks append span records to `agents/out/<run_id>/spans.buf.jsonl` (flock); only the daemon talks to MLflow. The daemon always `start_trace`s in its own process (InMemoryTraceManager is per-process). Do **not** pass `--force` to "fix" empty traces from a hook.
+
+**Gate does not end MLflow.** `stage(gate, completed)` logs `gate_pass` and leaves the serve daemon running so retries stay on the same trace. Coordinator calls `end-run` at **Done**:
+
+```bash
+"$(./agents/tools/resolve_python.sh)" agents/tools/mlflow_observe.py end-run --run-id <run_id>
+```
+
 Paste `observe_url` **immediately** (part of the URL banner). Soft no-op if observe is not ready — still paste Control Plane + Genie.
+
+Gate Hero stays empty until Gate — expected. Inventory / Events / Backlog should move as stages complete; tables-landed from `load_control` should move at Land.
 
 ## Dirty catalog (one chat choice)
 
-Before mint, if ops look dirty (`reconcile_results` / `migration_backlog` non-zero) and this is not a resume: ask once to run `make reset-sink` (keeps Azure). Never auto-reset. Do not invent a migration outside `start` → menu **1/2/3**.
+Before mint, if ops look dirty (`reconcile_results` / `migration_backlog` non-zero) and this is not a resume: ask once to run `make reset-sink` (keeps Azure). Never auto-reset. After a demo, offer `make teardown-databricks` (job, dashboard, Genie, MLflow experiment, catalog, connection, secret scope — Azure SQL stays) or `make teardown` (Azure RG). Do not invent a migration outside `start` → menu **1/2/3**.

@@ -18,7 +18,7 @@ SOURCE_TYPE ?= sqlserver
 TOOLS_CORE := databricks jq curl python3
 TOOLS_AZURE := az sqlcmd SqlPackage
 
-.PHONY: check check-core check-azure check-source check-land render bootstrap setup federation secrets deploy run demo teardown reset-sink genie materialize-demo sync-prompts discover print-urls observe-setup provision-track-a
+.PHONY: check check-core check-azure check-source check-land render bootstrap setup federation secrets deploy run demo teardown teardown-databricks reset-sink genie materialize-demo sync-prompts discover print-urls observe-setup provision-track-a
 
 check: check-source
 
@@ -122,12 +122,16 @@ demo: check-azure ## Scripted demo path (announce → bootstrap → setup)
 	@echo
 	@echo "Demo infra ready. Open Cursor and launch edw-demo-guide or edw-coordinator."
 
-genie: check-core ## Create/update Genie control-plane space
+GENIE_STRICT ?=
+genie: check-core ## Create/update Genie control-plane space (GENIE_STRICT=1 after Land)
 	@echo "[edw] Setup step=genie"
-	./databricks/genie/create_genie_space.sh
+	./databricks/genie/create_genie_space.sh $(if $(filter 1,$(GENIE_STRICT)),--strict,)
 
 teardown: check-azure ## Delete Azure resource group
 	./infra/azure/teardown.sh
+
+teardown-databricks: check-core ## Destroy Databricks demo assets (keeps Azure SQL)
+	./agents/tools/teardown_databricks.sh
 
 reset-sink: check-core ## Wipe Databricks managed sink + agents/out (keeps Azure)
 	./agents/tools/reset_databricks_sink.sh

@@ -48,9 +48,10 @@ Shared memory is **disk only** under `agents/out/<run_id>/` (orchestrator-worker
    ./agents/tools/render_sql.sh
    ./agents/tools/run_sql.sh --file databricks/_rendered/generated/load_inventory.sql
    python3 agents/tools/ensure_run_events.py --run-id <run_id>
+   make genie GENIE_STRICT=1
    ```
-   (`ensure_run_events` records `coordinator/started` and `convert/skipped` for table-only — **not** `assess/completed`. It re-inits MLflow via `resolve_python` and force-flushes hook buffer. If `observe_url:` appears and you have not shown it yet, paste it now.)
-   Then: `./agents/tools/observe_status.sh --stage Land` — Control Plane should show inventory + ≥1 agent_events **now**.
+   (`ensure_run_events` records `coordinator/started` and `convert/skipped` for table-only — **not** `assess/completed`. It inits MLflow via `resolve_python` (spawns the serve daemon) and force-flushes hook buffer. If `observe_url:` appears and you have not shown it yet, paste it now. `make genie GENIE_STRICT=1` after land so gold/silver tables join the space — fail loud on PATCH errors. Setup-time `make genie` is WARN-only so Track A is not blocked.)
+   Then: `./agents/tools/observe_status.sh --stage Land` — Control Plane should show inventory + ≥1 agent_events **now**. Tables-landed (`ops.load_control`) should move at Land; Gate Hero stays empty until Gate.
 
 4. **Delegate Assess** — launch Cursor subagent type **`edw-assess`** (required; hooks must fire). `edw-assess` is **readonly**: it returns JSON in the subagent reply only — it must **not** write files. Do **not** run Assess yourself in the parent chat and do **not** use opaque `generalPurpose` Task. Pass `run_id` and paths to `context.json` + `inventory.json`.
 
@@ -138,8 +139,9 @@ Shared memory is **disk only** under `agents/out/<run_id>/` (orchestrator-worker
 
 9. **Retry:** on gate=fail and `attempt < max_retries`, increment attempt and re-fan-out **only** items with status `blocked` or named in gate blockers (still ≤5 per wave) via **`edw-convert`**, then merge, `check_job_wiring`, redeploy/run, **`edw-test`**, **`edw-gate`**.
 
-10. **Print URLs:**
+10. **Done:** end the MLflow run (Gate must **not** call `end-run` — retries stay live), then print URLs:
     ```bash
+    "$(./agents/tools/resolve_python.sh)" agents/tools/mlflow_observe.py end-run --run-id <run_id>
     make print-urls
     ./agents/tools/observe_status.sh --stage Done
     ```

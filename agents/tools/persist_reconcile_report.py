@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -25,6 +26,19 @@ def validate_report(doc: dict) -> list[str]:
                 return [f"missing required property: {key}"]
         return []
     return [e.message for e in Draft7Validator(schema).iter_errors(doc)]
+
+
+def _enqueue_metric(run_id: str, key: str, value: float) -> None:
+    observe = ROOT / "agents" / "tools" / "mlflow_observe.py"
+    if not observe.is_file():
+        return
+    subprocess.run(
+        [sys.executable, str(observe), "metric", "--run-id", run_id, "--key", key, "--value", str(value)],
+        cwd=str(ROOT),
+        capture_output=True,
+        text=True,
+        check=False,
+    )
 
 
 def main() -> int:
@@ -68,6 +82,8 @@ def main() -> int:
     out_path.write_text(json.dumps(doc, indent=2) + "\n")
 
     summary = doc.get("summary") or {}
+    _enqueue_metric(args.run_id, "reconcile_passed", float(summary.get("passed") or 0))
+    _enqueue_metric(args.run_id, "reconcile_failed", float(summary.get("failed") or 0))
     print(
         f"[persist_reconcile_report] run_id={args.run_id} "
         f"passed={summary.get('passed')} failed={summary.get('failed')} "

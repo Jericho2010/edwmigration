@@ -15,8 +15,9 @@ SELECT
   f.`Total Including Tax` AS total_including_tax,
   f.`Profit` AS profit,
   f.`WWI Invoice ID` AS wwi_invoice_id,
-  f.`WWI Customer ID` AS wwi_customer_id,
-  f.`WWI Stock Item ID` AS wwi_stock_item_id
+  -- WWI Standard Fact.Sale has DW surrogates only (no WWI Customer/Stock Item ID cols).
+  CAST(NULL AS INT) AS wwi_customer_id,
+  CAST(NULL AS INT) AS wwi_stock_item_id
 FROM __UC_CATALOG__.bronze.fact_sale f
 INNER JOIN __UC_CATALOG__.silver.dim_customer_scd2 c
   ON f.`Customer Key` = c.customer_key

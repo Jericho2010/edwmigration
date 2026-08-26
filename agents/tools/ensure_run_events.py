@@ -76,11 +76,25 @@ def record(run_id: str, agent: str, event: str, detail: str = "") -> None:
 def init_mlflow(run_id: str) -> None:
     """Best-effort MLflow run + root span; print observe_url when enabled.
 
-    Prefer repo .venv via resolve_python.sh so first init is not enabled=False.
-    On parent-span-missing last_error, force re-init once and re-announce.
+    In-process init so tests and the coordinator share one interpreter.
+    Spawns the serve daemon when talking to a real tracking URI.
     """
-    observe = ROOT / "agents" / "tools" / "mlflow_observe.py"
-    resolve = ROOT / "agents" / "tools" / "resolve_python.sh"
+    tools = str(Path(__file__).resolve().parent)
+    if tools not in sys.path:
+        sys.path.insert(0, tools)
+    try:
+        import mlflow_observe as mobs
+
+        data = mobs.init_run(run_id)
+        mobs.announce_observe_url(str(data.get("observe_url") or ""))
+        if data.get("enabled") and mobs._should_spawn_serve():
+            mobs.spawn_serve_daemon(run_id)
+        return
+    except Exception as exc:
+        print(f"[ensure_run_events] in-process mlflow init failed: {exc}", file=sys.stderr)
+
+    observe = Path(__file__).resolve().parent / "mlflow_observe.py"
+    resolve = Path(__file__).resolve().parent / "resolve_python.sh"
     py = sys.executable
     if resolve.is_file():
         proc = subprocess.run(
@@ -92,30 +106,11 @@ def init_mlflow(run_id: str) -> None:
         )
         if proc.returncode == 0 and proc.stdout.strip():
             py = proc.stdout.strip()
-
-    def run_init(force: bool = False) -> None:
-        cmd = [py, str(observe), "init", "--run-id", run_id]
-        if force:
-            cmd.append("--force")
-        subprocess.run(cmd, cwd=str(ROOT), check=False)
-
-    run_init(force=False)
-
-    ctx_path = ROOT / "agents" / "out" / run_id / "mlflow_context.json"
-    if ctx_path.is_file():
-        try:
-            data = json.loads(ctx_path.read_text())
-        except Exception:
-            data = {}
-        err = str(data.get("last_error") or data.get("error") or "")
-        if "Parent span" in err or (
-            data.get("enabled") and not data.get("open_spans") and data.get("root_span_id")
-            and "Parent span" in err
-        ):
-            run_init(force=True)
-        elif data.get("enabled") is False and not data.get("trace_id"):
-            # Retry once with force after a soft-failed first init.
-            run_init(force=True)
+    subprocess.run(
+        [py, str(observe), "init", "--run-id", run_id],
+        cwd=str(ROOT),
+        check=False,
+    )
 
 
 def force_flush(run_id: str) -> None:

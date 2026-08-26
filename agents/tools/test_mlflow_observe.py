@@ -112,14 +112,14 @@ class ObserveMemoryTests(unittest.TestCase):
             self.assertTrue(c4.get("ended"))
             self.assertEqual(c4["open_spans"], {})
 
-    def test_gate_stage_ends_run(self) -> None:
+    def test_gate_stage_does_not_end_run(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             run_id = "gate-run-1"
             (root / "agents" / "out" / run_id).mkdir(parents=True)
             mobs.init_run(run_id, root=root)
             c = mobs.stage(run_id, "gate", "completed", detail="pass", root=root)
-            self.assertTrue(c.get("ended"))
+            self.assertFalse(c.get("ended"))
             backend = mobs.get_backend()
             assert isinstance(backend, mobs.MemoryBackend)
             self.assertTrue(any(k == "gate_pass" and v == 1.0 for k, v, _ in backend.metrics))
@@ -160,6 +160,100 @@ class ObserveMemoryTests(unittest.TestCase):
         buf = io.StringIO()
         mobs.announce_observe_url("", stream=buf)
         self.assertEqual(buf.getvalue(), "")
+
+    def test_parent_missing_does_not_create_run(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            run_id = "no-recover-1"
+            (root / "agents" / "out" / run_id).mkdir(parents=True)
+            mobs.init_run(run_id, root=root)
+            backend = mobs.get_backend()
+            assert isinstance(backend, mobs.MemoryBackend)
+            n_before = len(backend.runs)
+
+            def boom(*_a: object, **_k: object) -> str:
+                raise RuntimeError("Parent span with ID 'dead' not found.")
+
+            backend.start_span = boom  # type: ignore[method-assign]
+            c = mobs.span_start(run_id, key="subagent:x", name="agent.x", root=root)
+            self.assertEqual(len(backend.runs), n_before)
+            self.assertIn("Parent span", str(c.get("last_error") or ""))
+
+    def test_enqueue_and_serve_once(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            run_id = "serve-1"
+            (root / "agents" / "out" / run_id).mkdir(parents=True)
+            with mock.patch.object(mobs, "ROOT", root), mock.patch.object(mctx, "ROOT", root):
+                first = mobs.init_run(run_id, root=root)
+                first_id = first["mlflow_run_id"]
+                mobs.enqueue(
+                    run_id,
+                    {
+                        "op": "span-start",
+                        "key": "subagent:convert-1",
+                        "name": "agent.convert",
+                        "kind": "agent",
+                    },
+                    root=root,
+                )
+                mobs.enqueue(
+                    run_id,
+                    {"op": "span-end", "key": "subagent:convert-1", "status": "OK"},
+                    root=root,
+                )
+                mobs.enqueue(
+                    run_id,
+                    {"op": "metric", "key": "tables_landed", "value": 12},
+                    root=root,
+                )
+                mobs.serve_loop(run_id, root=root, once=True)
+                c = mctx.load_context(run_id, root=root)
+                assert c is not None
+                self.assertNotEqual(c.get("mlflow_run_id"), first_id)
+                self.assertNotIn("subagent:convert-1", c.get("open_spans") or {})
+                consumed = root / "agents" / "out" / run_id / "spans.consumed.jsonl"
+                self.assertTrue(consumed.is_file())
+                self.assertEqual(len(consumed.read_text().splitlines()), 3)
+                backend = mobs.get_backend()
+                assert isinstance(backend, mobs.MemoryBackend)
+                self.assertTrue(any(k == "tables_landed" and v == 12.0 for k, v, _ in backend.metrics))
+
+    def test_force_init_terminates_previous(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            run_id = "force-1"
+            (root / "agents" / "out" / run_id).mkdir(parents=True)
+            a = mobs.init_run(run_id, root=root)
+            first = a["mlflow_run_id"]
+            b = mobs.init_run(run_id, root=root, force=True)
+            self.assertNotEqual(first, b["mlflow_run_id"])
+            backend = mobs.get_backend()
+            assert isinstance(backend, mobs.MemoryBackend)
+            self.assertIn(first, backend.ended_runs)
+            live = [r for r in backend.runs if r["status"] == "RUNNING"]
+            self.assertEqual(len(live), 1)
+
+    def test_experiment_purge(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            for run_id in ("purge-a", "purge-b"):
+                (root / "agents" / "out" / run_id).mkdir(parents=True)
+                mobs.init_run(run_id, root=root)
+            backend = mobs.get_backend()
+            assert isinstance(backend, mobs.MemoryBackend)
+            self.assertGreaterEqual(len(backend.runs), 2)
+            result = mobs.experiment_purge(delete_experiment=True)
+            self.assertGreaterEqual(result["purged"], 2)
+            self.assertTrue(result["experiment_deleted"])
+            self.assertEqual(backend.runs, [])
+
+    def test_experiment_purge_skips_rest_on_memory(self) -> None:
+        with mock.patch.object(mobs, "_databricks_rest_purge") as rest:
+            rest.return_value = {"purged": 99}
+            result = mobs.experiment_purge(delete_experiment=False)
+            rest.assert_not_called()
+            self.assertNotEqual(result.get("purged"), 99)
 
     def test_cli_init_prints_announce(self) -> None:
         with tempfile.TemporaryDirectory() as td:
@@ -208,6 +302,31 @@ class EnsureRunEventsAnnounceTests(unittest.TestCase):
                 self.assertIn("observe_url:", text)
                 self.assertIn("Observed by MLflow:", text)
                 self.assertIn("ml/experiments", text)
+
+
+class EnqueueSpanTests(unittest.TestCase):
+    def test_enqueue_lines_appends_under_lock(self) -> None:
+        import enqueue_span as enq
+
+        with tempfile.TemporaryDirectory() as td:
+            path = Path(td) / "spans.buf.jsonl"
+            enq.enqueue_lines(path, [{"op": "span-start", "key": "a"}, {"op": "span-end", "key": "a"}])
+            lines = path.read_text(encoding="utf-8").splitlines()
+            self.assertEqual(len(lines), 2)
+            self.assertEqual(json.loads(lines[0])["op"], "span-start")
+            self.assertTrue((Path(str(path) + ".lock")).is_file())
+
+    def test_cli_stdin(self) -> None:
+        import enqueue_span as enq
+
+        with tempfile.TemporaryDirectory() as td:
+            path = Path(td) / "q.jsonl"
+            with mock.patch("sys.stdin", new=__import__("io").StringIO('{"op":"metric","key":"k","value":1}\n')):
+                rc = enq.main([str(path)])
+            self.assertEqual(rc, 0)
+            rec = json.loads(path.read_text().splitlines()[0])
+            self.assertEqual(rec["op"], "metric")
+            self.assertIn("ts", rec)
 
 
 class ObserveNoopTests(unittest.TestCase):
