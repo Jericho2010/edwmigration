@@ -380,6 +380,8 @@ class MlflowBackend:
 
 
 _MEMORY_SINGLETON: MemoryBackend | None = None
+_MLFLOW_SINGLETON: MlflowBackend | None = None
+_MLFLOW_SINGLETON_URI: str | None = None
 
 
 def _span_type(kind: str) -> str:
@@ -426,7 +428,13 @@ def resolve_tracking_uri() -> str | None:
 
 
 def get_backend(uri: str | None = None) -> Any | None:
-    global _MEMORY_SINGLETON
+    """Return the process-local backend. Databricks/URI clients are singletons.
+
+    MLflow 3 keeps live spans in InMemoryTraceManager (and MlflowBackend._live)
+    on the client that called start_trace. A new MlflowBackend per call empties
+    that map and raises Parent span not found.
+    """
+    global _MEMORY_SINGLETON, _MLFLOW_SINGLETON, _MLFLOW_SINGLETON_URI
     resolved = uri if uri is not None else resolve_tracking_uri()
     if resolved is None:
         return None
@@ -437,16 +445,23 @@ def get_backend(uri: str | None = None) -> Any | None:
     _apply_cli_auth()
     if not _MLFLOW_OK:
         return None
+    if _MLFLOW_SINGLETON is not None and _MLFLOW_SINGLETON_URI == resolved:
+        return _MLFLOW_SINGLETON
     try:
-        return MlflowBackend(resolved)
+        backend = MlflowBackend(resolved)
     except Exception:
         return None
+    _MLFLOW_SINGLETON = backend
+    _MLFLOW_SINGLETON_URI = resolved
+    return backend
 
 
 def reset_memory_backend() -> None:
-    """Test helper: clear singleton MemoryBackend."""
-    global _MEMORY_SINGLETON
+    """Test helper: clear process backend singletons."""
+    global _MEMORY_SINGLETON, _MLFLOW_SINGLETON, _MLFLOW_SINGLETON_URI
     _MEMORY_SINGLETON = None
+    _MLFLOW_SINGLETON = None
+    _MLFLOW_SINGLETON_URI = None
 
 
 def _run_id_of(run_obj: Any) -> str:
@@ -1154,11 +1169,15 @@ def announce_observe_url(url: str, stream=None) -> None:
     print(f"Observed by MLflow: {u}", file=out, flush=True)
 
 
-def nest_probe(run_id: str, root: Path | None = None) -> dict[str, Any]:
-    """In-process parent/child probe. FAIL if Parent span is missing.
+def nest_probe(run_id: str, root: Path | None = None, timeout: float = 30.0) -> dict[str, Any]:
+    """Parent/child probe. FAIL if Parent span is missing.
 
-    Starts agent.probe under the live root span and tool.probe under that
-    agent using in-process span objects (not reconstructed JSON parent ids).
+    When the serve daemon owns the live root span (normal Track A), enqueue
+    probe spans for that process — InMemoryTraceManager is per-process, so a
+    separate nest-probe CLI must not call start_span against an empty _live.
+
+    Tests / inline / no-serve: start agent.probe + tool.probe in-process under
+    the live root span object.
     """
     root = root or ROOT
     data = ensure_init(run_id, root)
@@ -1166,6 +1185,91 @@ def nest_probe(run_id: str, root: Path | None = None) -> dict[str, Any]:
     if not data.get("enabled") or not data.get("root_span_id"):
         result["error"] = "observe not enabled or root span missing"
         return result
+
+    def _clear_last_error() -> None:
+        def mut(d: dict[str, Any]) -> None:
+            d.pop("last_error", None)
+
+        ctx.update_context(run_id, mut, root)
+
+    # Serve owns the root span — probe via the queue so nesting hits the same process.
+    if is_serve_alive(run_id, root) and not _inline_cli():
+        _clear_last_error()
+        agent_key = "probe:agent"
+        tool_key = "probe:tool"
+        enqueue(
+            run_id,
+            {
+                "op": "span-start",
+                "key": agent_key,
+                "name": "agent.probe",
+                "kind": "agent",
+                "detail": '{"probe":true,"outcome":"ok"}',
+            },
+            root=root,
+        )
+        enqueue(
+            run_id,
+            {
+                "op": "span-start",
+                "key": tool_key,
+                "name": "tool.probe",
+                "kind": "tool",
+                "parent_key": agent_key,
+                "detail": '{"probe":true}',
+            },
+            root=root,
+        )
+        enqueue(
+            run_id,
+            {
+                "op": "span-end",
+                "key": tool_key,
+                "detail": '{"probe":"ok"}',
+                "status": "OK",
+            },
+            root=root,
+        )
+        enqueue(
+            run_id,
+            {
+                "op": "span-end",
+                "key": agent_key,
+                "detail": '{"probe":"ok"}',
+                "status": "OK",
+            },
+            root=root,
+        )
+        buf = spans_buf_path(run_id, root)
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            after = ctx.load_context(run_id, root) or {}
+            last = str(after.get("last_error") or "")
+            if _parent_span_missing(last):
+                result["error"] = last
+                return result
+            buf_empty = (not buf.is_file()) or buf.stat().st_size == 0
+            opens = after.get("open_spans") or {}
+            probes_closed = agent_key not in opens and tool_key not in opens
+            if buf_empty and probes_closed:
+                # Ensure serve actually applied our records (not a race on empty buf).
+                consumed = ctx.run_dir(run_id, root) / "spans.consumed.jsonl"
+                consumed_txt = ""
+                try:
+                    consumed_txt = consumed.read_text(encoding="utf-8") if consumed.is_file() else ""
+                except OSError:
+                    consumed_txt = ""
+                if "agent.probe" in consumed_txt and "tool.probe" in consumed_txt:
+                    result["ok"] = True
+                    result["agent_span_id"] = "queued"
+                    result["tool_span_id"] = "queued"
+                    return result
+            time.sleep(0.2)
+        after = ctx.load_context(run_id, root) or {}
+        last = str(after.get("last_error") or "")
+        result["error"] = last or "nest-probe timed out waiting for serve to apply probe spans"
+        return result
+
     backend = get_backend()
     if backend is None:
         result["error"] = "no mlflow backend"

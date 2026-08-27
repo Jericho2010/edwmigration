@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import tempfile
+import time
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -219,6 +220,36 @@ class ObserveMemoryTests(unittest.TestCase):
             result = mobs.nest_probe(run_id, root=root)
             self.assertTrue(result.get("ok"), result)
 
+    def test_nest_probe_via_serve_queue(self) -> None:
+        """When serve is alive, nest-probe must enqueue — not touch empty _live."""
+        import threading
+
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            run_id = "nest-queue-1"
+            (root / "agents" / "out" / run_id).mkdir(parents=True)
+            with mock.patch.object(mobs, "ROOT", root), mock.patch.object(mctx, "ROOT", root):
+                mobs.init_run(run_id, root=root)
+                stop = threading.Event()
+
+                def _serve() -> None:
+                    while not stop.is_set():
+                        mobs.drain_queue(run_id, root=root)
+                        time.sleep(0.05)
+
+                # Fake a live serve PID file so nest_probe takes the queue path.
+                pid_path = mobs.serve_pid_path(run_id, root)
+                pid_path.write_text(str(os.getpid()) + "\n", encoding="utf-8")
+                t = threading.Thread(target=_serve, daemon=True)
+                t.start()
+                try:
+                    with mock.patch.object(mobs, "_inline_cli", return_value=False):
+                        result = mobs.nest_probe(run_id, root=root, timeout=5.0)
+                    self.assertTrue(result.get("ok"), result)
+                finally:
+                    stop.set()
+                    t.join(timeout=2)
+
     def test_blocked_outcome_span_status_ok(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
@@ -392,6 +423,89 @@ class EnqueueSpanTests(unittest.TestCase):
             rec = json.loads(path.read_text().splitlines()[0])
             self.assertEqual(rec["op"], "metric")
             self.assertIn("ts", rec)
+
+
+class _LiveCheckingBackend:
+    """Mirrors MlflowBackend._live: parent must exist on *this* instance."""
+
+    instances: list = []
+
+    def __init__(self, uri: str) -> None:
+        self.uri = uri
+        self._live: dict = {}
+        self.runs: list = []
+        type(self).instances.append(self)
+
+    def get_or_create_experiment(self, name: str) -> str:
+        return "exp-1"
+
+    def search_runs(self, *args: object, **kwargs: object) -> list:
+        return []
+
+    def create_run(self, experiment_id: str, run_name: str, tags: dict) -> str:
+        rid = "mlrun-1"
+        self.runs.append({"id": rid, "tags": dict(tags)})
+        return rid
+
+    def start_trace(self, name, span_type, experiment_id, run_id, attributes=None, inputs=None):
+        sid = "root-live-1"
+        self._live[sid] = {"name": name}
+        return "tr-live-1", sid
+
+    def start_span(self, name, trace_id, parent_id, span_type, inputs=None, attributes=None):
+        if parent_id and parent_id not in self._live:
+            raise RuntimeError(f"Parent span with ID '{parent_id}' not found.")
+        sid = f"child-{len(self._live)}"
+        self._live[sid] = {"parent": parent_id, "name": name}
+        return sid
+
+    def end_span(self, trace_id, span_id, outputs=None, status="OK"):
+        self._live.pop(span_id, None)
+
+    def set_terminated(self, run_id, status="FINISHED"):
+        return None
+
+
+class DatabricksBackendReuseTests(unittest.TestCase):
+    """Databricks path must reuse one client so InMemoryTraceManager / _live stay valid."""
+
+    def setUp(self) -> None:
+        self._backend_env = os.environ.get("EDW_MLFLOW_BACKEND")
+        os.environ.pop("EDW_MLFLOW_BACKEND", None)
+        os.environ["DATABRICKS_HOST"] = "https://dbc.example.com"
+        os.environ["MLFLOW_TRACKING_URI"] = "databricks"
+        _LiveCheckingBackend.instances = []
+        mobs.reset_memory_backend()
+
+    def tearDown(self) -> None:
+        if self._backend_env is None:
+            os.environ.pop("EDW_MLFLOW_BACKEND", None)
+        else:
+            os.environ["EDW_MLFLOW_BACKEND"] = self._backend_env
+        mobs.reset_memory_backend()
+
+    def test_span_start_reuses_live_root_across_get_backend_calls(self) -> None:
+        """init_run then span_start must not raise Parent span missing (one client)."""
+        with (
+            mock.patch.object(mobs, "MlflowBackend", _LiveCheckingBackend),
+            mock.patch.object(mobs, "_MLFLOW_OK", True),
+            tempfile.TemporaryDirectory() as td,
+        ):
+            root = Path(td)
+            run_id = "reuse-1"
+            (root / "agents" / "out" / run_id).mkdir(parents=True)
+            mobs.init_run(run_id, root=root)
+            c = mobs.span_start(
+                run_id,
+                key="subagent:x",
+                name="agent.x",
+                kind="agent",
+                root=root,
+            )
+            self.assertNotIn("Parent span", str(c.get("last_error") or ""), c)
+            self.assertIn("subagent:x", c.get("open_spans") or {})
+            self.assertIs(mobs.get_backend(), mobs.get_backend())
+            self.assertEqual(len(_LiveCheckingBackend.instances), 1)
 
 
 class ObserveNoopTests(unittest.TestCase):

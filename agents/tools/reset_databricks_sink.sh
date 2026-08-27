@@ -52,7 +52,9 @@ done
 OPS_SQL+="SELECT 'ops_cleared' AS check_name;"
 
 echo "[reset-sink] clearing ops.* ..."
-"$RUN_SQL" --sql "$OPS_SQL"
+if ! "$RUN_SQL" --sql "$OPS_SQL"; then
+  echo "[reset-sink] WARN: ops.* wipe skipped (catalog or tables missing — already clean)"
+fi
 
 # Drop bronze/silver/gold managed tables AND views (views survive a
 # table-only wipe and dangle against dropped base tables).
