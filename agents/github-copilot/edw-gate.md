@@ -50,7 +50,7 @@ Also verify each non-blocked backlog `target_path` exists on disk under the repo
 1. Every inventoried **table** with `skip=false` exists as `${uc_catalog}.bronze.<landing_name>`.
 2. Every bronze-vs-source reconcile check for this run is `pass` (from `reconcile_report.json` / ops).
 3. **Routines/procs:** If `inventory.routines_skipped_reason` is set **or** `procs_total` is 0 **or** backlog is empty, skip conversion requirements (table-only ship is allowed). Otherwise: every backlog item with `status != "blocked"` and `target_layer != "n/a"` has a `proc_conversion_map` row with status in `draft|review|final` and `target_path` exists on disk under `databricks/silver|gold/`.
-4. `ops.agent_events` includes events for this `run_id` covering coordinator, assess, convert, test, gate. For table-only runs, `convert` with `event=skipped` (from `ensure_run_events.py`) satisfies the convert requirement; `assess/completed` comes from the coordinator after `persist_backlog.py`.
+4. `ops.agent_events` includes **hook** `subagentStart` (or `subagentstart`) rows for this `run_id` covering assess, convert, test, and gate — not merely `completed` / dual_write `start`. Coordinator `completed` after persist does **not** satisfy this. For table-only runs (`routines_skipped_reason` or `procs_total` 0 or empty backlog), `convert` with `event=skipped` (from `ensure_run_events.py`) satisfies convert; assess/test/gate still need `subagentStart`.
 
 **Do not** require specific table/proc names. **Do not** require universal ≥10/≥5 (demo acceptance counts are checked outside Gate by the demo guide).
 

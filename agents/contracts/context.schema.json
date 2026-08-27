@@ -57,6 +57,10 @@
       "type": "boolean",
       "description": "True when launched from edw-demo-guide."
     },
+    "track_a": {
+      "type": "boolean",
+      "description": "True when minted on Track A — observe fail-closed (hook subagentStart required)."
+    },
     "routines_skipped_reason": {
       "type": ["string", "null"],
       "description": "Set when MySQL routines were not exported (e.g. mysql CLI missing)."

@@ -131,6 +131,19 @@ def main() -> int:
 
     run_dir = ROOT / "agents" / "out" / args.run_id
     run_dir.mkdir(parents=True, exist_ok=True)
+
+    sys.path.insert(0, str(ROOT / "agents" / "tools"))
+    from assert_watchable import fail_if_unwatchable
+
+    watch_err = fail_if_unwatchable(
+        args.run_id,
+        "Assess",
+        root=ROOT,
+        require_mlflow=False if args.skip_ops else None,
+    )
+    if watch_err:
+        print("[persist_backlog] ERROR watchable: launch edw-assess so hooks fire", file=sys.stderr)
+        return 1
     out_path = run_dir / "migration_backlog.json"
 
     if not args.skip_ops:

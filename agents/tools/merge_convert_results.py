@@ -145,6 +145,30 @@ def merge(run_id: str, skip_ops: bool = False) -> dict:
     if not isinstance(backlog, list):
         raise ValueError("migration_backlog.json must be a JSON array")
 
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from assert_watchable import fail_if_unwatchable
+
+    watch_err = fail_if_unwatchable(
+        run_id,
+        "Convert",
+        root=ROOT,
+        require_mlflow=False if skip_ops else None,
+    )
+    if watch_err:
+        marker = {
+            "run_id": run_id,
+            "error": "watchable: " + "; ".join(watch_err),
+            "failed_at": datetime.now(timezone.utc).isoformat(),
+            "note": "hook subagentStart missing; backlog not updated — re-launch edw-convert",
+        }
+        failed_path.write_text(json.dumps(marker, indent=2) + "\n")
+        print(
+            f"[merge_convert_results] ERROR: watchable check failed; "
+            f"wrote {failed_path}; backlog unchanged",
+            file=sys.stderr,
+        )
+        raise SystemExit(1)
+
     # Deep-ish copy so we can abandon writes on ops failure
     backlog = json.loads(json.dumps(backlog))
     items = convertible_items(backlog)

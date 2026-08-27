@@ -341,6 +341,11 @@ class ObserveStatusArrowTests(unittest.TestCase):
         text = (ROOT / "agents" / "tools" / "observe_status.sh").read_text()
         self.assertIn("→", text)
 
+    def test_observe_status_fail_closed_watchable(self):
+        text = (ROOT / "agents" / "tools" / "observe_status.sh").read_text()
+        self.assertIn("assert_watchable.py", text)
+        self.assertIn("exit $((WATCH_RC | SOD_RC))", text)
+
 
 if __name__ == "__main__":
     unittest.main()

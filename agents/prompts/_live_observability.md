@@ -53,7 +53,7 @@ Gate Hero (gate counters on `migration_manifest_current`) stays empty until Gate
 
 Parent/coordinator may own Discover, Land, job wiring, `make deploy`/`make run`, and **all Track A provision**.
 
-**Forbidden:** opaque Task / `generalPurpose` for Assess/Convert/Test/Gate. Required `subagent_type` in `{edw-assess,edw-convert,edw-test,edw-gate}`. Dual_write is **also** required per convert item via `launch_convert_wave.sh` (not a substitute for typed Tasks):
+**Forbidden:** opaque Task / `generalPurpose` for Assess/Convert/Test/Gate. Required `subagent_type` in `{edw-assess,edw-convert,edw-test,edw-gate}`. Dual_write is **also** required per convert item via `launch_convert_wave.sh` (not a substitute for typed Tasks). Track A persist/merge/`observe_status` **exit 1** without hook `subagentStart` — stop and re-launch the `edw-*` Task.
 
 ```bash
 ./agents/tools/launch_convert_wave.sh --run-id <id> --item-id <item_id>

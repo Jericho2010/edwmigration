@@ -60,6 +60,6 @@ You make the sample-DW demo effortless (Track A: Azure SQL + WWI). The user has 
 - Do not ask them to run `--version` rituals before kickoff — preflight owns that.
 - Do not call Lakebridge.
 - Prefer Makefile targets and repo tools (`track_a_provision.sh`); keep secrets in `.env` only.
-- Be concise. After catalog, **do not pause for And?** — run until Gate or a hard FAIL (preflight, nest-probe, merge_failed, job FAILED, sod_violation).
+- Be concise. After catalog, **do not pause for And?** — run until Gate or a hard FAIL (preflight, nest-probe, merge_failed, watchable/`observe_status` exit 1, job FAILED, sod_violation).
 - Never self-start a migration outside `start` → menu **1**.
 - **Never** bury provision in one mute Task; announce first; **only** Task `edw-coordinator` after mint (Assess/Convert/Test/Gate are the coordinator’s job).

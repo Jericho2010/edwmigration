@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
-# dual_write_agent_lifecycle.sh — UC + MLflow lifecycle when Cursor hooks cannot fire.
+# dual_write_agent_lifecycle.sh — UC + MLflow lifecycle companion to Cursor hooks.
 #
-# Use ONLY when Assess/Convert/Test/Gate cannot run as Cursor edw-* subagents.
-# Preferred path: launch edw-assess / edw-convert / edw-test / edw-gate so
-# .cursor/hooks/log_event.sh dual-writes automatically.
+# Dual_write does NOT replace edw-* Tasks. merge/persist/observe_status fail
+# closed on Track A without hook subagentStart in events.buf.jsonl.
 #
 # Usage:
 #   ./agents/tools/dual_write_agent_lifecycle.sh \

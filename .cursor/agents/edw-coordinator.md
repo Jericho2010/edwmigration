@@ -82,6 +82,7 @@ Shared memory is **disk only** under `agents/out/<run_id>/` (orchestrator-worker
    ```
    Empty backlog is OK for table-only MySQL.
    Then: `./agents/tools/observe_status.sh --stage Assess` (Gate Hero still empty — expected until Gate).
+   If `persist_backlog.py` or `observe_status` **exits 1**: **stop**. That means hooks never recorded `subagentStart` for `edw-assess`. Re-launch **`edw-assess`**. Do not dual_write-and-continue.
 
 5. **Parallel Convert fan-out** (skip entirely if backlog empty — `ensure_run_events` already recorded `convert/skipped`):
 
@@ -111,12 +112,14 @@ Shared memory is **disk only** under `agents/out/<run_id>/` (orchestrator-worker
       ```bash
       python3 agents/tools/merge_convert_results.py --run-id <run_id>
       ```
-      If `agents/out/<run_id>/merge_failed.json` exists: **stop**, show the error, do not rewrite backlog or continue deploy until ops upsert succeeds (re-run merge after fixing auth/warehouse).
+      If `agents/out/<run_id>/merge_failed.json` exists: **stop**, show the error, do not rewrite backlog or continue deploy until ops upsert succeeds **and** watchable hooks exist (re-run merge after fixing auth/warehouse **or** re-launching `edw-convert`). Dual_write start/stop does **not** satisfy merge — `assert_watchable.py` requires hook `subagentStart`.
       Record one convert event from `convert_summary.json` (do **not** republish notebooks here):
       ```bash
       ./agents/tools/record_agent_event.sh --run-id <run_id> --agent convert --event completed --detail 'converted=N blocked=M'
       ```
       Use `event=blocked` instead of `completed` when `converted=0` and `blocked>0`.
+
+      If merge or `observe_status --stage Convert` **exits 1**: **stop**. Re-launch missing **`edw-convert`** Tasks. Do **not** `--apply` / `make run`.
 
    f. Launch the next wave until all selected items are merged. After each wave: `./agents/tools/observe_status.sh --stage Convert`. Do not pause for demo questionnaires.
 
@@ -135,6 +138,7 @@ Shared memory is **disk only** under `agents/out/<run_id>/` (orchestrator-worker
    ./agents/tools/record_agent_event.sh --run-id <run_id> --agent test --event completed
    ```
    Then: `./agents/tools/observe_status.sh --stage Test`.
+   If persist or observe_status **exits 1**: **stop** and re-launch **`edw-test`**.
 
 8. **Delegate Gate** — launch Cursor subagent type **`edw-gate`** (required). `edw-gate` is **readonly**: returns `migration_manifest` JSON in the reply only — must **not** write files. Coordinator writes `agents/out/<run_id>/manifest_raw.json` from that reply, then:
    ```bash
@@ -143,6 +147,7 @@ Shared memory is **disk only** under `agents/out/<run_id>/` (orchestrator-worker
    ```
    Gate ships on table land + reconcile when routines were skipped.
    Then: `./agents/tools/observe_status.sh --stage Gate`.
+   If persist or observe_status **exits 1**: **stop** and re-launch **`edw-gate`**.
 
 9. **Retry:** on gate=fail and `attempt < max_retries`, increment attempt and re-fan-out **only** items with status `blocked` or named in gate blockers (still ≤5 per wave) via **`edw-convert`**, then merge, `check_job_wiring`, redeploy/run, **`edw-test`**, **`edw-gate`**.
 
@@ -158,8 +163,9 @@ Shared memory is **disk only** under `agents/out/<run_id>/` (orchestrator-worker
 - Do not write notebooks yourself — only **`edw-convert`** does. Do not write `databricks/silver/**` or `databricks/gold/**`.
 - Do not hardcode source table or proc names.
 - Persist ops rows using helpers (`persist_backlog.py`, `merge_convert_results.py`, `persist_manifest.py`) — do not invent ad-hoc ops SQL. Readonly Assess/Test/Gate return JSON in chat; **you** write `*_raw.json` then persist.
-- Assess / Convert / Test / Gate **must** be Cursor `edw-*` subagents (`subagent_type` required) so hooks dual-write UC + MLflow live. Dual_write **also** per convert item via `launch_convert_wave.sh`.
+- Assess / Convert / Test / Gate **must** be Cursor `edw-*` subagents (`subagent_type` required) so hooks dual-write UC + MLflow live. Dual_write **also** per convert item via `launch_convert_wave.sh`. Dual_write is **not** a substitute — `persist_*` / `merge_convert_results.py` / `observe_status.sh` fail closed without hook `subagentStart`.
 - Forbidden: opaque Task / `generalPurpose` for those stages. Dual_write does not replace `subagent_type`.
+- If merge, persist, or `observe_status` exits 1: **stop**. Re-launch the missing `edw-*` Task. Do not `--apply` / `make run`.
 - Paste URLs **once** at mint (“Keep these open”); paste `observe_status` after every stage (includes last 5 `from → to` handoffs).
 - Track B dirty catalog: ask once. Track A uses the reset-sink predicate. Do not mint a second run when CURRENT_RUN is set.
 

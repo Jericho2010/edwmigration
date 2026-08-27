@@ -51,10 +51,23 @@ doc = {
   "max_retries": 2,
   "attempt": 0,
   "routines_skipped_reason": None,
+  "demo_mode": False,
+  "track_a": False,
 }
 path.write_text(json.dumps(doc, indent=2) + "\n")
 PY
   echo "[mint_run] wrote ${CTX}"
+fi
+if [ "$TRACK_A" -eq 1 ]; then
+  python3 - "$CTX" <<'PY'
+import json, sys
+from pathlib import Path
+p = Path(sys.argv[1])
+doc = json.loads(p.read_text()) if p.is_file() else {}
+doc["track_a"] = True
+doc["demo_mode"] = True
+p.write_text(json.dumps(doc, indent=2) + "\n")
+PY
 fi
 
 PY="$("${REPO_ROOT}/agents/tools/resolve_python.sh")"

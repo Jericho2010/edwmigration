@@ -163,9 +163,33 @@ if err:
 PY
 fi
 
+WATCH_RC=0
+if [ -n "$RUN_ID" ]; then
+  ST_MAP="Mint"
+  case "$(printf '%s' "$STAGE" | tr '[:upper:]' '[:lower:]')" in
+    assess) ST_MAP="Assess" ;;
+    convert|job) ST_MAP="Convert" ;;
+    test) ST_MAP="Test" ;;
+    gate|done) ST_MAP="Gate" ;;
+  esac
+  if ! python3 "${REPO_ROOT}/agents/tools/assert_watchable.py" --run-id "$RUN_ID" --stage "$ST_MAP"; then
+    WATCH_RC=1
+  fi
+fi
+
+SOD_RC=0
 if [ -n "$RUN_ID" ] && [ -f "${REPO_ROOT}/agents/out/${RUN_ID}/sod_violation" ]; then
   echo "FAIL sod_violation present — coordinator wrote silver/gold or convert missed wave lock"
   cat "${REPO_ROOT}/agents/out/${RUN_ID}/sod_violation"
+  python3 - "$REPO_ROOT" "$RUN_ID" <<'PY' || SOD_RC=1
+import sys
+from pathlib import Path
+root = Path(sys.argv[1])
+run_id = sys.argv[2]
+sys.path.insert(0, str(root / "agents" / "tools"))
+from assert_watchable import is_strict
+sys.exit(1 if is_strict(run_id, root=root) else 0)
+PY
 fi
 
 echo "Note: Gate Hero (gate counters) stays empty until Gate writes migration_manifest_current."
@@ -173,3 +197,4 @@ echo "Note: Tables-landed (load_control) should move at Land. Latest-run widgets
 echo "Note: Inventory/Events/Backlog should move as stages complete — empty during a run means hooks/edw-* missing or need make reset-sink."
 echo "===================="
 echo
+exit $((WATCH_RC | SOD_RC))

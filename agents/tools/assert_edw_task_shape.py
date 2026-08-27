@@ -14,6 +14,8 @@ ROOT = Path(__file__).resolve().parents[2]
 GUIDE = ROOT / "agents" / "prompts" / "05_demo_guide.md"
 COORD = ROOT / "agents" / "prompts" / "00_coordinator.md"
 LIVE = ROOT / "agents" / "prompts" / "_live_observability.md"
+ARCH = ROOT / "docs" / "architecture.md"
+TROUBLE = ROOT / "docs" / "troubleshooting.md"
 
 
 def main() -> int:
@@ -34,6 +36,10 @@ def main() -> int:
     live = LIVE.read_text()
     if re.search(r"unless.*dual.write|unless dual-write", live, re.I):
         errors.append("_live_observability.md still has unless dual-write loophole")
+    for path, label in ((ARCH, "docs/architecture.md"), (TROUBLE, "docs/troubleshooting.md")):
+        text = path.read_text()
+        if re.search(r"forbidden unless|unless.{0,60}dual.write", text, re.I):
+            errors.append(f"{label} still has unless dual-write loophole")
     if errors:
         print("[assert_edw_task_shape] FAIL:", file=sys.stderr)
         for e in errors:

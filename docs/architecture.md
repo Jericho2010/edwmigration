@@ -70,11 +70,11 @@ Foreign catalog mirrors the source via `CONNECTION` `TYPE SQLSERVER` or `TYPE MY
 Observability is **live during the migration**, not only after Gate. Four planes:
 
 1. **Cursor chat** — stage banners + pasted `observe_status.sh` after each stage (`agents/prompts/_live_observability.md`).
-2. **UC events** — Cursor hooks + `record_agent_event.sh` → `ops.agent_events`. Control Plane dashboard (`dataset_catalog` / `ops`). Genie with dynamic `table_identifiers`. Gate rule 4 reads this table only. Flush default is 1 event so the timeline updates while Convert runs.
+2. **UC events** — Cursor hooks + `record_agent_event.sh` → `ops.agent_events`. Control Plane dashboard (`dataset_catalog` / `ops`). Genie with dynamic `table_identifiers`. Gate rule 4 reads this table only (`subagentStart` for assess/convert/test/gate on non-table-only runs). Flush default is 1 event so the timeline updates while Convert runs.
 3. **MLflow traces** — live hierarchy in Databricks Experiments (`/Shared/edw-migration`): root `edw.run`, stage spans from milestones, AGENT spans from Cursor `subagentStart`/`Stop`, TOOL spans from shell/MCP/file hooks. Soft no-op until `make observe-setup`. The coordinator announces `observe_url` at mint — open it **while** Convert runs.
 4. **Genie** — same `ops.*` tables; useful as soon as inventory/events/backlog rows appear mid-run.
 
-**Subagents:** Assess / Convert / Test / Gate must run as Cursor **`edw-assess` / `edw-convert` / `edw-test` / `edw-gate`** so hooks fire. Opaque Task / `generalPurpose` fan-out is forbidden unless `dual_write_agent_lifecycle.sh` start/stop dual-writes the same UC + MLflow events (Convert: **`--item-id` per item**).
+**Subagents:** Assess / Convert / Test / Gate must run as Cursor **`edw-assess` / `edw-convert` / `edw-test` / `edw-gate`** so hooks fire. Opaque Task / `generalPurpose` fan-out is forbidden. Dual_write is **not** a substitute: `merge_convert_results.py` and persist helpers fail closed without hook `subagentStart`.
 
 **MLflow’s role:** live agent/tool span tree while the run executes. It does not replace Control Plane or Genie (those answer ship/fail from `ops.*`).
 

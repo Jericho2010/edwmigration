@@ -60,6 +60,7 @@ Portable prompts + contracts. Cursor and GitHub Copilot adapters are generated.
 | `allocate_target_paths.py` | Next `NN` from 20 + slug from `legacy_proc` (no canned WWI stems) |
 | `ensure_source_alias_views.sh` | SQL Server spaced-name views from `INFORMATION_SCHEMA` (one `sqlcmd` per view) |
 | `validate_converted_sql.py` | Convert SQL must read bronze, not the federated catalog |
+| `assert_watchable.py` | Fail closed: hook `subagentStart` required (not dual_write); Track A / `EDW_OBSERVE_STRICT` |
 | `check_job_wiring.py` | DAG from Assess `reads`/`writes`; WARN + `--apply` (peak ≤ 5); restore via skeleton YAML |
 | `run_sql.sh` | Statement Execution API |
 | `sync_prompts.sh` | Cursor + Copilot |

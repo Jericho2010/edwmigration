@@ -14,5 +14,6 @@
   "max_retries": 2,
   "attempt": 0,
   "demo_mode": true,
+  "track_a": true,
   "routines_skipped_reason": null
 }

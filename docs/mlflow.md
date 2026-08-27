@@ -144,7 +144,7 @@ Soft status / preflight **WARN** if observe is not ready; they do **not** block 
 ## Maintainer anti-patterns
 
 - Bare-`start` migration (only menu **1/2/3** may migrate).  
-- Opaque Task / `generalPurpose` for Assess/Convert/Test/Gate without `dual_write_agent_lifecycle.sh` (Convert: **`--item-id` per item**).  
+- Opaque Task / `generalPurpose` for Assess/Convert/Test/Gate. Dual_write does **not** replace typed Tasks — merge/persist fail without hook `subagentStart`.  
 - Waiting until Gate to open URLs.
 
 ---
@@ -158,7 +158,8 @@ Soft status / preflight **WARN** if observe is not ready; they do **not** block 
 | `agents/tools/mlflow_context.py` | Locked read/write of `mlflow_context.json` |
 | `.cursor/hooks.json` + `.cursor/hooks/log_event.sh` | Cursor lifecycle → UC buffer + span queue |
 | `agents/tools/record_agent_event.sh` | UC row + MLflow stage enqueue + force flush |
-| `agents/tools/dual_write_agent_lifecycle.sh` | Fallback UC + MLflow start/stop when hooks cannot fire (Convert: `--item-id` per worker) |
+| `agents/tools/assert_watchable.py` | Fail closed: hook `subagentStart` required (Track A / `EDW_OBSERVE_STRICT`) |
+| `agents/tools/dual_write_agent_lifecycle.sh` | Handoff/UC spans per convert item — **not** a substitute for `edw-*` Tasks |
 | `agents/tools/ensure_run_events.py` | Milestone rows + idempotent MLflow init (starts serve) |
 | `agents/tools/check_mlflow_observe.sh` | venv + `mlflow≥3.8` + host readiness |
 | `agents/tools/observe_status.sh` | Ops counts + URLs snapshot for stage checkpoints |
