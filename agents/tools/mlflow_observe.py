@@ -242,16 +242,35 @@ class MlflowBackend:
             try:
                 exp = self.client.get_experiment_by_name(candidate)
                 if exp is not None:
+                    self._ensure_genai_kind(str(exp.experiment_id), getattr(exp, "tags", None))
                     return exp.experiment_id
             except Exception:
                 pass
             try:
-                return self.client.create_experiment(candidate)
+                return self.client.create_experiment(
+                    candidate,
+                    tags={ctx.EXPERIMENT_KIND_TAG: ctx.EXPERIMENT_KIND_GENAI},
+                )
             except Exception:
                 continue
         # last resort
         exp = mlflow.set_experiment(ctx.FALLBACK_EXPERIMENT)
+        self._ensure_genai_kind(str(exp.experiment_id), getattr(exp, "tags", None))
         return exp.experiment_id
+
+    def _ensure_genai_kind(self, experiment_id: str, tags: Any = None) -> None:
+        """Point Databricks Experiments UI at GenAI (Traces), not classic ML (Runs)."""
+        current = ""
+        if isinstance(tags, dict):
+            current = str(tags.get(ctx.EXPERIMENT_KIND_TAG) or "")
+        if current in (ctx.EXPERIMENT_KIND_GENAI, "genai_development_inferred"):
+            return
+        try:
+            self.client.set_experiment_tag(
+                experiment_id, ctx.EXPERIMENT_KIND_TAG, ctx.EXPERIMENT_KIND_GENAI
+            )
+        except Exception:
+            return
 
     def create_run(self, experiment_id: str, run_name: str, tags: dict[str, str]) -> str:
         run = self.client.create_run(experiment_id, run_name=run_name, tags=tags)

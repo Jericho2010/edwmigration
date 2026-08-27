@@ -508,6 +508,50 @@ class DatabricksBackendReuseTests(unittest.TestCase):
             self.assertEqual(len(_LiveCheckingBackend.instances), 1)
 
 
+class _FakeTrackingClient:
+    def __init__(self, existing: object | None = None) -> None:
+        self.existing = existing
+        self.created: list[tuple[str, dict | None]] = []
+        self.tags_set: list[tuple[str, str, str]] = []
+
+    def get_experiment_by_name(self, name: str) -> object | None:
+        return self.existing
+
+    def create_experiment(self, name: str, artifact_location: str | None = None, tags: dict | None = None) -> str:
+        self.created.append((name, dict(tags) if tags else None))
+        return "exp-new"
+
+    def set_experiment_tag(self, experiment_id: str, key: str, value: str) -> None:
+        self.tags_set.append((experiment_id, key, value))
+
+
+class ExperimentKindTests(unittest.TestCase):
+    def _backend(self, client: _FakeTrackingClient) -> mobs.MlflowBackend:
+        backend = object.__new__(mobs.MlflowBackend)
+        backend.client = client
+        backend.tracking_uri = "databricks"
+        backend._live = {}
+        return backend
+
+    def test_create_experiment_sets_genai_kind_tag(self) -> None:
+        client = _FakeTrackingClient(existing=None)
+        backend = self._backend(client)
+        eid = backend.get_or_create_experiment("/Shared/edw-migration")
+        self.assertEqual(eid, "exp-new")
+        self.assertTrue(client.created)
+        tags = client.created[0][1] or {}
+        self.assertEqual(tags.get("mlflow.experimentKind"), "genai_development")
+
+    def test_existing_experiment_gets_genai_kind_tag(self) -> None:
+        existing = type("Exp", (), {"experiment_id": "exp-old", "tags": {}})()
+        client = _FakeTrackingClient(existing=existing)
+        backend = self._backend(client)
+        eid = backend.get_or_create_experiment("/Shared/edw-migration")
+        self.assertEqual(eid, "exp-old")
+        self.assertEqual(client.created, [])
+        self.assertIn(("exp-old", "mlflow.experimentKind", "genai_development"), client.tags_set)
+
+
 class ObserveNoopTests(unittest.TestCase):
     def test_backend_off(self) -> None:
         with tempfile.TemporaryDirectory() as td:

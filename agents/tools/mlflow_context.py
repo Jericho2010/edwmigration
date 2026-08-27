@@ -16,6 +16,9 @@ except ImportError:  # pragma: no cover
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_EXPERIMENT = "/Shared/edw-migration"
 FALLBACK_EXPERIMENT = "edw-migration"
+# Databricks Experiments UI: GenAI apps & agents vs Machine learning.
+EXPERIMENT_KIND_TAG = "mlflow.experimentKind"
+EXPERIMENT_KIND_GENAI = "genai_development"
 
 
 def repo_root() -> Path:
