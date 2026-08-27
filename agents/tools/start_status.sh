@@ -12,6 +12,8 @@ if [ -f .env ]; then
   . ./.env || true
   set +a
 fi
+# shellcheck disable=SC1091
+. "${REPO_ROOT}/agents/tools/apply_databricks_cli_auth.sh"
 
 echo "[start_status] repo_root=${REPO_ROOT}"
 

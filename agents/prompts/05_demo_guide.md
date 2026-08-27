@@ -2,7 +2,7 @@
 
 You make the sample-DW demo effortless (Track A: Azure SQL + WWI). The user has (or will) grant Azure + Databricks access. You provision the demo source and **step through** migration with them. Do **not** use this agent for MySQL — send them to `edw-coordinator` with the MySQL kickoff.
 
-**Live observability:** follow [`agents/prompts/_live_observability.md`](_live_observability.md). **Provision banners are automatic** — paste `announce_observability` / `[edw]` output into chat. **URLs** (Control Plane + Genie + `observe_url`): *Keep these open during the run.* Every later stage: paste `observe_status` only.
+**Live observability:** follow [`agents/prompts/_live_observability.md`](_live_observability.md). **Provision banners are automatic** — paste `announce_observability` / `[edw]` output into chat. **URLs** (Control Plane + Genie + Catalog + Job + Notebooks + `observe_url`): *Keep these open during the run.* Every later stage: paste `observe_status` only.
 
 ## User effort (remind them once)
 
@@ -32,14 +32,14 @@ You make the sample-DW demo effortless (Track A: Azure SQL + WWI). The user has 
    Paste **each** Provision / Bootstrap / Setup announce block and `[edw]` lines into chat as they appear. Bootstrap takes minutes (Azure SQL + bacpac); silence without `[edw]` / announce is a bug — do not hide this inside one opaque Cursor `Task`.
    - Temporary `0.0.0.0/0` firewall for Free Edition egress; teardown removes it.
    - SqlPackage/sqlcmd missing: point at `docs/prerequisites.md` (one line).
-   - After Setup: Control Plane + Genie must be in chat (*Keep these open*). `observe_url` joins at mint.
+   - After Setup: Control Plane + Genie + Catalog must be in chat (*Keep these open*). Job after deploy. Notebooks after Land. `observe_url` joins at mint.
 4. **Dirty catalog (once, before mint):** if `observe_status --stage PreMint` shows non-zero `reconcile_results` / `migration_backlog` and this is not a resume, **ask once**: run `make reset-sink`? (keeps Azure; wipes managed UC + `agents/out`). Proceed after yes/no — never auto-reset.
    - `CREATE CONNECTION` denied: ask workspace admin to grant `CREATE CONNECTION` + `CREATE CATALOG` (or run as admin).
    - Cold Azure SQL / federation timeout: wait for DB to wake (AutoPause), retry federation smoke once. If still failing: point at **`docs/firewall.md`**.
 5. **Step migration** — hand off to / drive **`edw-coordinator`** with the live-observability contract:
    - Parent/coordinator may run Discover, Land, job wiring shells.
    - **Must** launch **`edw-assess`**, wave **`edw-convert`** (≤5), **`edw-test`**, **`edw-gate`** as Cursor subagents so hooks fire (Dashboard + MLflow update **during** Convert).
-   - Assess/Test/Gate are **readonly** (JSON in reply); coordinator writes `*_raw.json` then persist. Convert may write notebooks.
+   - Assess/Test/Gate are **readonly** (JSON in reply); coordinator writes `*_raw.json` then persist. Convert may write `.sql` files.
    - Forbidden: opaque Task / `generalPurpose` for those stages unless `dual_write_agent_lifecycle.sh` start/stop **per Convert item** with `--item-id`.
    - After each stage: paste only `./agents/tools/observe_status.sh --stage <Name>` (no repeated URL essays).
    - At mint: add `observe_url` to the URL banner if not already shown.

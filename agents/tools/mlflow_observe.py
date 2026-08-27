@@ -382,6 +382,21 @@ def _span_type(kind: str) -> str:
     return mapping.get(k, "UNKNOWN")
 
 
+def _apply_cli_auth() -> None:
+    """Overlay matching-profile PAT when HOST is set without TOKEN. No-op if TOKEN exists."""
+    if (os.environ.get("DATABRICKS_TOKEN") or "").strip():
+        return
+    try:
+        tools = str(Path(__file__).resolve().parent)
+        if tools not in sys.path:
+            sys.path.insert(0, tools)
+        import databricks_cli_env as cli_env
+
+        cli_env.apply_cli_auth()
+    except Exception:
+        return
+
+
 def resolve_tracking_uri() -> str | None:
     """Return tracking URI, 'memory', or None (disabled)."""
     backend = (os.environ.get("EDW_MLFLOW_BACKEND") or "").strip().lower()
@@ -406,6 +421,7 @@ def get_backend(uri: str | None = None) -> Any | None:
         if _MEMORY_SINGLETON is None:
             _MEMORY_SINGLETON = MemoryBackend()
         return _MEMORY_SINGLETON
+    _apply_cli_auth()
     if not _MLFLOW_OK:
         return None
     try:
@@ -1085,6 +1101,7 @@ def _rest_json(method: str, url: str, token: str, body: dict[str, Any] | None = 
 
 def _databricks_rest_purge(delete_experiment: bool = False) -> dict[str, Any] | None:
     """Parallel REST delete. Returns None if host/token missing (caller falls back)."""
+    _apply_cli_auth()
     host = (os.environ.get("DATABRICKS_HOST") or "").rstrip("/")
     token = os.environ.get("DATABRICKS_TOKEN") or ""
     if not host or not token:

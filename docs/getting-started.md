@@ -53,7 +53,7 @@ flowchart TD
 | 2 | Start an EDW migration run against my Azure SQL. | `edw-coordinator` |
 | 3 | Migrate my Azure MySQL into catalog `<name>`… | `edw-coordinator` |
 | 4 | Print Control Plane, Genie, Catalog, Job, Notebooks, and MLflow observe URLs. | `make print-urls` |
-| 5 | Tear down the demo Azure resources. | `make teardown` (confirms first) |
+| 5 | Tear down demo resources (Databricks first; Azure optional). | `make teardown-databricks` (keeps Azure SQL) and/or `make teardown` (Azure RG). Confirms first. |
 | 6 | Show me the enterprise / SoD notes. | [enterprise.md](enterprise.md) |
 
 If agents are missing: `make sync-prompts`, then reload the window.
@@ -111,7 +111,7 @@ flowchart LR
   Menu --> A[Track A: edw-demo-guide]
   Menu --> B[Track B: edw-coordinator]
   Menu --> E[Enterprise / URLs / teardown]
-  A --> Out[Catalog + Dashboard + Genie]
+  A --> Out[Catalog + Dashboard + Genie + Job + Notebooks]
   B --> Out
   classDef user fill:#0B3D5C,stroke:#082C43,color:#fff
   classDef agent fill:#1B7A6E,stroke:#145A51,color:#fff
@@ -126,7 +126,7 @@ flowchart LR
 ## 6. What “success” feels like in the first session
 
 - Agent prints **Control Plane**, **Genie**, **Catalog**, **Job**, **Notebooks**, and (after a run is minted) **MLflow `observe_url`** (`make print-urls`).  
-- You can open the dashboard, ask Genie: *Did the last run ship?*, and watch the live MLflow trace during Convert.  
+- You can open the dashboard, Catalog, Job, and Notebooks folder, ask Genie: *Did the last run ship?*, and watch the live MLflow trace during Convert.  
 - Gate ship = empty blockers. For the **demo**, the guide also checks **counts** (≥10 tables / ≥5 procedures) — that is demo acceptance, not a Gate rule.  
 
 If something fails: **[troubleshooting.md](troubleshooting.md)**.

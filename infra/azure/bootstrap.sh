@@ -59,10 +59,13 @@ run() {
 : "${AZ_SQL_PASSWORD:?AZ_SQL_PASSWORD must be set}"
 : "${AZ_SQL_DB:=WideWorldImportersDW}"
 : "${DATABRICKS_HOST:?DATABRICKS_HOST must be set}"
-: "${DATABRICKS_TOKEN:?DATABRICKS_TOKEN must be set}"
 : "${DATABRICKS_SECRET_SCOPE:=edw-migration}"
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+# Overlay PAT from a matching CLI profile when .env has HOST without TOKEN.
+# shellcheck disable=SC1091
+. "${REPO_ROOT}/agents/tools/apply_databricks_cli_auth.sh"
+: "${DATABRICKS_TOKEN:?DATABRICKS_TOKEN must be set (or databricks auth login for a profile matching DATABRICKS_HOST)}"
 BACPAC_PATH="${REPO_ROOT}/legacy/wideworldimportersdw/WideWorldImportersDW-Standard.bacpac"
 
 echo "============================================================"

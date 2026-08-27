@@ -9,6 +9,10 @@ SHELL := /usr/bin/env bash
 -include .env
 export
 
+# HOST without TOKEN in .env makes the CLI ignore ~/.databrickscfg. Recipes that
+# call `databricks` go through this wrapper so a matching profile PAT is overlaid.
+DBX := ./agents/tools/databricks_cli.sh
+
 BUNDLE_VAR_warehouse_id := $(DATABRICKS_WAREHOUSE_ID)
 BUNDLE_VAR_catalog := $(DATABRICKS_CATALOG)
 export BUNDLE_VAR_warehouse_id
@@ -104,16 +108,16 @@ setup: check-source federation deploy genie print-urls ## Wire sink + dashboard 
 deploy: render ## Bundle validate --strict + deploy
 	@test -n "$(DATABRICKS_WAREHOUSE_ID)" || { echo "DATABRICKS_WAREHOUSE_ID required" >&2; exit 1; }
 	@echo "[edw] Setup step=deploy — bundle validate + deploy"
-	databricks bundle validate --strict -t dev
-	@USER=$$(databricks current-user me --output json | jq -r .userName); \
-	databricks workspace mkdirs "/Workspace/Users/$$USER/.bundle/edw_migration/dev/resources" 2>/dev/null || true
-	databricks bundle deploy -t dev
+	$(DBX) bundle validate --strict -t dev
+	@USER=$$($(DBX) current-user me --output json | jq -r .userName); \
+	$(DBX) workspace mkdirs "/Workspace/Users/$$USER/.bundle/edw_migration/dev/resources" 2>/dev/null || true
+	$(DBX) bundle deploy -t dev
 
 check-land: ## Fail if bronze land SQL is missing or still the placeholder
 	./agents/tools/check_land_ready.sh
 
 run: check-land ## Run medallion job (requires generated land SQL)
-	databricks bundle run edw_migration_medallion -t dev
+	$(DBX) bundle run edw_migration_medallion -t dev
 
 demo: check-azure ## Scripted demo path (announce → bootstrap → setup)
 	@./agents/tools/announce_observability.sh --stage Provision || true

@@ -19,6 +19,8 @@ if [ -f "${REPO_ROOT}/.env" ]; then
 fi
 # shellcheck disable=SC1091
 . "${REPO_ROOT}/agents/tools/resolve_source_env.sh"
+# shellcheck disable=SC1091
+. "${REPO_ROOT}/agents/tools/apply_databricks_cli_auth.sh"
 
 : "${DATABRICKS_SECRET_SCOPE:=edw-migration}"
 : "${SOURCE_PASSWORD:?SOURCE_PASSWORD (or AZ_SQL_PASSWORD) required to upsert secret}"

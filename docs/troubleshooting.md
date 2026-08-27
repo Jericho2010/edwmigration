@@ -10,7 +10,7 @@ Something broke? Find the symptom, apply the one-line fix, re-run the agent step
 | `az account show` fails | `az login` (Track A / firewall help) |
 | `AADSTS700082` / expired refresh token | `az logout` then `az login` (portal login does not refresh CLI) |
 | Sub visible but `az group list` → AuthorizationFailed | No RBAC on the sub — **Global Admin in Entra ≠ Owner on the subscription** — see [azure-access-unblocking.md](azure-access-unblocking.md) |
-| Databricks auth fails | `databricks auth login --host …` or set `DATABRICKS_TOKEN` |
+| Databricks auth fails / CLI ignores `~/.databrickscfg` | `.env` has `DATABRICKS_HOST` without `DATABRICKS_TOKEN`. Repo tools overlay a matching CLI profile. Re-login: `databricks auth login --host …` or set `DATABRICKS_TOKEN` |
 | `make setup` wants SqlPackage | Only `make bootstrap` / `make demo` need it. Track B setup needs connection fields only. |
 | Federation JDBC / cold Azure SQL | Warm DB (`SELECT 1`); check [firewall](firewall.md) |
 | MySQL SSL / cert errors | SSL required. Default `SOURCE_TRUST_SERVER_CERTIFICATE=true` |

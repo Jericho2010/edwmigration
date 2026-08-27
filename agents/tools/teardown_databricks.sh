@@ -34,10 +34,8 @@ if [ -f "${REPO_ROOT}/.env" ]; then
   . "${REPO_ROOT}/.env" || true
   set +a
 fi
-
-if [ -f "${REPO_ROOT}/agents/tools/databricks_cli_env.py" ]; then
-  eval "$(python3 "${REPO_ROOT}/agents/tools/databricks_cli_env.py" --export 2>/dev/null || true)"
-fi
+# shellcheck disable=SC1091
+. "${REPO_ROOT}/agents/tools/apply_databricks_cli_auth.sh"
 
 if [ -f "${REPO_ROOT}/agents/tools/resolve_source_env.sh" ]; then
   # shellcheck disable=SC1091

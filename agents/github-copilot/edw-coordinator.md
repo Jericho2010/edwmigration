@@ -11,7 +11,7 @@ Read `SOURCE_TYPE` from `.env` (`sqlserver` default, or `mysql`). Demo-guide pat
 
 Shared memory is **disk only** under `agents/out/<run_id>/` (orchestrator-worker artifact pattern). Subagents do not share chat context.
 
-**Live observability:** follow [`agents/prompts/_live_observability.md`](_live_observability.md) for the whole run (chat + MLflow + Control Plane + Genie + **Notebooks / Catalog / Job** **during** stages, not only after Gate).
+**Live observability:** follow [`agents/prompts/_live_observability.md`](_live_observability.md) for the whole run (chat + MLflow + Control Plane + Genie + Notebooks + Catalog + Job as each plane becomes available, not only after Gate).
 
 ## Responsibilities
 
@@ -95,12 +95,11 @@ Shared memory is **disk only** under `agents/out/<run_id>/` (orchestrator-worker
    e. After the wave finishes (result files present or clearly missing), merge:
       ```bash
       python3 agents/tools/merge_convert_results.py --run-id <run_id>
-      python3 agents/tools/publish_run_notebooks.py --run-id <run_id>
       ```
       If `agents/out/<run_id>/merge_failed.json` exists: **stop**, show the error, do not rewrite backlog or continue deploy until ops upsert succeeds (re-run merge after fixing auth/warehouse).
-
-      Then record one convert event from `convert_summary.json`:
+      Then publish the Workspace notebooks gallery and record one convert event from `convert_summary.json`:
       ```bash
+      python3 agents/tools/publish_run_notebooks.py --run-id <run_id>
       ./agents/tools/record_agent_event.sh --run-id <run_id> --agent convert --event completed --detail 'converted=N blocked=M'
       ```
       Use `event=blocked` instead of `completed` when `converted=0` and `blocked>0`.
@@ -116,7 +115,7 @@ Shared memory is **disk only** under `agents/out/<run_id>/` (orchestrator-worker
    ```bash
    python3 agents/tools/check_job_wiring.py --run-id <run_id> --apply
    ```
-   Tell the user Gate can still pass notebooks the job does not run until wiring is applied (see `docs/limits.md`). Prefer `--apply` over hand-editing; humans may still tighten `depends_on` afterward.
+   Tell the user Gate can still pass SQL files the job does not run until wiring is applied (see `docs/limits.md`). Prefer `--apply` over hand-editing; humans may still tighten `depends_on` afterward.
    ```bash
    make deploy && make run
    python3 agents/tools/publish_run_notebooks.py --run-id <run_id>

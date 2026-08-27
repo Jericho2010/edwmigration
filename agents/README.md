@@ -30,13 +30,15 @@ Portable prompts + contracts. Cursor and GitHub Copilot adapters are generated.
 | `check_land_ready.sh` | Fail if bronze land SQL is missing/placeholder (`make run`) |
 | `smoke_path_guards.sh` | CI/local path-coupling + merge smoke |
 | `materialize_demo_env.sh` | Build `.env` from logins |
-| `announce_observability.sh` | Paste-ready Control Plane + Genie + observe_url banner (`--stage`) |
+| `announce_observability.sh` | Paste-ready Control Plane + Genie + Catalog + Job + Notebooks + observe_url banner (`--stage`) |
 | `track_a_provision.sh` | Track A materialize→bootstrap→setup with announce heartbeats |
 | `render_sql.sh` | Catalog/federation render (`SOURCE_TYPE`) → `_rendered/` |
 | `resolve_source_env.sh` | Map `SOURCE_*` / `AZ_SQL_*` |
 | `print_observability_urls.sh` | Control Plane + Genie + Catalog + Job + Notebooks + MLflow `observe_url` |
 | `publish_run_notebooks.py` | Import SQL as Workspace notebooks under `edwmigration_YYYYMMDD` |
 | `databricks_cli_env.py` | Overlay CLI PAT from a profile whose host matches `DATABRICKS_HOST` |
+| `apply_databricks_cli_auth.sh` | Source after `.env` to apply that overlay (used by `run_sql`, setup, teardown, print-urls) |
+| `databricks_cli.sh` | `databricks` CLI wrapper with the same overlay (`make deploy` / `make run`) |
 | `observe_status.sh` | Ops counts + URLs snapshot for stage checkpoints |
 | `dual_write_agent_lifecycle.sh` | UC + MLflow start/stop when hooks cannot fire (fallback; Convert: `--item-id` per item) |
 | `reset_databricks_sink.sh` | Wipe managed UC + views + `agents/out` (keeps Azure); `make reset-sink` |
@@ -52,7 +54,7 @@ Portable prompts + contracts. Cursor and GitHub Copilot adapters are generated.
 | `validate_artifact.py` | JSON Schema check against `agents/contracts/` |
 | `validate_backlog_paths.py` | Unique silver/gold `target_path`s before Convert fan-out |
 | `persist_backlog.py` | Assess → `migration_backlog.json` + `ops.migration_backlog` |
-| `persist_reconcile_report.py` | Test → `reconcile_report.json` |
+| `persist_reconcile_report.py` | Test → `reconcile_report.json` + `ops.reconcile_results` |
 | `persist_manifest.py` | Gate → `migration_manifest.json` + `ops.migration_manifest_current` |
 | `merge_convert_results.py` | Merge `convert/*.json` → backlog + `ops.proc_conversion_map` |
 | `check_job_wiring.py` | WARN + propose (or `--apply`) safe YAML patch for missing job tasks |

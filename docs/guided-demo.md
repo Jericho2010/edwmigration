@@ -12,7 +12,7 @@ flowchart LR
   O[Open repo root] --> G[Type start or edw-demo-guide]
   G --> S[Choose 1 or paste kickoff]
   S --> F[Fix if agent asks]
-  F --> W[Watch Dashboard Genie MLflow]
+  F --> W[Watch Control Plane Catalog Job Notebooks Genie MLflow]
   W --> T[Teardown when done]
   classDef user fill:#0B3D5C,stroke:#082C43,color:#fff
   classDef agent fill:#1B7A6E,stroke:#145A51,color:#fff
@@ -50,13 +50,13 @@ Warehouse, Azure/Databricks login, and tools: the guide runs `./agents/tools/pre
    - Wire federation, dashboard, Genie (`make setup`)  
    - Drive the coordinator with checkpoints: Assess → **Convert wave** (≤5 in parallel) → merge → Test → Gate  
 5. Watch live (open links **once**, leave them open):
-   - Open **Control Plane**, **Genie**, and MLflow **`observe_url`** when the guide prints them (**Provision** best-effort, **Setup**, then **Mint** for `observe_url`). Leave tabs open; watch chat `[edw]` heartbeats during bootstrap.
+   - Open **Control Plane**, **Genie**, **Catalog**, and MLflow **`observe_url`** when the guide prints them (**Provision** best-effort, **Setup**, then **Mint** for `observe_url`). After Land, open **Notebooks**; after deploy, open **Job**. Leave tabs open; watch chat `[edw]` heartbeats during bootstrap.
    - In chat, expect `observe_status` after each stage — not another URL dump.
    - Assess / Convert / Test / Gate should run as Cursor **`edw-*`** agents (hooks feed the Dashboard + MLflow).
    - Ask Genie mid-run about inventory/events; after Gate: *Did the last run ship?*  
    Details: **[MLflow observability](mlflow.md)**.
 6. Demo acceptance (guide check, **not** a Gate rule): **≥10 tables** and **≥5 procedures** migrated (counts only).  
-7. When finished: ask the guide to tear down. Databricks-only (keeps Azure SQL): `make teardown-databricks`. Azure RG: menu **5** or `make teardown`. Between demos without tearing down Azure: confirm `make reset-sink` when offered (stale dashboard from a prior demo).
+7. When finished: ask the guide to tear down (menu **5**). Databricks-only (keeps Azure SQL): `make teardown-databricks`. Azure RG: `make teardown`. Between demos without tearing down Azure: confirm `make reset-sink` when offered (stale dashboard from a prior demo).
 
 ### Live acceptance checklist (`start` → **1** / **2** / **3**)
 

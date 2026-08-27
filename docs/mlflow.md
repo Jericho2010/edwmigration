@@ -125,7 +125,7 @@ Convert fan-out appears as **parallel child AGENT spans** under the run root. Sh
 |---|---|
 | One-time deps | `make observe-setup` (repo `.venv` + `mlflow>=3.8`) |
 | Health | `./agents/tools/check_mlflow_observe.sh` (also from soft status / Track A preflight) |
-| Auth | Same Databricks session as the CLI (`DATABRICKS_HOST` + profile/PAT) |
+| Auth | Same Databricks session as the CLI (`DATABRICKS_HOST` + matching profile/PAT overlay when `.env` has HOST without TOKEN) |
 
 Soft status / preflight **WARN** if observe is not ready; they do **not** block the menu or migration. See [prerequisites.md](prerequisites.md) and [troubleshooting.md](troubleshooting.md).
 

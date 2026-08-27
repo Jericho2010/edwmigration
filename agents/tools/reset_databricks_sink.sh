@@ -15,6 +15,8 @@ if [ -f "${REPO_ROOT}/.env" ]; then
   . "${REPO_ROOT}/.env" || true
   set +a
 fi
+# shellcheck disable=SC1091
+. "${REPO_ROOT}/agents/tools/apply_databricks_cli_auth.sh"
 
 : "${DATABRICKS_CATALOG:?DATABRICKS_CATALOG must be set in .env}"
 : "${DATABRICKS_HOST:?DATABRICKS_HOST must be set in .env}"

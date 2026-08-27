@@ -29,6 +29,8 @@ if [ -f "${REPO_ROOT}/.env" ]; then
   . "${REPO_ROOT}/.env" || true
   set +a
 fi
+# shellcheck disable=SC1091
+. "${REPO_ROOT}/agents/tools/apply_databricks_cli_auth.sh"
 
 echo
 echo "=== Observability · ${STAGE} ==="
@@ -42,6 +44,9 @@ if [ -z "${DATABRICKS_HOST:-}" ]; then
   echo "Keep these open during the run."
   echo "Control Plane: not ready yet — appears after make setup (deploy + genie)."
   echo "Genie: not ready yet — appears after make setup."
+  echo "Catalog: not ready yet — appears after make setup."
+  echo "Job: not ready yet — appears after make deploy."
+  echo "Notebooks: appear after Land (publish_run_notebooks)."
   echo "MLflow traces: appear after mint (mlflow_observe init / ensure_run_events)."
   echo "Until then: watch chat for [edw] heartbeats from track_a_provision / bootstrap."
   echo "================="
@@ -66,7 +71,7 @@ case "$STAGE" in
     echo "[edw] ${STAGE}: long Azure/Databricks work may follow — chat should show [edw] steps; do not assume hung silence."
     ;;
   Setup)
-    echo "[edw] Setup: Control Plane + Genie should be openable now; observe_url joins at Mint."
+    echo "[edw] Setup: Control Plane + Genie + Catalog should be openable now; Job after deploy; Notebooks after Land; observe_url joins at Mint."
     ;;
 esac
 

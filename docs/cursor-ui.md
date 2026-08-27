@@ -53,7 +53,7 @@ Allow terminal / tool use when Cursor asks so the agent can run `make` and repo 
 - Soft status appears (informational only — not the same as Track A preflight)  
 - After you choose **1**, Track A preflight (`preflight_track_a.sh`) may ask for a single login or install — do that, then say continue  
 - It writes or updates `.env`  
-- Later it prints **Control Plane** and **Genie** URLs (`make print-urls`)  
+- Later it prints **Control Plane**, **Genie**, **Catalog**, **Job**, and **Notebooks** URLs (`make print-urls`). Catalog/Job after setup/deploy; Notebooks after Land (`edwmigration_YYYYMMDD`). MLflow `observe_url` joins at mint.
 
 Full walkthrough: [guided-demo.md](guided-demo.md) · Copilot: [agent-setup.md](agent-setup.md#github-copilot)
 

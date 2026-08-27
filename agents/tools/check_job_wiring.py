@@ -451,7 +451,7 @@ def main_with_args(argv: list[str] | None = None) -> int:
     )
     print(
         f"[check_job_wiring] WARN {len(missing)} backlog path(s) not wired "
-        f"into {rel_job} — Gate may pass notebooks the job "
+        f"into {rel_job} — Gate may pass SQL files the job "
         f"does not run (see docs/limits.md):"
     )
 

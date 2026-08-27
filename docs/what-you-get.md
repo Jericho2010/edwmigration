@@ -63,7 +63,7 @@ flowchart LR
   C --> J[Job run]
   J --> T[Test]
   T --> G[Gate]
-  G --> O[Dashboard + Genie]
+  G --> O[Dashboard + Genie + Catalog + Job + Notebooks]
   classDef work fill:#C47B2D,stroke:#8F5A1F,color:#fff
   classDef agent fill:#1B7A6E,stroke:#145A51,color:#fff
   classDef ops fill:#5B4B8A,stroke:#3F3460,color:#fff
@@ -76,10 +76,10 @@ flowchart LR
 |---|---|
 | **Discover** | List base tables (+ export procs/routines if tools allow) |
 | **Land** | Copy each table into `bronze.*` and record counts |
-| **Convert** | Turn T-SQL / MySQL routines into Spark SQL notebooks in **parallel waves (≤5)** via `edw-convert` *(skipped cleanly if none)* |
+| **Convert** | Turn T-SQL / MySQL routines into Spark SQL (`.sql`) in **parallel waves (≤5)** via `edw-convert` *(skipped cleanly if none)* |
 | **Test** | Bronze row counts vs source |
 | **Gate** | Ship / no-ship from inventory + reconcile + conversions |
-| **Observe** | Control Plane dashboard + Genie Q&A + MLflow live traces (`observe_url`) |
+| **Observe** | Control Plane + Genie + Catalog + Job + Notebooks (`edwmigration_YYYYMMDD`) + MLflow live traces (`observe_url`) |
 
 ```mermaid
 %%{init: {"theme":"base","themeVariables":{"primaryColor":"#E8F1F8","primaryTextColor":"#0B3D5C","primaryBorderColor":"#0B3D5C","lineColor":"#5B7A8C","secondaryColor":"#E6F4F1","tertiaryColor":"#F7F3EA","background":"#FFFFFF","mainBkg":"#E8F1F8","clusterBkg":"#F7FAFC","clusterBorder":"#5B7A8C","titleColor":"#0B3D5C","edgeLabelBackground":"#FFFFFF"}}}%%
@@ -124,7 +124,7 @@ sequenceDiagram
   participant Wave as Convert_wave_max_5
   participant DBX as Databricks
   You->>Guide: Menu1 plus catalog
-  Guide-->>You: Control Plane Genie banner Provision
+  Guide-->>You: Control Plane Genie Catalog banner Provision
   Guide->>DBX: bootstrap and setup
   Guide-->>You: banner Setup
   Guide->>Coord: mint run
@@ -153,16 +153,19 @@ Everything for one run lives under `agents/out/<run_id>/` (also pointed at by `a
 | `merge_failed.json` | Present only if ops merge failed (fix before continuing) |
 | `reconcile_report.json` | Test pass/fail checks |
 | `migration_manifest.json` | Gate ship / no-ship + blockers |
-| `mlflow_context.json` | MLflow experiment/trace ids + `observe_url` (after observe init) |
+| `notebooks.json` | Workspace gallery folder + Catalog/Job URLs after `publish_run_notebooks.py` |
 
 ---
 
-## Control Plane + Genie + MLflow
+## Control Plane + Genie + Catalog + Job + Notebooks + MLflow
 
-After setup: `make print-urls` (Dashboard + Genie). After the coordinator mints a run: same command also prints **`observe_url`** when MLflow observe is ready (`make observe-setup`).
+After setup: `make print-urls` (Control Plane + Genie + Catalog; Job after deploy). After Land: **Notebooks** (`edwmigration_YYYYMMDD`). After the coordinator mints a run: same command also prints **`observe_url`** when MLflow observe is ready (`make observe-setup`).
 
 - **Control Plane** — Gate, timeline, backlog, reconcile. Gate Hero stays empty until Gate; Inventory / Events / Backlog move earlier.  
 - **Genie** — *Did the last run ship?* / *Why did the gate fail?* (also useful mid-run on inventory/events)  
+- **Catalog** — Unity Catalog explorer for landed bronze/silver/gold  
+- **Job** — medallion job runs (`sql_task` on repo SQL)  
+- **Notebooks** — Workspace gallery of the same SQL (readable, not the job runtime)  
 - **MLflow** — live subagent/tool span tree while Convert runs (Cursor hooks dual-write every `edw-*` agent + shell/MCP/file tools). Soft no-op until `make observe-setup`.  
 - **Cursor chat** — `observe_status` after each stage (URLs pasted once at setup/mint).
 

@@ -2,13 +2,13 @@
 
 [![Validate](https://github.com/Jericho2010/edwmigration/actions/workflows/validate.yml/badge.svg)](https://github.com/Jericho2010/edwmigration/actions/workflows/validate.yml)
 
-**Watch an agent migrate a warehouse into Databricks — while you watch a Control Plane, ask Genie if the run shipped, and follow live MLflow traces of every subagent.**
+**Watch an agent migrate a warehouse into Databricks — while you watch a Control Plane, Catalog, Job, and Workspace notebooks, ask Genie if the run shipped, and follow live MLflow traces of every subagent.**
 
 You do not need to be a migration expert. You do not hand-write medallion SQL. Open this repo in Cursor, type **`start`**, pick a menu item, and follow along. Log in only when the agent asks.
 
 **Demo-ready** on **Databricks Free Edition** + Azure SQL free offer (Track A). Your own Azure SQL / MySQL works too (Track B). Details and acceptance counts: [guided demo](docs/guided-demo.md).
 
-**Observability:** Control Plane + Genie + **[MLflow live traces](docs/mlflow.md)** — how Cursor hooks wire every `edw-*` subagent into one span tree.
+**Observability:** Control Plane + Genie + Catalog + Job + Notebooks + **[MLflow live traces](docs/mlflow.md)** — how Cursor hooks wire every `edw-*` subagent into one span tree.
 
 Type **`start`** — these agents do the rest:
 
@@ -47,10 +47,10 @@ This repo’s agents:
 1. **Connect** to your source (live read via Lakehouse Federation)  
 2. **Discover** every base table (and procedures/routines when tools allow)  
 3. **Land** tables into bronze and prove row counts match  
-4. **Convert** procedures into Spark SQL notebooks when there is a backlog  
-5. **Wire** new notebooks into the medallion job when needed (`check_job_wiring.py --apply`; safe concurrency)  
+4. **Convert** procedures into Spark SQL (`.sql` under `databricks/silver|gold`) when there is a backlog  
+5. **Wire** new SQL files into the medallion job when needed (`check_job_wiring.py --apply`; safe concurrency)  
 6. **Gate** the run — ship or no-ship, with reasons  
-7. **Show** progress on a Control Plane, Genie, and **[MLflow](docs/mlflow.md)** live agent/tool traces (`observe_url`)
+7. **Show** progress on a Control Plane, Genie, Catalog, Job, Workspace notebooks (`edwmigration_YYYYMMDD`), and **[MLflow](docs/mlflow.md)** live agent/tool traces (`observe_url`)
 
 ```mermaid
 %%{init: {"theme":"base","themeVariables":{"primaryColor":"#E8F1F8","primaryTextColor":"#0B3D5C","primaryBorderColor":"#0B3D5C","lineColor":"#5B7A8C","secondaryColor":"#E6F4F1","tertiaryColor":"#F7F3EA","background":"#FFFFFF","mainBkg":"#E8F1F8","clusterBkg":"#F7FAFC","clusterBorder":"#5B7A8C","titleColor":"#0B3D5C","edgeLabelBackground":"#FFFFFF"}}}%%
@@ -62,7 +62,7 @@ sequenceDiagram
   Agent->>DBX: Wire catalog + federation
   Agent->>DBX: Discover + land bronze
   Agent->>DBX: Convert / job / Gate
-  DBX-->>You: Dashboard + Genie + MLflow observe_url
+  DBX-->>You: Control Plane + Genie + Catalog + Job + Notebooks + MLflow
 ```
 
 ---
@@ -82,7 +82,7 @@ sequenceDiagram
 
 Full hand-holding: **[Guided demo](docs/guided-demo.md)** · Tool reference: **[Prerequisites](docs/prerequisites.md)**
 
-When you’re done: menu **5**, or ask the guide to tear down (`make teardown`).
+When you’re done: menu **5**, then confirm **Databricks** wipe (`make teardown-databricks`, keeps Azure SQL) and/or **Azure** (`make teardown`).
 
 ---
 
@@ -92,7 +92,7 @@ When you’re done: menu **5**, or ask the guide to tear down (`make teardown`).
 |---|---|
 | **Learning / SE / first try** | Stay on [Guided demo](docs/guided-demo.md); then [What you get](docs/what-you-get.md) · [MLflow](docs/mlflow.md) |
 | **Have a sandbox DB** | [Your database](docs/your-database.md) |
-| **Watch agents live** | **[MLflow observability](docs/mlflow.md)** — Control Plane + Genie + traces |
+| **Watch agents live** | **[MLflow observability](docs/mlflow.md)** — Control Plane + Genie + Catalog + Job + Notebooks + traces |
 | **Platform / security / prod** | **[Enterprise](docs/enterprise.md)** — SoD, OAuth, private network, CI |
 | **Extending the engine** | [Architecture](docs/architecture.md) · [CONTRIBUTING](CONTRIBUTING.md) |
 
@@ -111,7 +111,7 @@ For production-shaped controls (not Free Edition public firewall), read **[Enter
 ## What “done” looks like
 
 - Tables in `${DATABRICKS_CATALOG}.bronze.*`  
-- **Control Plane** + **Genie** + **MLflow `observe_url`** (`make print-urls`; observe link appears after the coordinator mints a run)  
+- **Control Plane** + **Genie** + **Catalog** + **Job** + **Notebooks** (`edwmigration_YYYYMMDD` after Land) + **MLflow `observe_url`** (`make print-urls`; observe link appears after the coordinator mints a run)  
 - Gate ship with empty blockers  
 - Demo path also checks **counts** (≥10 tables / ≥5 procs) — that is demo acceptance, not a Gate rule  
 
@@ -126,7 +126,7 @@ More: **[What you get](docs/what-you-get.md)** · **[MLflow observability](docs/
 | Open this repo at the **git root** in Cursor | Loads agents + hooks |
 | Type **`start`** and pick a menu item | Soft status + routes to the right agent |
 | Fix only what preflight / the agent names (login, install, warehouse) | Writes `.env`; federation → discover → land → convert → job → Gate |
-| Watch Dashboard + Genie; confirm if asked (>200 tables) | Prints URLs; clears blockers on retry |
+| Watch Dashboard + Genie + Catalog + Job + Notebooks; confirm if asked (>200 tables) | Prints URLs; clears blockers on retry |
 
 No object lists. No Lakebridge. No hand-written landing SQL.
 

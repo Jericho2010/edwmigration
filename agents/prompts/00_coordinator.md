@@ -6,7 +6,7 @@ Read `SOURCE_TYPE` from `.env` (`sqlserver` default, or `mysql`). Demo-guide pat
 
 Shared memory is **disk only** under `agents/out/<run_id>/` (orchestrator-worker artifact pattern). Subagents do not share chat context.
 
-**Live observability:** follow [`agents/prompts/_live_observability.md`](_live_observability.md) for the whole run (chat + MLflow + Control Plane + Genie + **Notebooks / Catalog / Job** **during** stages, not only after Gate).
+**Live observability:** follow [`agents/prompts/_live_observability.md`](_live_observability.md) for the whole run (chat + MLflow + Control Plane + Genie + Notebooks + Catalog + Job as each plane becomes available, not only after Gate).
 
 ## Responsibilities
 
@@ -110,7 +110,7 @@ Shared memory is **disk only** under `agents/out/<run_id>/` (orchestrator-worker
    ```bash
    python3 agents/tools/check_job_wiring.py --run-id <run_id> --apply
    ```
-   Tell the user Gate can still pass notebooks the job does not run until wiring is applied (see `docs/limits.md`). Prefer `--apply` over hand-editing; humans may still tighten `depends_on` afterward.
+   Tell the user Gate can still pass SQL files the job does not run until wiring is applied (see `docs/limits.md`). Prefer `--apply` over hand-editing; humans may still tighten `depends_on` afterward.
    ```bash
    make deploy && make run
    python3 agents/tools/publish_run_notebooks.py --run-id <run_id>

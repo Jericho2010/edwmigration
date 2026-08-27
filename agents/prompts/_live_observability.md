@@ -47,7 +47,7 @@ Gate Hero (gate counters on `migration_manifest_current`) stays empty until Gate
 | Stage | Cursor subagent | Writes files? |
 |---|---|---|
 | Assess | `edw-assess` | No (readonly) — JSON in reply; coordinator writes `assess_raw.json` |
-| Convert | `edw-convert` (≤5 parallel) | Yes — notebook + `convert/<item_id>.json` |
+| Convert | `edw-convert` (≤5 parallel) | Yes — `.sql` + `convert/<item_id>.json` |
 | Test | `edw-test` | No (readonly) — JSON in reply; coordinator writes `reconcile_raw.json` |
 | Gate | `edw-gate` | No (readonly) — JSON in reply; coordinator writes `manifest_raw.json` |
 

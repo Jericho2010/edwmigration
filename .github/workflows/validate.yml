@@ -204,6 +204,9 @@ jobs:
           test -f agents/tools/check_job_wiring.py
           grep -q "persist_backlog.py" agents/prompts/00_coordinator.md
           grep -q "merge_failed.json" agents/prompts/00_coordinator.md
+          grep -q "teardown-databricks" docs/getting-started.md
+          grep -q apply_databricks_cli_auth.sh agents/tools/run_sql.sh
+          grep -q databricks_cli.sh Makefile
           ! grep -qE 'may set `skip`' agents/prompts/01_assess.md
 
       - name: Job wiring unit tests
@@ -217,6 +220,10 @@ jobs:
       - name: Publish notebooks unit tests
         run: |
           python3 -m unittest discover -s agents/tools -p 'test_publish_run_notebooks.py' -v
+
+      - name: Persist reconcile unit tests
+        run: |
+          python3 -m unittest discover -s agents/tools -p 'test_persist_reconcile_report.py' -v
 
       - name: MLflow observe setup artifacts present
         run: |

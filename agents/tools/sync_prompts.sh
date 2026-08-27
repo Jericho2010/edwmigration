@@ -44,7 +44,7 @@ sync_cursor "00_coordinator.md" "edw-coordinator" "false" \
 sync_cursor "01_assess.md" "edw-assess" "true" \
   "Inventory → migration backlog JSON (empty OK if routines skipped). No skip field; unique target_paths. Readonly."
 sync_cursor "02_convert.md" "edw-convert" "false" \
-  'Convert one T-SQL/MySQL routine to silver/gold notebook + convert/<item_id>.json; land-first bronze reads; validate_artifact before exit.'
+  'Convert one T-SQL/MySQL routine to silver/gold SQL + convert/<item_id>.json; land-first bronze reads; validate_artifact before exit.'
 sync_cursor "03_test.md" "edw-test" "true" \
   "Run reconcile SQL, query ops.reconcile_results, return reconcile_report.json. Readonly."
 sync_cursor "04_gate.md" "edw-gate" "true" \

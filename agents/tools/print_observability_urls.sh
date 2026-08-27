@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Print Control Plane dashboard URL + Genie room URL (best-effort, never fails setup).
+# Print Control Plane + Genie + Catalog + Job + Notebooks + MLflow observe_url
+# (best-effort, never fails setup).
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -20,9 +21,8 @@ fi
 
 SEARCH_HINT="EDW Migration Control Plane"
 
-if command -v python3 >/dev/null 2>&1 && [ -f "${REPO_ROOT}/agents/tools/databricks_cli_env.py" ]; then
-  eval "$(python3 "${REPO_ROOT}/agents/tools/databricks_cli_env.py" --export 2>/dev/null || true)"
-fi
+# shellcheck disable=SC1091
+. "${REPO_ROOT}/agents/tools/apply_databricks_cli_auth.sh"
 
 echo
 echo "=== Observability ==="

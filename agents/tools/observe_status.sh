@@ -15,6 +15,8 @@ if [ -f "${REPO_ROOT}/.env" ]; then
   . "${REPO_ROOT}/.env" || true
   set +a
 fi
+# shellcheck disable=SC1091
+. "${REPO_ROOT}/agents/tools/apply_databricks_cli_auth.sh"
 
 STAGE=""
 RUN_ID=""
@@ -39,7 +41,7 @@ CATALOG="$DATABRICKS_CATALOG"
 
 echo
 echo "=== observe_status${STAGE:+ · ${STAGE}} ==="
-echo "Open these now (live during the run): Control Plane + Genie + MLflow observe_url below."
+echo "Open these now (live during the run): Control Plane + Genie + Catalog + Job + Notebooks + MLflow observe_url below."
 if [ -n "$RUN_ID" ]; then
   echo "run_id=${RUN_ID}"
 else
@@ -87,7 +89,7 @@ fi
 if [ -n "$RUN_ID" ]; then
   OUT="${REPO_ROOT}/agents/out/${RUN_ID}"
   echo "local artifacts:"
-  for f in inventory.json migration_backlog.json convert_summary.json reconcile_report.json migration_manifest.json mlflow_context.json; do
+  for f in inventory.json migration_backlog.json convert_summary.json reconcile_report.json migration_manifest.json mlflow_context.json notebooks.json; do
     if [ -f "${OUT}/${f}" ]; then
       echo "  OK  ${f}"
     else

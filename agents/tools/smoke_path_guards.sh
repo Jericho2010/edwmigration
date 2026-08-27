@@ -116,7 +116,7 @@ python3 agents/tools/persist_backlog.py --run-id "$SMOKE_RID" \
 python3 agents/tools/persist_manifest.py --run-id "$SMOKE_RID" \
   --from-file agents/samples/run/migration_manifest.json --skip-ops
 python3 agents/tools/persist_reconcile_report.py --run-id "$SMOKE_RID" \
-  --from-file agents/samples/run/reconcile_report.json
+  --from-file agents/samples/run/reconcile_report.json --skip-ops
 test -f "agents/out/${SMOKE_RID}/migration_backlog.json"
 test -f "agents/out/${SMOKE_RID}/migration_manifest.json"
 test -f "agents/out/${SMOKE_RID}/reconcile_report.json"
@@ -127,6 +127,14 @@ python3 agents/tools/check_job_wiring.py --backlog agents/samples/run/migration_
 
 echo "[smoke] check_job_wiring propose/apply on temp job"
 python3 -m unittest discover -s agents/tools -p 'test_check_job_wiring.py' -q
+
+echo "[smoke] CLI auth overlay wired (HOST without TOKEN)"
+grep -q apply_databricks_cli_auth.sh agents/tools/run_sql.sh
+grep -q databricks_cli.sh Makefile
+grep -q apply_databricks_cli_auth.sh infra/azure/bootstrap.sh
+grep -q "teardown-databricks" docs/getting-started.md
+test -x agents/tools/databricks_cli.sh
+test -f agents/tools/apply_databricks_cli_auth.sh
 
 # cleanup smoke run dir
 rm -rf "agents/out/${RID}"

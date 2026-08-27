@@ -9,7 +9,7 @@ You are launched as Cursor subagent **`edw-convert`** so hooks dual-write live U
 
 Convert **one** legacy stored procedure (T-SQL) or MySQL routine into Databricks Spark SQL under `databricks/silver/` or `databricks/gold/`.
 
-You may run in parallel with other Convert workers for the same `run_id`. Shared memory is disk-only under `agents/out/<run_id>/` (orchestrator-worker artifact pattern: write the notebook + result JSON; return a short path summary in chat).
+You may run in parallel with other Convert workers for the same `run_id`. Shared memory is disk-only under `agents/out/<run_id>/` (orchestrator-worker artifact pattern: write the Spark SQL `.sql` file + result JSON; return a short path summary in chat). Workspace notebooks are a gallery copy after Land (`publish_run_notebooks.py`) — do not import to Workspace yourself.
 
 ## Inputs
 
@@ -24,8 +24,8 @@ You may run in parallel with other Convert workers for the same `run_id`. Shared
 ## Process
 
 1. Read `context.json`, inventory `landing_name`s, and source SQL; map to Spark SQL per convert_style for the dialect (`tsql` or `mysql`). **Land-first:** windows/joins/MERGE run on `__UC_CATALOG__.bronze.<landing_name>`, not the federated source.
-2. If blocked criteria in convert_style apply: write a stub notebook with `-- TODO` and result `status: "blocked"`.
-3. Otherwise write/overwrite **only** this item's `target_path` with a complete notebook (header including `Source dialect`, SQL, smoke `SELECT`). Prefer set-based `CREATE OR REPLACE` / `MERGE`. Do **not** emit `CREATE PROCEDURE`.
+2. If blocked criteria in convert_style apply: write a stub `.sql` file with `-- TODO` and result `status: "blocked"`.
+3. Otherwise write/overwrite **only** this item's `target_path` with a complete Spark SQL file (header including `Source dialect`, SQL, smoke `SELECT`). Prefer set-based `CREATE OR REPLACE` / `MERGE`. Do **not** emit `CREATE PROCEDURE`.
 4. Use `${uc_catalog}` / `__UC_CATALOG__` three-part names consistent with repo templates (`__UC_CATALOG__.silver|gold.*`).
 5. **Must** write result JSON to `agents/out/<run_id>/convert/<item_id>.json` per `agents/contracts/convert_result.schema.json`, then validate:
 

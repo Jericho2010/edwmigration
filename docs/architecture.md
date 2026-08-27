@@ -26,7 +26,7 @@ flowchart LR
     WWI[WWI bacpac]
   end
   WWI -.-> Fed
-  Gate --> Obs[Dashboard + Genie]
+  Gate --> Obs[Dashboard + Genie + Catalog]
   classDef agent fill:#1B7A6E,stroke:#145A51,color:#fff
   classDef azureC fill:#0078D4,stroke:#005A9E,color:#fff
   classDef bronze fill:#C47B2D,stroke:#8F5A1F,color:#fff
@@ -39,7 +39,7 @@ flowchart LR
 
 **Convert fan-out:** after Assess, `validate_backlog_paths.py` → waves of ≤5 `edw-convert` agents → `merge_convert_results.py` → then deploy/run. Shared memory is disk artifacts under `agents/out/<run_id>/` (orchestrator-worker; land-first Federation — convert reads bronze Delta). See [artifacts map](what-you-get.md#run-artifacts-map).
 
-**Convert vs job tasks:** Gate checks notebooks on disk + `ops.proc_conversion_map`. The medallion DAB job runs the **checked-in** silver/gold task set in `databricks/jobs/edw_migration_medallion.yml` — new convert paths are not auto-wired into job tasks until that YAML is extended. See [limits.md](limits.md).
+**Convert vs job tasks:** Gate checks `.sql` files on disk + `ops.proc_conversion_map`. The medallion DAB job runs the **checked-in** silver/gold task set in `databricks/jobs/edw_migration_medallion.yml` — new convert paths are not auto-wired into job tasks until that YAML is extended. Workspace notebooks are a gallery copy after Land. See [limits.md](limits.md).
 
 Full colored system diagram: [`img/architecture.mmd`](img/architecture.mmd) · Delegation: [`img/agent_delegation.mmd`](img/agent_delegation.mmd)
 

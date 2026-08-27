@@ -28,7 +28,7 @@ Until reshot: docs caption the older images as “prefer `start`” in [cursor-u
 Record your screen. Save as `docs/media/hero.mp4`.
 
 1. Cursor — type `start`, show status + menu, reply `1`, allow tools, then cut.  
-2. Terminal — `make print-urls` (show the two links).  
+2. Terminal — `make print-urls` (Control Plane, Genie, Catalog, Job, Notebooks, observe_url).  
 3. Browser — Control Plane dashboard.  
 4. Browser — Genie: ask `Did the last run ship?` Show the answer.
 
