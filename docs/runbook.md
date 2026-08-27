@@ -51,7 +51,7 @@ SqlPackage **not** required for `make setup`.
 | `make setup` | Secrets + federation + deploy + genie + URLs |
 | `make observe-setup` | Create `.venv` + install MLflow observe deps |
 | `make print-urls` | Control Plane + Genie + Catalog + Job + Notebooks + MLflow `observe_url` |
-| `make reset-sink` | Wipe Databricks managed sink + `agents/out` (**keeps Azure**) |
+| `make reset-sink` | Wipe Databricks managed sink + `agents/out`; restore job skeleton; delete run-local silver/gold SQL (**keeps Azure**) |
 | `make teardown-databricks` | Destroy job, dashboard, Genie, MLflow experiment, catalog, connection, secret scope, `edwmigration_*` notebooks (**keeps Azure SQL**) |
 | `make deploy` / `make run` | Bundle deploy / job |
 | `make teardown` | Delete demo Azure RG |
@@ -59,7 +59,7 @@ SqlPackage **not** required for `make setup`.
 
 Also: `./agents/tools/observe_status.sh` (stage checkpoint), `./agents/tools/check_mlflow_observe.sh` (add `--strict` in Track A preflight). Full write-up: **[MLflow observability](mlflow.md)**.
 
-**Re-demo without rebuilding Azure:** `make reset-sink` then mint a new run (Discover → Gate). To wipe Databricks assets entirely (orphaned MLflow runs, Genie, jobs) but keep Azure SQL: `make teardown-databricks` then `make setup`.
+**Re-demo without rebuilding Azure:** `make reset-sink` (restores the job skeleton, clears silver/gold SQL) then mint a new run (Discover → Convert → wire → Gate). To wipe Databricks assets entirely (orphaned MLflow runs, Genie, jobs) but keep Azure SQL: `make teardown-databricks` then `make setup`.
 ---
 
 ## Trust checklist

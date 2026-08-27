@@ -13,7 +13,7 @@
 
 ## Naming
 
-- Files: `<NN>_<snake_case>.sql` (`20`-`29` silver, `30`-`39` gold).
+- Files: `<NN>_<snake_case>.sql` assigned by `allocate_target_paths.py` (NN starts at 20). Do not invent a canned dims/marts namespace.
 - Tables: `__UC_CATALOG__.<layer>.<snake_case>` (rendered to the user catalog).
 - Columns: snake_case. Quote source columns with spaces when reading bronze.
 - Do **not** hardcode WideWorldImporters / demo object names.

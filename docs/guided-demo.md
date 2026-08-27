@@ -1,6 +1,6 @@
 # Guided demo (Track A)
 
-**The recommended first experience.** About an hour the first time. Uses free Azure SQL + Databricks Free Edition sample data. An agent does the heavy lifting; you watch and confirm — and fix **only** what preflight asks.
+**The recommended first experience.** About an hour the first time. Uses free Azure SQL + Databricks Free Edition. Track A bootstraps WideWorldImporters as the **source**. Convert agents still write silver/gold from that inventory — the repo does **not** ship a pre-authored WWI star schema in the job. An agent does the heavy lifting; you watch and confirm — and fix **only** what preflight asks.
 
 **Verified:** Track A path checked against Databricks Free Edition patterns (preflight → bootstrap → migration → URLs). Demo acceptance counts (≥10 tables / ≥5 procs) depend on a full run on *your* tenant — those counts are checked by the guide, not by Gate.
 
@@ -48,7 +48,7 @@ Warehouse, Azure/Databricks login, and tools: the guide runs `./agents/tools/pre
    - Write `.env` (`materialize_demo_env`)  
    - Bootstrap free Azure SQL + WideWorldImporters sample (`make bootstrap`)  
    - Wire federation, dashboard, Genie (`make setup`)  
-   - Drive the coordinator with checkpoints: Assess → **Convert wave** (≤5 in parallel) → merge → Test → Gate  
+   - Drive the coordinator with checkpoints: Assess → **Convert wave** (≤5 in parallel) → merge → job wiring `--apply` → Test → Gate  
 5. Watch live (open links **once**, leave them open):
    - Open **Control Plane**, **Genie**, **Catalog**, and MLflow **`observe_url`** when the guide prints them (**Provision** best-effort, **Setup**, then **Mint** for `observe_url`). After Land, open **Notebooks**; after deploy, open **Job**. Leave tabs open; watch chat `[edw]` heartbeats during bootstrap.
    - In chat, expect `observe_status` after each stage — not another URL dump.
@@ -69,7 +69,7 @@ During Assess/Convert you should see all of these for **this** `run_id`:
 
 Gate Hero stays empty until Gate — expected. Inventory / Events / Backlog should populate earlier.
 
-**Job wiring (plain English):** Gate checks that converted notebooks exist on disk. The medallion job runs a **checked-in** task list — for the WWI demo that already covers the sample. If the guide prints a job-wiring WARN on a custom conversion, it can propose/apply a safe YAML patch (`check_job_wiring.py --apply`) so the new notebook becomes a job task without exceeding Free Edition concurrency ([limits.md](limits.md)).
+**Job wiring (plain English):** Gate checks that converted `.sql` files exist on disk. The committed medallion job is a **skeleton** (federation smoke → bronze land → empty fixtures → generated reconcile → lineage). After Convert, the coordinator runs `check_job_wiring.py` and `--apply` when needed so those files become job tasks. The DAG comes from Assess `reads`/`writes`; peak concurrency stays ≤ 5 ([limits.md](limits.md)). Teaching copies under `demo/wwi/reference/` are **not** copied into the job. First-run Gate can fail on bad Spark SQL — fix Convert, do not restore canned notebooks.
 
 What you will see at each pause: **[What you will see while it works](what-you-get.md#what-you-will-see-while-it-works)**.
 
@@ -100,7 +100,7 @@ You can stop and celebrate when **all** of these are true:
 1. Control Plane, Genie, and Catalog URLs open early (`announce_observability` / `make print-urls` at Provision/Setup); **Notebooks** (`edwmigration_YYYYMMDD`) after Land; **Job** after deploy  
 2. Genie can answer *Did the last run ship?*  
 3. Gate summary shows ship (empty blockers)  
-4. Demo acceptance counts: **≥10** bronze tables and **≥5** converted procs *(guide check, not Gate)*  
+4. Demo acceptance counts: **≥10** bronze tables and **≥5** converted procs *(guide check, not Gate)* — those procs must be Convert outputs, not `demo/wwi/reference/` copies  
 5. **MLflow (recommended):** you ran `make observe-setup` once, and opened `observe_url` **when minted** (watched during Convert, not only at the end)  
 6. You tore down Databricks (`make teardown-databricks`) and/or Azure (`make teardown` / menu **5**) **or** consciously kept them / used `make reset-sink` for a follow-up  
 

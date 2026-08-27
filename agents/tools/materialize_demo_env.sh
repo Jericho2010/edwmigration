@@ -18,10 +18,17 @@ if ! az account show >/dev/null 2>&1; then
 fi
 
 SUB="$(az account show --query id -o tsv)"
-LOC="${AZ_LOCATION:-eastus}"
 RG="${AZ_RG:-rg-edw-migration-demo}"
+LOC="${AZ_LOCATION:-eastus}"
+if az group show --name "$RG" >/dev/null 2>&1; then
+  LOC="$(az group show --name "$RG" --query location -o tsv)"
+  echo "[materialize_demo_env] reusing existing RG ${RG} location=${LOC}"
+fi
 SUFFIX="$(openssl rand -hex 3)"
-SQL_SERVER="${AZ_SQL_SERVER:-sql-edwmig-${SUFFIX}}"
+SQL_SERVER="${AZ_SQL_SERVER:-}"
+if [ -z "$SQL_SERVER" ]; then
+  SQL_SERVER="sql-edwmig-${SUFFIX}"
+fi
 SQL_ADMIN="${AZ_SQL_ADMIN:-edwadmin}"
 SQL_PASSWORD="${AZ_SQL_PASSWORD:-}"
 if [ -z "$SQL_PASSWORD" ]; then
@@ -97,7 +104,7 @@ ${TOKEN_LINE}
 DATABRICKS_WAREHOUSE_ID=${WH}
 DATABRICKS_CATALOG=${CATALOG}
 DATABRICKS_SECRET_SCOPE=${SCOPE}
-FOREIGN_CATALOG=wwi_dw_fed
+FOREIGN_CATALOG=sqlserver_fed
 CONNECTION_NAME=azure_sql_edw
 EOF
 

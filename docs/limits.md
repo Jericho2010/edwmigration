@@ -27,7 +27,7 @@ Constraints shape the engine and the demo.
 - **Full-auto discovery:** all visible base tables + procs/routines when export tools exist. If `tables_total > 200`, the coordinator warns and asks for confirm before land.
 - **Batch full-refresh** bronze land (`CREATE OR REPLACE TABLE AS SELECT`). No CDC/streaming in v1.
 - **Convert fan-out:** up to 5 parallel `edw-convert` workers per wave; results under `agents/out/<run_id>/convert/`.
-- **Convert vs job tasks:** Gate verifies `.sql` files on disk + `ops.proc_conversion_map`. The medallion job (`databricks/jobs/edw_migration_medallion.yml`) runs the **checked-in** silver/gold task paths. Newly converted SQL files are not job tasks until wired: `check_job_wiring.py` WARNs and prints a proposed patch; `python3 agents/tools/check_job_wiring.py --run-id <run_id> --apply` inserts safe serialized tasks (peak concurrency ≤ 5) before `reconcile` and updates `reconcile.depends_on`. Humans may still tighten `depends_on` for correctness. Coordinator/demo-guide run the check (and `--apply` when WARN fires) before deploy. Workspace notebooks are a gallery copy after Land (`publish_run_notebooks.py`).
+- **Convert vs job tasks:** Gate verifies `.sql` files on disk + `ops.proc_conversion_map`. The committed medallion job is a **skeleton** (`federation_smoke`, `bronze_land`, `stage_fixtures`, `reconcile`, `lineage_check`). Convert SQL under `databricks/silver|gold` is a run artifact (gitignored). `check_job_wiring.py --apply` inserts tasks from the backlog using Assess `reads`/`writes` and packs peak concurrency ≤ 5. `make reset-sink` restores `edw_migration_medallion.skeleton.yml`. Coordinator runs the check (and `--apply` when WARN fires) before deploy. Workspace notebooks are a gallery copy after Land (`publish_run_notebooks.py`). First-run Gate can fail on bad Spark SQL — that is Convert quality, not a reason to restore canned notebooks.
 - **Auth:** PAT supported now; OAuth (`databricks auth login`) is the enterprise target state.
 
 ## Out of scope
@@ -41,4 +41,4 @@ Constraints shape the engine and the demo.
 
 ## Extending
 
-See [CONTRIBUTING.md](../CONTRIBUTING.md). Keep WWI object names out of the core engine; put sample-estate content under `demo/wwi/`, `infra/azure/`, or `legacy/`.
+Keep WWI object names out of the core engine; put sample-estate content under `demo/wwi/` (including `demo/wwi/reference/`), `infra/azure/`, or `legacy/`.

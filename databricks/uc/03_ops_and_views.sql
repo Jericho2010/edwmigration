@@ -7,9 +7,13 @@ CREATE TABLE IF NOT EXISTS __UC_CATALOG__.ops.load_control (
   row_count       BIGINT,
   started_at      TIMESTAMP    NOT NULL,
   ended_at        TIMESTAMP,
-  status          STRING       NOT NULL
+  status          STRING       NOT NULL,
+  run_id          STRING
 )
 COMMENT 'Per-table load audit for bronze landings';
+
+ALTER TABLE __UC_CATALOG__.ops.load_control
+  ADD COLUMN IF NOT EXISTS run_id STRING;
 
 CREATE TABLE IF NOT EXISTS __UC_CATALOG__.ops.migration_inventory (
   run_id            STRING,
@@ -34,22 +38,29 @@ CREATE TABLE IF NOT EXISTS __UC_CATALOG__.ops.migration_backlog (
   priority        STRING,
   risk_flags      STRING,
   status          STRING       NOT NULL,
-  updated_at      TIMESTAMP    NOT NULL
+  updated_at      TIMESTAMP    NOT NULL,
+  run_id          STRING
 )
 COMMENT 'Assess backlog of procs to convert';
 
 ALTER TABLE __UC_CATALOG__.ops.migration_backlog
+  ADD COLUMN IF NOT EXISTS run_id STRING;
+ALTER TABLE __UC_CATALOG__.ops.migration_backlog
   DROP CONSTRAINT IF EXISTS migration_backlog_pk;
 ALTER TABLE __UC_CATALOG__.ops.migration_backlog
-  ADD CONSTRAINT migration_backlog_pk PRIMARY KEY (item_id) NOT ENFORCED;
+  ADD CONSTRAINT migration_backlog_pk PRIMARY KEY (run_id, item_id) NOT ENFORCED;
 
 CREATE TABLE IF NOT EXISTS __UC_CATALOG__.ops.proc_conversion_map (
   legacy_proc     STRING       NOT NULL,
   target_path     STRING       NOT NULL,
   status          STRING       NOT NULL,
-  updated_at      TIMESTAMP    NOT NULL
+  updated_at      TIMESTAMP    NOT NULL,
+  run_id          STRING
 )
 COMMENT 'Convert agent record of converted procs';
+
+ALTER TABLE __UC_CATALOG__.ops.proc_conversion_map
+  ADD COLUMN IF NOT EXISTS run_id STRING;
 
 CREATE TABLE IF NOT EXISTS __UC_CATALOG__.ops.reconcile_results (
   check_id        STRING       NOT NULL,
@@ -69,9 +80,13 @@ CREATE TABLE IF NOT EXISTS __UC_CATALOG__.ops.fixture_expectations (
   metric          STRING       NOT NULL,
   expected        BIGINT,
   compare         STRING       NOT NULL,
-  notes           STRING
+  notes           STRING,
+  staged_at       TIMESTAMP
 )
 COMMENT 'Optional demo-pack fixture expectations';
+
+ALTER TABLE __UC_CATALOG__.ops.fixture_expectations
+  ADD COLUMN IF NOT EXISTS staged_at TIMESTAMP;
 
 CREATE TABLE IF NOT EXISTS __UC_CATALOG__.ops.migration_manifest_current (
   run_id          STRING       NOT NULL,

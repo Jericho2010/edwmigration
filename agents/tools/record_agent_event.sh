@@ -75,6 +75,6 @@ if [ -f "$OBSERVE" ]; then
     STAGE_ARGS=(stage --run-id "$RUN_ID" --agent "$AGENT" --event "$EVENT")
     [ -n "$TOOL" ] && STAGE_ARGS+=(--tool "$TOOL")
     [ -n "$DETAIL" ] && STAGE_ARGS+=(--detail "$DETAIL")
-    "$PY" "$OBSERVE" "${STAGE_ARGS[@]}" >/dev/null 2>&1 || true
+    "$PY" "$OBSERVE" "${STAGE_ARGS[@]}" || echo "[record_agent_event] MLflow stage failed (see above)" >&2
   fi
 fi

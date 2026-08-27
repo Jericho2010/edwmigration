@@ -2,12 +2,14 @@
 -- Source dialect: tsql
 -- Classification: migrate
 -- Target layer:   silver
--- Patterns:       scd2
--- Notes:          Land-first SCD2 apply: close current dim rows whose WWI id appears in
---                 bronze.integration_supplier_staging, then append staging versions with
---                 lineage_key. SQL Server IDENTITY/SEQUENCE Supplier Key → max(existing)+row_number
---                 for new versions only; preserve landed keys. Lineage + ETL cutoff updated
---                 as silver side tables (no federated writes; no multi-table TRAN).
+-- Patterns:       scd2, snapshot
+-- Notes:          Land-first SCD2 apply from bronze.integration_supplier_staging onto
+--                 bronze.dim_supplier. Close current versions (Valid To = end-of-time)
+--                 whose WWI Supplier ID appears in staging, then append staging rows
+--                 with the open Supplier lineage_key. IDENTITY Supplier Key is synthesized
+--                 as max(existing)+row_number for new versions only. Lineage
+--                 completion and ETL cutoff live on silver copies (Federation is
+--                 read-only; BEGIN TRAN is sequential Delta, not multi-table atomic).
 
 -- Open lineage key for Supplier (incomplete load), mirroring TOP 1 ... ORDER BY DESC.
 CREATE OR REPLACE TEMP VIEW _supplier_lineage AS
@@ -59,14 +61,15 @@ existing_closed AS (
   LEFT JOIN _supplier_rows_to_close rtco
     ON d.`WWI Supplier ID` = rtco.wwi_supplier_id
 ),
+max_key AS (
+  SELECT COALESCE(MAX(supplier_key), 0) AS max_supplier_key
+  FROM existing_closed
+),
 new_versions AS (
   SELECT
-    (
-      SELECT COALESCE(MAX(`Supplier Key`), 0)
-      FROM __UC_CATALOG__.bronze.dim_supplier
-    ) + ROW_NUMBER() OVER (
+    CAST(mk.max_supplier_key + ROW_NUMBER() OVER (
       ORDER BY s.`WWI Supplier ID`, s.`Valid From`
-    ) AS supplier_key,
+    ) AS BIGINT) AS supplier_key,
     s.`WWI Supplier ID` AS supplier_id,
     s.`Supplier` AS supplier_name,
     s.`Category` AS category,
@@ -78,6 +81,7 @@ new_versions AS (
     s.`Valid To` AS valid_to,
     l.lineage_key
   FROM __UC_CATALOG__.bronze.integration_supplier_staging s
+  CROSS JOIN max_key mk
   LEFT JOIN _supplier_lineage l ON TRUE
 )
 SELECT * FROM existing_closed

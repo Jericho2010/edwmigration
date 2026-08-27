@@ -129,7 +129,7 @@ Sources also live in [`img/enterprise_sod.mmd`](img/enterprise_sod.mmd) and [`im
 |---|---|
 | Discovery → land → convert → reconcile → Gate model | Free Edition + public firewall as the path |
 | Control Plane + Genie as the explainer | Laptop PAT as prod identity |
-| Inventory-driven (no hard-coded WWI names) | One person who creates, converts, deploys, and Gates |
+| Inventory-driven (no hard-coded WWI names); job is skeleton + assemble | One person who creates, converts, deploys, and Gates |
 
 Auth note in-engine today: PAT works for demos; **OAuth + SP is the enterprise target** ([architecture.md](architecture.md), [limits.md](limits.md)).
 

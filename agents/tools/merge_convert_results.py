@@ -100,9 +100,10 @@ def _enqueue_metric(run_id: str, key: str, value: float) -> None:
     )
 
 
-def upsert_proc_map(catalog: str, rows: list[dict]) -> None:
+def upsert_proc_map(catalog: str, rows: list[dict], run_id: str = "") -> None:
     if not rows:
         return
+    rid = esc_sql(run_id)
     statements: list[str] = []
     for row in rows:
         lp = esc_sql(row["legacy_proc"])
@@ -110,14 +111,24 @@ def upsert_proc_map(catalog: str, rows: list[dict]) -> None:
         st = esc_sql(row["status"])
         statements.append(
             f"DELETE FROM `{catalog}`.ops.proc_conversion_map "
-            f"WHERE legacy_proc = '{lp}';"
+            f"WHERE run_id = '{rid}' AND legacy_proc = '{lp}';"
         )
         statements.append(
             f"INSERT INTO `{catalog}`.ops.proc_conversion_map "
-            f"(legacy_proc, target_path, status, updated_at) VALUES "
-            f"('{lp}', '{tp}', '{st}', current_timestamp());"
+            f"(legacy_proc, target_path, status, updated_at, run_id) VALUES "
+            f"('{lp}', '{tp}', '{st}', current_timestamp(), '{rid}');"
         )
     run_ops_sql("\n".join(statements))
+
+
+def load_wave(run_dir: Path) -> dict | None:
+    path = run_dir / "convert_wave.json"
+    if not path.is_file():
+        return None
+    doc = json.loads(path.read_text())
+    if not isinstance(doc, dict):
+        raise ValueError("convert_wave.json must be a JSON object")
+    return doc
 
 
 def merge(run_id: str, skip_ops: bool = False) -> dict:
@@ -137,6 +148,20 @@ def merge(run_id: str, skip_ops: bool = False) -> dict:
     # Deep-ish copy so we can abandon writes on ops failure
     backlog = json.loads(json.dumps(backlog))
     items = convertible_items(backlog)
+    wave = load_wave(run_dir)
+    wave_ids: set[str] | None = None
+    wave_paths: set[str] = set()
+    if wave is not None:
+        raw_ids = wave.get("item_ids") or wave.get("items") or []
+        wave_ids = {str(x) for x in raw_ids}
+        for p in wave.get("target_paths") or []:
+            wave_paths.add(str(p))
+        if not wave_ids and wave_paths:
+            wave_ids = {
+                str(it["item_id"])
+                for it in items
+                if str(it.get("target_path") or "") in wave_paths
+            }
 
     converted = 0
     blocked = 0
@@ -144,7 +169,26 @@ def merge(run_id: str, skip_ops: bool = False) -> dict:
     map_rows: list[dict] = []
     details: list[dict] = []
 
-    for item in items:
+    by_id = {str(it.get("item_id")): it for it in items}
+
+    if wave_ids is not None:
+        for wid in sorted(wave_ids):
+            item = by_id.get(wid)
+            result_path = convert_dir / f"{wid}.json"
+            tp = (item or {}).get("target_path") or ""
+            if tp:
+                wave_paths.add(str(tp))
+            if not result_path.is_file():
+                raise FileNotFoundError(
+                    f"wave item {wid} missing convert/{wid}.json "
+                    f"(target_path={tp or 'unknown'})"
+                )
+
+    work_items = items
+    if wave_ids is not None:
+        work_items = [it for it in items if str(it.get("item_id")) in wave_ids]
+
+    for item in work_items:
         item_id = item["item_id"]
         result_path = convert_dir / f"{item_id}.json"
         entry: dict = {"item_id": item_id, "legacy_proc": item.get("legacy_proc")}
@@ -194,6 +238,19 @@ def merge(run_id: str, skip_ops: bool = False) -> dict:
         target_path = doc["target_path"]
         status = doc["status"]
         on_disk = (ROOT / target_path).is_file()
+        expected_tp = item.get("target_path") or ""
+        if expected_tp and target_path != expected_tp:
+            blocked += 1
+            item["status"] = "blocked"
+            entry.update(
+                {
+                    "status": "blocked",
+                    "notes": f"JSON target_path {target_path!r} != backlog {expected_tp!r}",
+                    "target_path": target_path,
+                }
+            )
+            details.append(entry)
+            continue
 
         if status in OK_STATUSES and not on_disk:
             blocked += 1
@@ -244,7 +301,7 @@ def merge(run_id: str, skip_ops: bool = False) -> dict:
         "converted": converted,
         "blocked": blocked,
         "missing_results": missing,
-        "total": len(items),
+        "total": len(work_items),
         "merged_at": datetime.now(timezone.utc).isoformat(),
         "items": details,
     }
@@ -252,11 +309,11 @@ def merge(run_id: str, skip_ops: bool = False) -> dict:
     if not skip_ops:
         try:
             catalog = load_context_catalog(run_dir)
-            upsert_proc_map(catalog, map_rows)
+            upsert_proc_map(catalog, map_rows, run_id=run_id)
             sys.path.insert(0, str(ROOT / "agents" / "tools"))
             from persist_backlog import upsert_ops as upsert_backlog
 
-            upsert_backlog(catalog, backlog)
+            upsert_backlog(catalog, backlog, run_id=run_id)
         except Exception as exc:  # noqa: BLE001 — surface ops failure to marker
             marker = {
                 "run_id": run_id,
@@ -282,9 +339,29 @@ def merge(run_id: str, skip_ops: bool = False) -> dict:
     _enqueue_metric(run_id, "procs_converted", float(converted))
     _enqueue_metric(run_id, "procs_blocked", float(blocked))
 
+    sys.path.insert(0, str(ROOT / "agents" / "tools"))
+    from edw_handoff import emit_handoff_quiet
+
+    if missing:
+        oc = "fail"
+    elif blocked:
+        oc = "blocked"
+    else:
+        oc = "ok"
+    emit_handoff_quiet(
+        run_id,
+        from_agent="convert",
+        to_agent="coordinator",
+        item_id="",
+        action="merge",
+        artifact=str(summary_path.relative_to(ROOT)),
+        outcome=oc,
+        skip_ops=skip_ops,
+    )
+
     print(
         f"[merge_convert_results] run_id={run_id} converted={converted} "
-        f"blocked={blocked} missing={missing} total={len(items)} "
+        f"blocked={blocked} missing={missing} total={len(work_items)} "
         f"summary={summary_path}"
     )
     return summary

@@ -16,6 +16,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 SCHEMA_PATH = ROOT / "agents" / "contracts" / "migration_manifest.schema.json"
+sys.path.insert(0, str(ROOT / "agents" / "tools"))
+from edw_vocab import gate_pass_value  # noqa: E402
 
 
 def load_env() -> None:
@@ -156,7 +158,22 @@ def main() -> int:
     _enqueue_metric(args.run_id, "tables_total", float(summary.get("tables_total") or 0))
     _enqueue_metric(args.run_id, "procs_converted", float(summary.get("procs_converted") or 0))
     _enqueue_metric(args.run_id, "procs_total", float(summary.get("procs_total") or 0))
-    _enqueue_metric(args.run_id, "gate_pass", 1.0 if gate.lower() == "ship" else 0.0)
+    _enqueue_metric(args.run_id, "gate_pass", gate_pass_value(gate))
+
+    try:
+        from edw_handoff import emit_handoff_quiet
+
+        emit_handoff_quiet(
+            args.run_id,
+            from_agent="gate",
+            to_agent="coordinator",
+            action="persist",
+            artifact=str(out_path.relative_to(ROOT)),
+            outcome="ok" if gate_pass_value(gate) >= 1.0 else "fail",
+            skip_ops=args.skip_ops,
+        )
+    except Exception:
+        pass
 
     print(
         f"[persist_manifest] run_id={args.run_id} gate={doc.get('gate')} "

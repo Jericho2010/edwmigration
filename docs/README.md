@@ -85,7 +85,7 @@ flowchart TD
 
 | Doc | Purpose |
 |---|---|
-| [architecture.md](architecture.md) | Engine vs demo pack (+ Observability summary) |
+| [architecture.md](architecture.md) | Engine vs demo pack: skeleton job + Convert assemble |
 | [enterprise.md](enterprise.md) | SoD and production controls |
 | [limits.md](limits.md) | Free tiers + scope |
 | [lakebridge.md](lakebridge.md) | Compete, don’t compose |

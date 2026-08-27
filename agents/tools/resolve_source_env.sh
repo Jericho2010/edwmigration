@@ -32,7 +32,7 @@ if [ "$SOURCE_TYPE" = "sqlserver" ]; then
   : "${SOURCE_DATABASE:=${AZ_SQL_DB:-WideWorldImportersDW}}"
   : "${SOURCE_USER:=${AZ_SQL_ADMIN:-edwadmin}}"
   : "${SOURCE_PASSWORD:=${AZ_SQL_PASSWORD:-}}"
-  : "${FOREIGN_CATALOG:=wwi_dw_fed}"
+  : "${FOREIGN_CATALOG:=sqlserver_fed}"
   : "${CONNECTION_NAME:=azure_sql_edw}"
   CONNECTION_TYPE=SQLSERVER
   SOURCE_SYSTEM=azure_sql
@@ -43,7 +43,7 @@ else
   # If switching from a prior demo .env, replace SQL Server demo names unless user
   # explicitly set non-demo foreign/connection names.
   case "${FOREIGN_CATALOG:-}" in
-    ''|wwi_dw_fed) FOREIGN_CATALOG=mysql_fed ;;
+    ''|wwi_dw_fed|sqlserver_fed) FOREIGN_CATALOG=mysql_fed ;;
   esac
   case "${CONNECTION_NAME:-}" in
     ''|azure_sql_edw) CONNECTION_NAME=azure_mysql_edw ;;

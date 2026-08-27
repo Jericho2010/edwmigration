@@ -15,11 +15,14 @@ Something broke? Find the symptom, apply the one-line fix, re-run the agent step
 | Federation JDBC / cold Azure SQL | Warm DB (`SELECT 1`); check [firewall](firewall.md) |
 | MySQL SSL / cert errors | SSL required. Default `SOURCE_TRUST_SERVER_CERTIFICATE=true` |
 | MySQL unreachable from Free Edition | Open Flexible Server firewall / public access for demo — [firewall](firewall.md) |
-| MySQL uses `wwi_dw_fed` names | Remove stale `FOREIGN_CATALOG` / `CONNECTION_NAME` or set mysql defaults |
+| MySQL uses a leftover SQL Server foreign catalog name | Remove stale `FOREIGN_CATALOG` / `CONNECTION_NAME` or omit them so defaults apply (`mysql_fed`) |
 | `CREATE CONNECTION` denied | Need metastore `CREATE CONNECTION` (+ `CREATE CATALOG`) |
 | Smoke: 0 foreign tables | Wrong database name / connection / bacpac not imported |
 | `mysql` CLI missing | Tables still migrate; routines skipped with a note |
 | Job missing `10_land_all.sql` / placeholder land | Discover + generate for a `run_id`, then `make render` — `make run` now refuses placeholder land |
+| Job has no silver/gold tasks | Expected until `check_job_wiring.py --apply`. The committed job is smoke/land/fixtures/reconcile/lineage. |
+| Gate / job fails on Spark SQL after Convert | Fix Convert (or Assess `reads`/`writes`). Do **not** copy `demo/wwi/reference/` into the job. |
+| Previous demo’s WWI tasks leaked into a new source | `make reset-sink` restores `edw_migration_medallion.skeleton.yml` and deletes run-local `databricks/silver\|gold/*.sql` |
 | Hooks events on wrong run / `unknown` | Open **repo root**; ensure `agents/out/CURRENT_RUN` exists after coordinator start |
 | Gate fails unconverted | Convert backlog **or** table-only run with `ensure_run_events.py` |
 | Gate fails missing agent_events | `ensure_run_events.py` (coordinator + convert/skipped) then `record_agent_event` for assess/test/gate after each persist helper |
@@ -34,7 +37,7 @@ Something broke? Find the symptom, apply the one-line fix, re-run the agent step
 | Silent agent / empty Dashboard **during** Convert | Assess/Convert/Test/Gate must be Cursor **`edw-*`** subagents so hooks fire. Opaque Task / `generalPurpose` without `dual_write_agent_lifecycle.sh` (Convert: `--item-id` per item) produces silence. Paste `./agents/tools/observe_status.sh --stage <Name>` after each stage. |
 | Agent self-starts migration on bare `start` | Bug — only menu **1/2/3** may migrate. See `agents/prompts/06_start.md` / `.cursor/rules/edw-start.mdc`. |
 | Genie create/update fails | Ops tables must exist (`make setup`); warehouse ID set. Setup-time `make genie` WARNs on PATCH 400 so Track A continues. After Land, `make genie GENIE_STRICT=1` fails loud. |
-| Need clean demo without Azure teardown | `make reset-sink` (tables/rows) or `make teardown-databricks` (catalog, jobs, Genie, MLflow, secrets). Both keep Azure SQL. |
+| Need clean demo without Azure teardown | `make reset-sink` (tables/rows + restore job skeleton + clear silver/gold SQL) or `make teardown-databricks` (catalog, jobs, Genie, MLflow, secrets). Both keep Azure SQL. |
 
 Offline seed mode was removed — use the [guided demo](guided-demo.md) or [your database](your-database.md).
 

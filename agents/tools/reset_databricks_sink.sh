@@ -105,6 +105,17 @@ if [ -d "$OUT_DIR" ]; then
   find "$OUT_DIR" -mindepth 1 -maxdepth 1 ! -name '.gitkeep' -exec rm -rf {} +
 fi
 
+SKELETON="${REPO_ROOT}/databricks/jobs/edw_migration_medallion.skeleton.yml"
+JOB_YAML="${REPO_ROOT}/databricks/jobs/edw_migration_medallion.yml"
+if [ -f "$SKELETON" ]; then
+  cp "$SKELETON" "$JOB_YAML"
+  echo "[reset-sink] restored medallion job skeleton"
+fi
+for layer in silver gold; do
+  find "${REPO_ROOT}/databricks/${layer}" -maxdepth 1 -name '*.sql' -delete 2>/dev/null || true
+done
+echo "[reset-sink] cleared run-local databricks/silver|gold SQL"
+
 echo
 echo "[reset-sink] done. Expected empty Control Plane until Discover/load_inventory."
 echo

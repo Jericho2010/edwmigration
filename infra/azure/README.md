@@ -1,7 +1,8 @@
 # infra/azure/ — demo-pack Azure SQL provisioning
 
 Provisions and tears down the **optional** free Azure SQL WideWorldImportersDW
-source used by the guided demo. Not required for path B (existing Azure SQL).
+**source** used by the guided demo. Not a pre-authored Databricks warehouse.
+Not required for path B (existing Azure SQL).
 
 Operator guide: [docs/runbook.md](../../docs/runbook.md). Demo pack notes: [demo/wwi/README.md](../../demo/wwi/README.md).
 

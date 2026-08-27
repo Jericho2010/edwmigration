@@ -126,13 +126,14 @@ sequenceDiagram
   You->>Coord: Kickoff
   Coord->>DBX: Discover inventory
   Note over You,Coord: Confirm if tables_total greater than 200
-  Coord->>DBX: Land + reconcile + Convert + Gate
+  Coord->>DBX: Land + Convert + wire job + Gate
   Coord-->>You: make print-urls
 ```
 
 - No object list required.  
 - If inventory exceeds **200 tables**, confirm before land.  
 - Afterward: `make print-urls` → Control Plane + Genie.  
+- The DAB job starts as a **skeleton**. Convert writes silver/gold; `check_job_wiring.py --apply` inserts those files from Assess `reads`/`writes` (peak ≤ 5). Gold marts exist only if they were in inventory/procs.  
 
 Trust checklist: inventory → bronze reconcile pass → Gate blockers empty.
 

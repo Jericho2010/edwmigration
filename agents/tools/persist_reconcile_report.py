@@ -161,6 +161,24 @@ def main() -> int:
     summary = doc.get("summary") or {}
     _enqueue_metric(args.run_id, "reconcile_passed", float(summary.get("passed") or 0))
     _enqueue_metric(args.run_id, "reconcile_failed", float(summary.get("failed") or 0))
+
+    try:
+        sys.path.insert(0, str(ROOT / "agents" / "tools"))
+        from edw_handoff import emit_handoff_quiet
+
+        failed = int(summary.get("failed") or 0)
+        emit_handoff_quiet(
+            args.run_id,
+            from_agent="test",
+            to_agent="coordinator",
+            action="persist",
+            artifact=str(out_path.relative_to(ROOT)),
+            outcome="fail" if failed else "ok",
+            skip_ops=args.skip_ops,
+        )
+    except Exception:
+        pass
+
     print(
         f"[persist_reconcile_report] run_id={args.run_id} "
         f"passed={summary.get('passed')} failed={summary.get('failed')} "

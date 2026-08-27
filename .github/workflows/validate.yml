@@ -29,14 +29,24 @@ jobs:
           ! grep -R "demo-offline" Makefile || exit 1
           ! grep -R "compose with Lakebridge\|shell out to Lakebridge" docs/lakebridge.md || exit 1
 
-      - name: No WWI object names in core engine (uc + slugify + stage prompts)
+      - name: No WWI object names in core engine
         run: |
-          if grep -En "Dimension\.Customer|MigrateStagedCustomerData|Fact\.Sale" \
-              databricks/uc/*.sql agents/tools/slugify.py \
+          if grep -En "Dimension\.Customer|MigrateStagedCustomerData|Fact\.Sale|20_dims_scd1|22_fact_sale|MigrateCity" \
+              databricks/uc/*.sql \
+              databricks/jobs/edw_migration_medallion.yml \
+              databricks/jobs/edw_migration_medallion.skeleton.yml \
+              databricks/tests/13_stage_fixture_expectations.sql \
+              agents/tools/slugify.py \
+              agents/tools/ensure_source_alias_views.sh \
+              agents/tools/allocate_target_paths.py \
               agents/prompts/00_coordinator.md agents/prompts/01_assess.md \
               agents/prompts/02_convert.md agents/prompts/03_test.md \
               agents/prompts/04_gate.md; then
             echo "WWI-specific names found in core engine paths" >&2
+            exit 1
+          fi
+          if grep -En "PaymentMethod" databricks/uc/02b_alias_probe.sql agents/tools/ensure_source_alias_views.sh; then
+            echo "PaymentMethod must not be a required engine probe" >&2
             exit 1
           fi
           echo "core engine naming OK"
@@ -157,14 +167,14 @@ jobs:
         run: |
           chmod +x agents/tools/*.sh
           SOURCE_TYPE=sqlserver AZ_SQL_SERVER=example AZ_SQL_ADMIN=edwadmin AZ_SQL_DB=WideWorldImportersDW \
-            FOREIGN_CATALOG=wwi_dw_fed CONNECTION_NAME=azure_sql_edw \
+            FOREIGN_CATALOG=sqlserver_fed CONNECTION_NAME=azure_sql_edw \
             ./agents/tools/render_sql.sh
           grep -q "TYPE SQLSERVER" databricks/_rendered/uc/01_federation_setup.sql
           grep -q "source-password" databricks/_rendered/uc/01_federation_setup.sql
-          sqlfluff lint databricks/_rendered/uc databricks/_rendered/silver databricks/_rendered/gold --nocolor || sqlfluff lint databricks/uc --nocolor
+          sqlfluff lint databricks/_rendered/uc --nocolor || sqlfluff lint databricks/uc --nocolor
           SOURCE_TYPE=mysql SOURCE_HOST=example.mysql.database.azure.com SOURCE_PORT=3306 \
             SOURCE_DATABASE=appdb SOURCE_USER=demo SOURCE_PASSWORD=dummy \
-            FOREIGN_CATALOG=wwi_dw_fed CONNECTION_NAME=azure_sql_edw DATABRICKS_CATALOG=my_edw \
+            FOREIGN_CATALOG=sqlserver_fed CONNECTION_NAME=azure_sql_edw DATABRICKS_CATALOG=my_edw \
             ./agents/tools/render_sql.sh
           grep -q "TYPE MYSQL" databricks/_rendered/uc/01_federation_setup.sql
           grep -q "example.mysql.database.azure.com" databricks/_rendered/uc/01_federation_setup.sql
@@ -186,6 +196,7 @@ jobs:
               "c", "f", "mysql",
           )
           assert "'mysql' AS _source_system" in sql, sql
+          assert "v_run_id" in sql and "run_id" in sql
           schema = json.load(open("agents/contracts/context.schema.json"))
           doc = json.load(open("agents/samples/run/context.json"))
           Draft7Validator(schema).validate(doc)
@@ -221,9 +232,9 @@ jobs:
         run: |
           python3 -m unittest discover -s agents/tools -p 'test_publish_run_notebooks.py' -v
 
-      - name: Persist reconcile unit tests
+      - name: Plane contracts
         run: |
-          python3 -m unittest discover -s agents/tools -p 'test_persist_reconcile_report.py' -v
+          make test-planes
 
       - name: MLflow observe setup artifacts present
         run: |

@@ -1,20 +1,41 @@
 {
   "title": "EDW Migration Copilot",
-  "description": "Control-plane copilot for EDW migration runs: Gate status, inventory, backlog, reconcile, and agent timeline. Domain mart questions are added by the demo pack when gold tables exist.",
+  "description": "Control-plane copilot for EDW migration runs: Gate status, inventory, backlog, reconcile, agent timeline, and handoffs. Prefer ops.migration_manifest_current, ops.migration_inventory, ops.migration_backlog, ops.proc_conversion_map, ops.reconcile_results, and ops.agent_events. Show precise counts. Domain mart questions are added when gold/silver tables exist. Gate pass and ship both mean SHIP.",
   "serialized_space": {
     "version": 2,
     "config": {
       "sample_questions": [
-        {"id": "q1", "question": ["Did the last migration run ship?"]},
-        {"id": "q2", "question": ["Why did the gate fail?"]},
-        {"id": "q3", "question": ["Which tables failed reconcile?"]},
-        {"id": "q4", "question": ["What is left to convert?"]},
-        {"id": "q5", "question": ["Show the agent timeline for the latest run"]}
+        {"id": "4e70d47ea609ac3e267cfc62e57f512b", "question": ["Did the last migration run ship?"]},
+        {"id": "cd5137d53ab734ad13327c50b51cdd34", "question": ["Which agents ran this run and when?"]},
+        {"id": "48036609164d8b742dbbb34646e04c82", "question": ["Which convert items are ok vs blocked?"]},
+        {"id": "8ccbd21ecd97bb3c65bdf1460cb2f893", "question": ["What was the last handoff?"]},
+        {"id": "a4784ca0300175d2cafad148bcd3df98", "question": ["Show the agent timeline for the latest run"]}
+      ],
+      "example_question_sqls": [
+        {
+          "id": "4e70d47ea609ac3e267cfc62e57f512b",
+          "question": "Did the last migration run ship?",
+          "sql": "SELECT run_id, gate, CASE WHEN lower(gate) IN ('pass', 'ship') THEN 1 ELSE 0 END AS gate_pass FROM ops.migration_manifest_current ORDER BY updated_at DESC LIMIT 1"
+        },
+        {
+          "id": "cd5137d53ab734ad13327c50b51cdd34",
+          "question": "Which agents ran this run and when?",
+          "sql": "WITH latest AS (SELECT COALESCE((SELECT run_id FROM ops.agent_events ORDER BY ts DESC LIMIT 1), (SELECT run_id FROM ops.migration_manifest_current ORDER BY updated_at DESC LIMIT 1)) AS run_id) SELECT agent, min(ts) AS first_ts, max(ts) AS last_ts, count(*) AS events FROM ops.agent_events e CROSS JOIN latest WHERE e.run_id = latest.run_id AND lower(event) IN ('started','completed','handoff','blocked','failed','subagentstart','subagentstop') GROUP BY agent ORDER BY first_ts"
+        },
+        {
+          "id": "48036609164d8b742dbbb34646e04c82",
+          "question": "Which convert items are ok vs blocked?",
+          "sql": "WITH latest AS (SELECT COALESCE((SELECT run_id FROM ops.agent_events ORDER BY ts DESC LIMIT 1), (SELECT run_id FROM ops.migration_manifest_current ORDER BY updated_at DESC LIMIT 1)) AS run_id) SELECT legacy_proc, target_path, status FROM ops.proc_conversion_map m CROSS JOIN latest WHERE m.run_id = latest.run_id ORDER BY status, legacy_proc"
+        },
+        {
+          "id": "8ccbd21ecd97bb3c65bdf1460cb2f893",
+          "question": "What was the last handoff?",
+          "sql": "WITH latest AS (SELECT COALESCE((SELECT run_id FROM ops.agent_events ORDER BY ts DESC LIMIT 1), (SELECT run_id FROM ops.migration_manifest_current ORDER BY updated_at DESC LIMIT 1)) AS run_id) SELECT get_json_object(detail, '$.from') AS from_agent, get_json_object(detail, '$.to') AS to_agent, get_json_object(detail, '$.item_id') AS item_id, get_json_object(detail, '$.outcome') AS outcome, ts FROM ops.agent_events e CROSS JOIN latest WHERE e.run_id = latest.run_id AND lower(event) = 'handoff' ORDER BY ts DESC LIMIT 1"
+        }
       ]
     },
     "data_sources": {
       "tables": []
-    },
-    "instructions": "You are the EDW Migration Copilot. Prefer ops.migration_manifest_current, ops.migration_inventory, ops.migration_backlog, ops.proc_conversion_map, ops.reconcile_results, and ops.agent_events for control-plane questions. Show precise counts. If unsure, say so and suggest which ops table to check."
+    }
   }
 }

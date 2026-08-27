@@ -30,6 +30,7 @@ Follow `agents/github-copilot/edw-coordinator.md`. Stages: assess, convert, test
 ## Rules
 
 - Discover **all base tables** (not views) and procs/routines when export tools exist — no hard-coded WWI object lists in engine logic.
+- The committed medallion job is a **skeleton**. Convert writes `databricks/silver/` or `databricks/gold/` plus its convert result JSON. Coordinator runs `check_job_wiring.py --apply` from Assess `reads`/`writes`. Do **not** copy `demo/wwi/reference/` into the job.
 - Convert writes only `databricks/silver/` or `databricks/gold/` plus its convert result JSON — not `ops.*` or the backlog.
 - Never invoke Lakebridge.
 - Secrets stay in `.env` (gitignored); Federation password secret key is `source-password`.

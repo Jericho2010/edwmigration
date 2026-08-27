@@ -1,24 +1,24 @@
 [
   {
     "item_id": "item-001",
-    "legacy_proc": "Integration.MigrateStagedStockItemData",
+    "legacy_proc": "dbo.MigrateItem",
     "classification": "migrate",
-    "reads": "Integration.StockItem_Staging",
-    "writes": "Dimension.Stock Item",
+    "reads": "dbo.Item_Staging",
+    "writes": "dbo.Item",
     "target_layer": "gold",
-    "target_path": "databricks/gold/30_mart_daily_sales.sql",
+    "target_path": "databricks/gold/20_migrate_item.sql",
     "priority": "high",
     "risk_flags": "mutates_db,scd2",
     "status": "converted"
   },
   {
     "item_id": "item-002",
-    "legacy_proc": "Integration.MigrateStagedCustomerData",
+    "legacy_proc": "dbo.MigrateCustomer",
     "classification": "migrate",
-    "reads": "Integration.Customer_Staging",
-    "writes": "Dimension.Customer",
+    "reads": "dbo.Customer_Staging",
+    "writes": "dbo.Customer",
     "target_layer": "gold",
-    "target_path": "databricks/gold/32_mart_customer_current.sql",
+    "target_path": "databricks/gold/21_migrate_customer.sql",
     "priority": "high",
     "risk_flags": "mutates_db,scd2",
     "status": "converted"

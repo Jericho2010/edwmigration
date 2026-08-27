@@ -34,7 +34,7 @@ Record your screen. Save as `docs/media/hero.mp4`.
 
 Cut out waiting. Gate does not need to be green.
 
-Optional: make `docs/img/hero.gif` from the MP4 for the README, or leave that to the agent.
+Optional: make `docs/img/hero.gif` from the MP4. Do **not** replace `docs/img/agent_squad_roles.png` (README hero poster).
 
 ## Done
 

@@ -57,7 +57,10 @@ Portable prompts + contracts. Cursor and GitHub Copilot adapters are generated.
 | `persist_reconcile_report.py` | Test → `reconcile_report.json` + `ops.reconcile_results` |
 | `persist_manifest.py` | Gate → `migration_manifest.json` + `ops.migration_manifest_current` |
 | `merge_convert_results.py` | Merge `convert/*.json` → backlog + `ops.proc_conversion_map` |
-| `check_job_wiring.py` | WARN + propose (or `--apply`) safe YAML patch for missing job tasks |
+| `allocate_target_paths.py` | Next `NN` from 20 + slug from `legacy_proc` (no canned WWI stems) |
+| `ensure_source_alias_views.sh` | SQL Server spaced-name views from `INFORMATION_SCHEMA` (one `sqlcmd` per view) |
+| `validate_converted_sql.py` | Convert SQL must read bronze, not the federated catalog |
+| `check_job_wiring.py` | DAG from Assess `reads`/`writes`; WARN + `--apply` (peak ≤ 5); restore via skeleton YAML |
 | `run_sql.sh` | Statement Execution API |
 | `sync_prompts.sh` | Cursor + Copilot |
 

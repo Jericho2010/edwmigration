@@ -13,7 +13,7 @@ MLflow is the **live execution trace** plane for a migration run. It does not re
 | **UC events** (`ops.agent_events`) | Hooks + `record_agent_event.sh` | Gate rule 4, Control Plane timeline, Genie Q&A |
 | **MLflow traces** | Same lifecycle dual-written via `mlflow_observe.py` | Live parent/child span tree in Databricks Experiments |
 
-MLflow is **additive and soft**: missing `.venv` / `mlflow`, tracking errors, or `EDW_MLFLOW_BACKEND=off` → no-op (exit 0). Migration continues; traces simply do not record.
+MLflow is **additive**. Track B: missing `.venv` / `mlflow`, tracking errors, or `EDW_MLFLOW_BACKEND=off` → no-op (exit 0); migration continues. **Track A:** `make observe-setup` and nest-probe are **required** — do not continue a guided demo with a lying empty tree.
 
 Traces land in Databricks experiment **`/Shared/edw-migration`** (fallback name `edw-migration` if Shared create fails). Per-run state is `agents/out/<run_id>/mlflow_context.json` (experiment id, trace id, open spans, `observe_url`).
 

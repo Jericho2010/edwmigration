@@ -14,10 +14,11 @@ For platform buyers after the wow: open [Enterprise](enterprise.md) (SoD / no pu
 
 ## 30–45 minutes
 
-Add: open inventory counts after Assess; after a Convert wave, show two `agents/out/<run_id>/convert/*.json` files plus Control Plane agent events; open Catalog + Job + the Workspace notebooks folder (`edwmigration_YYYYMMDD`); inject fault (`inject_fault.sh`) → Gate blocks → revert → green; teardown (menu **5**: Databricks and/or Azure).
+Add: open inventory counts after Assess; after a Convert wave, show two `agents/out/<run_id>/convert/*.json` files plus a wired silver/gold `.sql` (not `demo/wwi/reference/`); open Catalog + Job + the Workspace notebooks folder (`edwmigration_YYYYMMDD`); inject fault (`inject_fault.sh`) → Gate blocks → revert → green; teardown (menu **5**: Databricks and/or Azure).
 
 ## Takeaways
 
 - User effort is permissions + type `start` + pick a number (fix only what preflight names).
+- Track A bootstraps WWI as the **source**. Convert writes silver/gold; the committed job is a skeleton (not a canned star schema).
 - Engine is not coupled to WWI object names — add tables/procs and re-Assess.
 - Observability demystifies the agents.

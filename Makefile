@@ -22,7 +22,7 @@ SOURCE_TYPE ?= sqlserver
 TOOLS_CORE := databricks jq curl python3
 TOOLS_AZURE := az sqlcmd SqlPackage
 
-.PHONY: check check-core check-azure check-source check-land render bootstrap setup federation secrets deploy run demo teardown teardown-databricks reset-sink genie materialize-demo sync-prompts discover print-urls observe-setup provision-track-a publish-notebooks
+.PHONY: check check-core check-azure check-source check-land render bootstrap setup federation secrets deploy run demo teardown teardown-databricks reset-sink genie materialize-demo sync-prompts discover print-urls observe-setup provision-track-a publish-notebooks test-planes
 
 check: check-source
 
@@ -30,8 +30,12 @@ observe-setup: ## Create .venv and install MLflow observe deps (requirements-obs
 	python3 -m venv .venv
 	.venv/bin/pip install -U pip
 	.venv/bin/pip install -r requirements-observe.txt
-	./agents/tools/check_mlflow_observe.sh
+	./agents/tools/check_mlflow_observe.sh --strict
 	@echo "observe-setup OK — use .venv (tools auto-prefer it via resolve_python / re-exec)"
+
+test-planes: ## Plane-contract unit tests (no live Databricks)
+	python3 -m unittest discover -s agents/tools -p 'test_*.py' -v
+	python3 agents/tools/assert_edw_task_shape.py
 
 check-core:
 	@for t in $(TOOLS_CORE); do \
@@ -86,9 +90,13 @@ bootstrap: check-azure ## Provision free Azure SQL + WWI bacpac (demo pack)
 	./infra/azure/bootstrap.sh
 
 federation: secrets render ## UC federation + ops
+	./agents/tools/ensure_source_alias_views.sh
 	./agents/tools/run_sql.sh --file databricks/_rendered/uc/01_federation_setup.sql
 	./agents/tools/run_sql.sh --file databricks/_rendered/uc/03_ops_and_views.sql
 	./agents/tools/run_sql.sh --file databricks/_rendered/uc/02_federation_smoke.sql
+	@if [ -f databricks/generated/02b_alias_probe.sql ]; then \
+	  ./agents/tools/run_sql.sh --file databricks/generated/02b_alias_probe.sql; \
+	fi
 
 print-urls: check-core ## Print Control Plane + Genie + Catalog + Job + Notebooks + MLflow
 	./agents/tools/print_observability_urls.sh
@@ -117,7 +125,7 @@ check-land: ## Fail if bronze land SQL is missing or still the placeholder
 	./agents/tools/check_land_ready.sh
 
 run: check-land ## Run medallion job (requires generated land SQL)
-	$(DBX) bundle run edw_migration_medallion -t dev
+	./agents/tools/wait_job_run.sh --bundle-run
 
 demo: check-azure ## Scripted demo path (announce → bootstrap → setup)
 	@./agents/tools/announce_observability.sh --stage Provision || true

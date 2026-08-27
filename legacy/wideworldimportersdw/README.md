@@ -1,6 +1,7 @@
 # WideWorldImportersDW (Standard) — bacpac
 
 Microsoft sample data warehouse `WideWorldImportersDW` in `.bacpac` form.
+Track A imports this as the **source**. It is not a Databricks silver/gold job.
 
 ## Source
 

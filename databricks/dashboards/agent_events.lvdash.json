@@ -2,13 +2,46 @@
   "datasets": [
     {
       "name": "gate_hero",
-      "displayName": "Gate Hero",
+      "displayName": "Gate Hero (manifest until Gate)",
       "queryLines": [
         "SELECT run_id, gate, ",
-        "CASE WHEN lower(gate) = 'ship' THEN 1 ELSE 0 END AS gate_pass, ",
+        "CASE WHEN lower(gate) IN ('pass', 'ship') THEN 1 ELSE 0 END AS gate_pass, ",
         "tables_landed, tables_total, procs_converted, procs_total, updated_at ",
         "FROM ops.migration_manifest_current ",
         "ORDER BY updated_at DESC LIMIT 1 "
+      ]
+    },
+    {
+      "name": "tables_landed_hero",
+      "displayName": "Tables Landed Hero",
+      "queryLines": [
+        "WITH latest AS ( ",
+        "  SELECT COALESCE( ",
+        "    (SELECT run_id FROM ops.agent_events ORDER BY ts DESC LIMIT 1), ",
+        "    (SELECT run_id FROM ops.migration_manifest_current ORDER BY updated_at DESC LIMIT 1) ",
+        "  ) AS run_id ",
+        ") ",
+        "SELECT COUNT(DISTINCT table_name) AS tables_landed ",
+        "FROM ops.load_control lc CROSS JOIN latest ",
+        "WHERE lc.run_id = latest.run_id ",
+        "AND COALESCE(lc.row_count, 0) > 0 ",
+        "AND lower(lc.table_name) NOT LIKE '%staging%' "
+      ]
+    },
+    {
+      "name": "procs_converted_hero",
+      "displayName": "Procs Converted Hero",
+      "queryLines": [
+        "WITH latest AS ( ",
+        "  SELECT COALESCE( ",
+        "    (SELECT run_id FROM ops.agent_events ORDER BY ts DESC LIMIT 1), ",
+        "    (SELECT run_id FROM ops.migration_manifest_current ORDER BY updated_at DESC LIMIT 1) ",
+        "  ) AS run_id ",
+        ") ",
+        "SELECT COUNT(*) AS procs_converted ",
+        "FROM ops.proc_conversion_map m CROSS JOIN latest ",
+        "WHERE m.run_id = latest.run_id ",
+        "AND lower(m.status) IN ('draft','review','final') "
       ]
     },
     {
@@ -47,8 +80,15 @@
       "name": "backlog_status",
       "displayName": "Backlog",
       "queryLines": [
+        "WITH latest AS ( ",
+        "  SELECT COALESCE( ",
+        "    (SELECT run_id FROM ops.agent_events ORDER BY ts DESC LIMIT 1), ",
+        "    (SELECT run_id FROM ops.migration_manifest_current ORDER BY updated_at DESC LIMIT 1) ",
+        "  ) AS run_id ",
+        ") ",
         "SELECT status, COUNT(*) AS items ",
-        "FROM ops.migration_backlog ",
+        "FROM ops.migration_backlog b CROSS JOIN latest ",
+        "WHERE b.run_id = latest.run_id ",
         "GROUP BY status "
       ]
     },
@@ -56,8 +96,17 @@
       "name": "tables_landed",
       "displayName": "Tables Landed",
       "queryLines": [
+        "WITH latest AS ( ",
+        "  SELECT COALESCE( ",
+        "    (SELECT run_id FROM ops.agent_events ORDER BY ts DESC LIMIT 1), ",
+        "    (SELECT run_id FROM ops.migration_manifest_current ORDER BY updated_at DESC LIMIT 1) ",
+        "  ) AS run_id ",
+        ") ",
         "SELECT table_name, COALESCE(row_count, 0) AS row_count, status, started_at ",
-        "FROM ops.load_control ",
+        "FROM ops.load_control lc CROSS JOIN latest ",
+        "WHERE lc.run_id = latest.run_id ",
+        "AND COALESCE(lc.row_count, 0) > 0 ",
+        "AND lower(lc.table_name) NOT LIKE '%staging%' ",
         "ORDER BY started_at "
       ]
     },
@@ -65,8 +114,15 @@
       "name": "convert_tracker",
       "displayName": "Convert Tracker",
       "queryLines": [
+        "WITH latest AS ( ",
+        "  SELECT COALESCE( ",
+        "    (SELECT run_id FROM ops.agent_events ORDER BY ts DESC LIMIT 1), ",
+        "    (SELECT run_id FROM ops.migration_manifest_current ORDER BY updated_at DESC LIMIT 1) ",
+        "  ) AS run_id ",
+        ") ",
         "SELECT legacy_proc, target_path, status, updated_at ",
-        "FROM ops.proc_conversion_map ",
+        "FROM ops.proc_conversion_map m CROSS JOIN latest ",
+        "WHERE m.run_id = latest.run_id ",
         "ORDER BY updated_at DESC "
       ]
     },
@@ -100,6 +156,7 @@
         "SELECT agent, COUNT(*) AS events ",
         "FROM ops.agent_events e CROSS JOIN latest ",
         "WHERE e.run_id = latest.run_id ",
+        "AND lower(event) IN ('started','completed','handoff','blocked','failed','subagentstart','subagentstop') ",
         "GROUP BY agent ",
         "ORDER BY events DESC "
       ]
@@ -118,6 +175,7 @@
         "FROM ops.agent_events e CROSS JOIN latest ",
         "WHERE e.ts >= current_timestamp() - INTERVAL 24 HOURS ",
         "AND e.run_id = latest.run_id ",
+        "AND lower(event) IN ('started','completed','handoff','blocked','failed','subagentstart','subagentstop') ",
         "GROUP BY 1, 2 ",
         "ORDER BY 1 "
       ]
@@ -135,8 +193,32 @@
         "SELECT e.run_id, agent, event, tool, detail, ts ",
         "FROM ops.agent_events e CROSS JOIN latest ",
         "WHERE e.run_id = latest.run_id ",
+        "AND lower(event) IN ('started','completed','handoff','blocked','failed','subagentstart','subagentstop') ",
         "ORDER BY ts DESC ",
         "LIMIT 100 "
+      ]
+    },
+    {
+      "name": "handoffs",
+      "displayName": "Handoffs",
+      "queryLines": [
+        "WITH latest AS ( ",
+        "  SELECT COALESCE( ",
+        "    (SELECT run_id FROM ops.agent_events ORDER BY ts DESC LIMIT 1), ",
+        "    (SELECT run_id FROM ops.migration_manifest_current ORDER BY updated_at DESC LIMIT 1) ",
+        "  ) AS run_id ",
+        ") ",
+        "SELECT ",
+        "  get_json_object(e.detail, '$.from') AS from_agent, ",
+        "  get_json_object(e.detail, '$.to') AS to_agent, ",
+        "  get_json_object(e.detail, '$.item_id') AS item_id, ",
+        "  get_json_object(e.detail, '$.artifact') AS artifact, ",
+        "  get_json_object(e.detail, '$.outcome') AS outcome, ",
+        "  e.ts ",
+        "FROM ops.agent_events e CROSS JOIN latest ",
+        "WHERE e.run_id = latest.run_id AND lower(e.event) = 'handoff' ",
+        "ORDER BY e.ts DESC ",
+        "LIMIT 50 "
       ]
     }
   ],
@@ -187,11 +269,11 @@
               "encodings": {
                 "value": {
                   "fieldName": "gate_pass",
-                  "displayName": "Gate (1=ship)"
+                  "displayName": "SHIP"
                 }
               },
               "frame": {
-                "title": "Gate",
+                "title": "SHIP",
                 "showTitle": true
               }
             }
@@ -210,7 +292,7 @@
               {
                 "name": "main_query",
                 "query": {
-                  "datasetName": "gate_hero",
+                  "datasetName": "tables_landed_hero",
                   "fields": [
                     {
                       "name": "tables_landed",
@@ -250,7 +332,7 @@
               {
                 "name": "main_query",
                 "query": {
-                  "datasetName": "gate_hero",
+                  "datasetName": "procs_converted_hero",
                   "fields": [
                     {
                       "name": "procs_converted",
@@ -583,6 +665,88 @@
         },
         {
           "widget": {
+            "name": "handoffs-table",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "handoffs",
+                  "fields": [
+                    {
+                      "name": "from_agent",
+                      "expression": "`from_agent`"
+                    },
+                    {
+                      "name": "to_agent",
+                      "expression": "`to_agent`"
+                    },
+                    {
+                      "name": "item_id",
+                      "expression": "`item_id`"
+                    },
+                    {
+                      "name": "artifact",
+                      "expression": "`artifact`"
+                    },
+                    {
+                      "name": "outcome",
+                      "expression": "`outcome`"
+                    },
+                    {
+                      "name": "ts",
+                      "expression": "`ts`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "from_agent",
+                    "displayName": "From"
+                  },
+                  {
+                    "fieldName": "to_agent",
+                    "displayName": "To"
+                  },
+                  {
+                    "fieldName": "item_id",
+                    "displayName": "Item"
+                  },
+                  {
+                    "fieldName": "artifact",
+                    "displayName": "Artifact"
+                  },
+                  {
+                    "fieldName": "outcome",
+                    "displayName": "Outcome"
+                  },
+                  {
+                    "fieldName": "ts",
+                    "displayName": "When"
+                  }
+                ]
+              },
+              "frame": {
+                "title": "Handoffs",
+                "showTitle": true
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 22,
+            "width": 12,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
             "name": "by-agent-bar",
             "queries": [
               {
@@ -624,7 +788,7 @@
           },
           "position": {
             "x": 0,
-            "y": 22,
+            "y": 28,
             "width": 6,
             "height": 6
           }
@@ -680,7 +844,7 @@
           },
           "position": {
             "x": 6,
-            "y": 22,
+            "y": 28,
             "width": 6,
             "height": 6
           }
@@ -762,7 +926,7 @@
           },
           "position": {
             "x": 0,
-            "y": 28,
+            "y": 34,
             "width": 12,
             "height": 8
           }

@@ -71,7 +71,7 @@ def resolve_source() -> dict:
         database = database or os.environ.get("AZ_SQL_DB") or "WideWorldImportersDW"
         user = user or os.environ.get("AZ_SQL_ADMIN") or "edwadmin"
         password = password or os.environ.get("AZ_SQL_PASSWORD") or ""
-        foreign = os.environ.get("FOREIGN_CATALOG") or "wwi_dw_fed"
+        foreign = os.environ.get("FOREIGN_CATALOG") or "sqlserver_fed"
     elif st == "mysql":
         port = port or "3306"
         foreign = os.environ.get("FOREIGN_CATALOG") or "mysql_fed"

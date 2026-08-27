@@ -6,12 +6,15 @@ Medallion + DAB for the migration engine.
 |---|---|
 | `uc/` | Federation + ops templates (`__UC_CATALOG__`) |
 | `bronze/10_land_all.sql` | Placeholder; replaced by generated land |
-| `silver/` `gold/` | Convert outputs (+ WWI demo known-good) |
-| `generated/` | Gitignored output of `generate_from_inventory.py` |
+| `silver/` `gold/` | Convert **run artifacts** (gitignored `.sql`; README only in git) |
+| `generated/` | Gitignored output of `generate_from_inventory.py` / alias probe |
 | `_rendered/` | Gitignored render for deploy |
-| `jobs/` | Lakeflow job + dashboard resource |
+| `jobs/edw_migration_medallion.yml` | Engine skeleton (`federation_smoke` → `bronze_land` → `stage_fixtures` → `reconcile` → `lineage_check`); `--apply` adds Convert tasks |
+| `jobs/edw_migration_medallion.skeleton.yml` | Restore original (`make reset-sink`) |
 | `dashboards/` | Control Plane AI/BI JSON |
 | `genie/` | Copilot space config + create script |
+
+WWI teaching notebooks (not executed, not copied into the job): [`demo/wwi/reference/`](../demo/wwi/reference/).
 
 ```bash
 make render && make deploy && make run

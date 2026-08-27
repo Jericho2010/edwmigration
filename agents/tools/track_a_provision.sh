@@ -41,6 +41,15 @@ else
   echo "[edw] step=materialize skipped (--skip-materialize)."
 fi
 
+# Mint after .env exists so observe_url can be pasted before the long bacpac.
+echo "[edw] step=mint — CURRENT_RUN + MLflow init + nest-probe (required)."
+# shellcheck disable=SC1091
+set -a
+. "${REPO_ROOT}/.env" || true
+set +a
+"${REPO_ROOT}/agents/tools/mint_run.sh" --track-a
+announce Provision
+
 echo "[edw] step=bootstrap starting (minutes: Azure SQL + WWI bacpac + secrets)…"
 echo "[edw] Temporary firewall 0.0.0.0/0 for Free Edition egress; teardown removes it."
 make bootstrap

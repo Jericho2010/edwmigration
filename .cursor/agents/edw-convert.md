@@ -7,7 +7,7 @@ readonly: false
 
 # 02_convert.md — Convert
 
-You are launched as Cursor subagent **`edw-convert`** so hooks dual-write live UC + MLflow spans. If hooks cannot run, the coordinator must wrap you with `dual_write_agent_lifecycle.sh` start/stop **per item** (`--item-id <item_id>`), so parallel Convert span keys do not collide.
+You are launched as Cursor subagent **`edw-convert`** so hooks dual-write live UC + MLflow spans. Coordinator also runs `dual_write_agent_lifecycle.sh` start/stop **per item** (`--item-id`) **in addition to** this typed Task — dual_write is not a substitute for `subagent_type: edw-convert`.
 
 Convert **one** legacy stored procedure (T-SQL) or MySQL routine into Databricks Spark SQL under `databricks/silver/` or `databricks/gold/`.
 
@@ -21,17 +21,18 @@ You may run in parallel with other Convert workers for the same `run_id`. Shared
 - `agents/out/<run_id>/inventory.json` — map source tables → `landing_name` for bronze reads
 - `SOURCE_TYPE` from context / `.env` (`sqlserver`|`mysql`)
 - `agents/prompts/convert_style.md`
-- Existing silver/gold files for patterns (do not assume WWI names)
+- Do **not** read `demo/wwi/reference/` (WWI teaching copies; not this source)
 
 ## Process
 
 1. Read `context.json`, inventory `landing_name`s, and source SQL; map to Spark SQL per convert_style for the dialect (`tsql` or `mysql`). **Land-first:** windows/joins/MERGE run on `__UC_CATALOG__.bronze.<landing_name>`, not the federated source.
 2. If blocked criteria in convert_style apply: write a stub `.sql` file with `-- TODO` and result `status: "blocked"`.
-3. Otherwise write/overwrite **only** this item's `target_path` with a complete Spark SQL file (header including `Source dialect`, SQL, smoke `SELECT`). Prefer set-based `CREATE OR REPLACE` / `MERGE`. Do **not** emit `CREATE PROCEDURE`.
+3. Otherwise write/overwrite **only** this item's `target_path` with a complete Spark SQL file (header including `Source dialect`, SQL, smoke `SELECT`). Prefer set-based `CREATE OR REPLACE` / `MERGE`. Do **not** emit `CREATE PROCEDURE`. Use the allocated `target_path` as-is.
 4. Use `${uc_catalog}` / `__UC_CATALOG__` three-part names consistent with repo templates (`__UC_CATALOG__.silver|gold.*`).
-5. **Must** write result JSON to `agents/out/<run_id>/convert/<item_id>.json` per `agents/contracts/convert_result.schema.json`, then validate:
+5. **Must** write result JSON to `agents/out/<run_id>/convert/<item_id>.json` per `agents/contracts/convert_result.schema.json`, then validate SQL then JSON:
 
 ```bash
+python3 agents/tools/validate_converted_sql.py --file <target_path> --expect-path <target_path>
 python3 agents/tools/validate_artifact.py \
   --schema agents/contracts/convert_result.schema.json \
   --file agents/out/<run_id>/convert/<item_id>.json
@@ -43,7 +44,7 @@ If validation fails, fix the JSON (or mark blocked) before finishing.
 {
   "item_id": "item-001",
   "legacy_proc": "Schema.ProcName",
-  "target_path": "databricks/gold/3x_....sql",
+  "target_path": "databricks/gold/20_migrate_item.sql",
   "status": "draft|review|final|blocked",
   "notes": "...",
   "patterns_used": ["snapshot", "scd2"]

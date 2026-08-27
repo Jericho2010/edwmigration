@@ -2,13 +2,15 @@
 -- Source dialect: tsql
 -- Classification: migrate
 -- Target layer:   silver
--- Patterns:       scd_key_lookup, delete_insert, snapshot
+-- Patterns:       scd_key_lookup, fact_replace, snapshot
 -- Notes:          Land-first fact migrate: resolve SCD dimension keys from bronze dims
 --                 using Last Modified When in Valid From/To (TOP 1 by Valid From → 0 if
 --                 unmatched), drop existing Fact.Sale rows for staged WWI Invoice IDs,
 --                 append staging lines with new Sale Key (max landed + row_number) and
---                 open Sale lineage_key. Lineage + ETL cutoff updated as silver side
---                 tables (no federated writes; no multi-table TRAN).
+--                 open Sale lineage_key. Staging key updates are inlined (no federated
+--                 write-back). Lineage + ETL cutoff updated as silver side tables
+--                 (Federation is read-only; BEGIN TRAN is sequential Delta, not
+--                 multi-table atomic).
 
 -- Open lineage key for Sale (incomplete load), mirroring TOP 1 ... ORDER BY DESC.
 CREATE OR REPLACE TEMP VIEW _sale_lineage AS
@@ -138,9 +140,10 @@ WITH retained AS (
     f.`Total Chiller Items` AS total_chiller_items,
     f.`Lineage Key` AS lineage_key
   FROM __UC_CATALOG__.bronze.fact_sale f
-  WHERE f.`WWI Invoice ID` NOT IN (
-    SELECT DISTINCT `WWI Invoice ID`
-    FROM __UC_CATALOG__.bronze.integration_sale_staging
+  WHERE NOT EXISTS (
+    SELECT 1
+    FROM __UC_CATALOG__.bronze.integration_sale_staging st
+    WHERE st.`WWI Invoice ID` = f.`WWI Invoice ID`
   )
 ),
 incoming AS (

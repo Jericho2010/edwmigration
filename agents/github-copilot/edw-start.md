@@ -32,7 +32,7 @@ Those actions begin **only** after the user replies with menu **1**, **2**, or *
 
    - If agents are missing: tell them to run `make sync-prompts` and reload the Cursor window.
    - If `agents/out/CURRENT_RUN` exists: mention the run id and ask whether they want to **resume** that migration (menu 2/3 / coordinator) or start something else (menu still applies).
-   - If status shows an **MLflow WARN** / not ready: one-line remediation `make observe-setup` (recommended before menu 1/2/3 if they want live traces). Do **not** block the menu.
+   - Track A (menu 1): `make observe-setup` is **required** (preflight FAILs without it). Track B may continue if MLflow is a WARN.
 
 2. **Phrase menu** — print exactly this menu (numbers + phrases):
 

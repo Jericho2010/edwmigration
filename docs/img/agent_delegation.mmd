@@ -17,7 +17,8 @@ flowchart TD
   C2 --> Results
   Cn --> Results
   Results --> Merge["merge_convert_results"]
-  Merge --> DeployRun["Bundle deploy + run"]
+  Merge --> Wire["check_job_wiring apply"]
+  Wire --> DeployRun["Bundle deploy + run"]
   DeployRun --> Test["edw-test (readonly)"]
   Test -->|"reconcile report"| Coord
   Coord --> Gate["edw-gate (readonly)"]
@@ -33,4 +34,4 @@ flowchart TD
   class User user
   class Start,Guide,Coord,C1,C2,Cn agent
   class Assess,Test,Gate readonly
-  class Discover,Generate,DeployRun,Validate,Merge,Wave,Results work
+  class Discover,Generate,DeployRun,Validate,Merge,Wire,Wave,Results work

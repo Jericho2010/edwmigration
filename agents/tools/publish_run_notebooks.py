@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Import medallion SQL as Databricks SQL notebooks under edwmigration_YYYYMMDD.
 
-Gallery only — the DAB job keeps sql_task. Coordinator calls this at Land,
-after each Convert merge, and after deploy.
+Gallery only — the DAB job keeps sql_task. Coordinator calls this at Land
+and after --apply deploy, not after every convert merge.
 
 Usage:
   python3 agents/tools/publish_run_notebooks.py --run-id UUID
@@ -13,6 +13,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 from dataclasses import asdict, dataclass
@@ -71,31 +72,50 @@ def _pick_source(root: Path, layer: str, name: str) -> Path | None:
     return None
 
 
+def job_yaml_path(root: Path) -> Path:
+    return root / "databricks" / "jobs" / "edw_migration_medallion.yml"
+
+
 def build_import_plan(root: Path | None = None) -> list[ImportItem]:
-    """SQL files to import. Prefer _rendered over repo. Skip federation setup."""
+    """Import only SQL referenced as sql_task.file.path in the medallion job.
+
+    dest_name is the job task_key (gallery = job). Skip 01_federation_setup.
+    """
     root = root or ROOT
+    job = job_yaml_path(root)
+    if not job.is_file():
+        return []
+    tools = Path(__file__).resolve().parent
+    if str(tools) not in sys.path:
+        sys.path.insert(0, str(tools))
+    import check_job_wiring as cjw
+
     items: list[ImportItem] = []
-    seen: set[tuple[str, str]] = set()
-    for layer in LAYERS:
-        names: set[str] = set()
-        for base in (root / "databricks" / "_rendered" / layer, root / "databricks" / layer):
-            if not base.is_dir():
+    seen: set[str] = set()
+    for t in cjw.parse_tasks(job.read_text()):
+        key = t.get("task_key") or ""
+        raw = t.get("path") or ""
+        if not key or not raw:
+            continue
+        repo = cjw.normalize_repo_path(raw)
+        if repo.endswith("01_federation_setup.sql"):
+            continue
+        m = re.search(r"databricks/(uc|bronze|silver|gold|tests)/([^/]+\.sql)$", repo)
+        if not m:
+            # generated land lives under bronze
+            if "10_land_all.sql" in repo:
+                layer, name = "bronze", "10_land_all.sql"
+            else:
                 continue
-            for path in base.glob("*.sql"):
-                names.add(path.name)
-        if layer == "bronze" and (root / "databricks" / "_rendered" / "generated" / "10_land_all.sql").is_file():
-            names.add("10_land_all.sql")
-        for name in sorted(names):
-            if name in SKIP_NAMES:
-                continue
-            src = _pick_source(root, layer, name)
-            if src is None:
-                continue
-            key = (layer, name)
-            if key in seen:
-                continue
-            seen.add(key)
-            items.append(ImportItem(layer=layer, source=str(src), dest_name=src.stem))
+        else:
+            layer, name = m.group(1), m.group(2)
+        src = _pick_source(root, layer, name)
+        if src is None:
+            continue
+        if key in seen:
+            continue
+        seen.add(key)
+        items.append(ImportItem(layer=layer, source=str(src), dest_name=key))
     return items
 
 

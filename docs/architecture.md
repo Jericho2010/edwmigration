@@ -7,8 +7,8 @@ Start with [What you get](what-you-get.md) for plain English; [Enterprise](enter
 
 ## Engine vs demo pack
 
-- **Engine:** `SOURCE_TYPE` (`sqlserver`|`mysql`) → Lakehouse Federation → discover base tables (+ procs/routines) → generate bronze land/reconcile → **parallel Convert fan-out** → job → Test → Gate → Dashboard/Genie.  
-- **Demo pack** (`demo/wwi`, `infra/azure`, `legacy/*`): optional WideWorldImporters sample for [Track A](guided-demo.md). Gate never requires WWI object names.
+- **Engine:** `SOURCE_TYPE` (`sqlserver`|`mysql`) → Lakehouse Federation → discover base tables (+ procs/routines) → generate bronze land/reconcile → **parallel Convert fan-out** → assemble job from Assess `reads`/`writes` → Test → Gate → Dashboard/Genie.  
+- **Demo pack** (`demo/wwi`, `infra/azure`, `legacy/*`): optional WideWorldImporters **source** for [Track A](guided-demo.md). `demo/wwi/reference/` is teaching SQL (not executed, not copied into the job). Gate never requires WWI object names.
 
 ```mermaid
 %%{init: {"theme":"base","themeVariables":{"primaryColor":"#E8F1F8","primaryTextColor":"#0B3D5C","primaryBorderColor":"#0B3D5C","lineColor":"#5B7A8C","secondaryColor":"#E6F4F1","tertiaryColor":"#F7F3EA","background":"#FFFFFF","mainBkg":"#E8F1F8","clusterBkg":"#F7FAFC","clusterBorder":"#5B7A8C","titleColor":"#0B3D5C","edgeLabelBackground":"#FFFFFF"}}}%%
@@ -18,7 +18,8 @@ flowchart LR
     Fed --> Disc[Discover]
     Disc --> Land[Land bronze]
     Land --> Conv[Convert fan-out]
-    Conv --> Job[Job run]
+    Conv --> Wire[Assemble job]
+    Wire --> Job[Job run]
     Job --> Test[Test]
     Test --> Gate[Gate]
   end
@@ -31,15 +32,17 @@ flowchart LR
   classDef azureC fill:#0078D4,stroke:#005A9E,color:#fff
   classDef bronze fill:#C47B2D,stroke:#8F5A1F,color:#fff
   classDef ops fill:#5B4B8A,stroke:#3F3460,color:#fff
-  class ST,Fed,Disc,Conv,Test agent
+  class ST,Fed,Disc,Conv,Wire,Test agent
   class WWI azureC
   class Land,Job bronze
   class Gate,Obs ops
 ```
 
-**Convert fan-out:** after Assess, `validate_backlog_paths.py` → waves of ≤5 `edw-convert` agents → `merge_convert_results.py` → then deploy/run. Shared memory is disk artifacts under `agents/out/<run_id>/` (orchestrator-worker; land-first Federation — convert reads bronze Delta). See [artifacts map](what-you-get.md#run-artifacts-map).
+**Convert fan-out:** after Assess, `validate_backlog_paths.py` → waves of ≤5 `edw-convert` agents → `merge_convert_results.py` → `check_job_wiring.py --apply` → then deploy/run. Shared memory is disk artifacts under `agents/out/<run_id>/` (orchestrator-worker; land-first Federation — convert reads bronze Delta). See [artifacts map](what-you-get.md#run-artifacts-map).
 
-**Convert vs job tasks:** Gate checks `.sql` files on disk + `ops.proc_conversion_map`. The medallion DAB job runs the **checked-in** silver/gold task set in `databricks/jobs/edw_migration_medallion.yml` — new convert paths are not auto-wired into job tasks until that YAML is extended. Workspace notebooks are a gallery copy after Land. See [limits.md](limits.md).
+**Convert vs job tasks:** Gate checks `.sql` files on disk + `ops.proc_conversion_map`. The medallion DAB job is an **engine skeleton** (`federation_smoke` → `bronze_land` → `stage_fixtures` → generated `reconcile` → `lineage_check`). Convert SQL under `databricks/silver|gold` is a run artifact (gitignored). `check_job_wiring.py --apply` inserts those files from Assess `reads`/`writes` and packs peak concurrency ≤ 5. `make reset-sink` restores `edw_migration_medallion.skeleton.yml` and deletes run-local silver/gold SQL. Workspace notebooks are a gallery copy after Land. See [limits.md](limits.md).
+
+**Catalog defaults:** engine `FOREIGN_CATALOG` is `sqlserver_fed` / `mysql_fed` (not a WWI catalog name). Spaced SQL Server table names get alias views from `INFORMATION_SCHEMA`, not a hardcoded list.
 
 Full colored system diagram: [`img/architecture.mmd`](img/architecture.mmd) · Delegation: [`img/agent_delegation.mmd`](img/agent_delegation.mmd)
 

@@ -58,6 +58,15 @@ print(f"EXIT_CODE={shlex.quote(str(exit_code)[:40])}")
 PY
 )"
 
+# SoD: coordinator/demo-guide must not write silver/gold; convert needs wave lock.
+if [ "$EVENT" = "afterFileEdit" ] && [ "$RUN_ID" != "unknown" ]; then
+  FILE_PATH="$(python3 -c 'import json,sys; o=json.loads(sys.argv[1] or "{}"); print(o.get("file_path") or o.get("path") or "")' "$PAYLOAD" 2>/dev/null || true)"
+  if [ -n "${FILE_PATH:-}" ]; then
+    python3 "${REPO_ROOT}/agents/tools/assert_squad_sod.py" \
+      --run-id "$RUN_ID" --agent "$AGENT" --file "$FILE_PATH" >/dev/null 2>&1 || true
+  fi
+fi
+
 BUF_DIR="${REPO_ROOT}/agents/out/${RUN_ID}"
 mkdir -p "$BUF_DIR"
 BUF_FILE="${BUF_DIR}/events.buf.jsonl"

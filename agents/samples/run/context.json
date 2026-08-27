@@ -1,14 +1,14 @@
 {
   "run_id": "00000000-0000-4000-8000-000000000001",
   "source_type": "sqlserver",
-  "foreign_catalog": "wwi_dw_fed",
+  "foreign_catalog": "sqlserver_fed",
   "uc_catalog": "edw_migration",
-  "source_database": "WideWorldImportersDW",
+  "source_database": "sourcedb",
   "scoped_tables": [
-    "dim_customer",
-    "dim_city",
-    "dim_stock_item",
-    "fact_sale"
+    "dbo_customer",
+    "dbo_city",
+    "dbo_item",
+    "dbo_sale"
   ],
   "databricks_host": "https://dbc-example.cloud.databricks.com",
   "max_retries": 2,

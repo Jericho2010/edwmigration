@@ -68,7 +68,7 @@ UNION ALL SELECT 'load_control', COUNT(*) FROM ${CATALOG}.ops.load_control
 
   if [ -n "$RUN_ID" ]; then
     EV="$("${REPO_ROOT}/agents/tools/run_sql.sh" --sql "
-SELECT agent, event, LEFT(COALESCE(detail,''), 80) AS detail
+SELECT agent, event, LEFT(COALESCE(detail,''), 120) AS detail
 FROM ${CATALOG}.ops.agent_events
 WHERE run_id = '${RUN_ID}'
 ORDER BY ts DESC
@@ -77,6 +77,45 @@ LIMIT 8;
     echo "recent agent_events for run:"
     if [ -n "$EV" ]; then
       echo "$EV" | awk -F'\t' 'NR==1 && $1=="agent" {next} {print "  "$0}'
+    else
+      echo "  (none yet)"
+    fi
+    HO="$("${REPO_ROOT}/agents/tools/run_sql.sh" --sql "
+SELECT LEFT(COALESCE(detail,''), 400) AS detail
+FROM ${CATALOG}.ops.agent_events
+WHERE run_id = '${RUN_ID}' AND lower(event) = 'handoff'
+ORDER BY ts DESC
+LIMIT 5;
+" 2>/dev/null || true)"
+    echo "last handoffs:"
+    if [ -n "$HO" ]; then
+      python3 - "$HO" <<'PY' 2>/dev/null || echo "$HO" | awk -F'\t' 'NR==1 && $1=="detail" {next} {print "  "$0}'
+import json, sys
+raw = sys.argv[1]
+for line in raw.splitlines():
+    line=line.strip()
+    if not line or line=="detail":
+        continue
+    try:
+        d=json.loads(line)
+        src=d.get("from","?"); dst=d.get("to","?")
+        item=d.get("item_id") or ""
+        oc=d.get("outcome") or ""
+        extra=f" ({item})" if item else ""
+        print(f"  {src} → {dst}{extra} {oc}".rstrip())
+    except Exception:
+        print("  "+line[:120])
+PY
+    else
+      echo "  (none yet)"
+    fi
+    MAP="$("${REPO_ROOT}/agents/tools/run_sql.sh" --sql "
+SELECT status, COUNT(*) AS n FROM ${CATALOG}.ops.proc_conversion_map
+WHERE run_id = '${RUN_ID}' GROUP BY status
+" 2>/dev/null || true)"
+    echo "convert map:"
+    if [ -n "$MAP" ]; then
+      echo "$MAP" | awk -F'\t' 'NR==1 && $1=="status" {next} {print "  "$0}'
     else
       echo "  (none yet)"
     fi
@@ -118,7 +157,15 @@ print(f"mlflow enabled={d.get('enabled')} last_error={d.get('last_error') or d.g
 url = (d.get("observe_url") or "").strip()
 if url:
     print(f"observe_url: {url}")
+err = (d.get("last_error") or d.get("error") or "").strip()
+if err:
+    print("FAIL last_error set — stop Track A / Convert until nest-probe + serve are healthy")
 PY
+fi
+
+if [ -n "$RUN_ID" ] && [ -f "${REPO_ROOT}/agents/out/${RUN_ID}/sod_violation" ]; then
+  echo "FAIL sod_violation present — coordinator wrote silver/gold or convert missed wave lock"
+  cat "${REPO_ROOT}/agents/out/${RUN_ID}/sod_violation"
 fi
 
 echo "Note: Gate Hero (gate counters) stays empty until Gate writes migration_manifest_current."

@@ -2,12 +2,14 @@
 -- Source dialect: tsql
 -- Classification: migrate
 -- Target layer:   silver
--- Patterns:       scd2
--- Notes:          Land-first SCD2 apply: close current dim rows whose WWI id appears in
---                 bronze.integration_stockitem_staging, then append staging versions with
---                 lineage_key. SQL Server IDENTITY Stock Item Key → max(existing)+row_number
---                 for new versions only; preserve landed keys. Lineage + ETL cutoff updated
---                 as silver side tables (no federated writes; no multi-table TRAN).
+-- Patterns:       scd2, snapshot
+-- Notes:          Land-first SCD2 apply from bronze.integration_stockitem_staging onto
+--                 bronze.dim_stock_item. Close current versions (Valid To = end-of-time)
+--                 whose WWI Stock Item ID appears in staging, then append staging rows
+--                 with the open Stock Item lineage_key. IDENTITY Stock Item Key is
+--                 synthesized as max(existing)+row_number for new versions only. Lineage
+--                 completion and ETL cutoff live on silver copies (Federation is
+--                 read-only; BEGIN TRAN is sequential Delta, not multi-table atomic).
 
 -- Open lineage key for Stock Item (incomplete load), mirroring TOP 1 ... ORDER BY DESC.
 CREATE OR REPLACE TEMP VIEW _stock_item_lineage AS

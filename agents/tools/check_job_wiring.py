@@ -2,11 +2,12 @@
 """Warn when backlog target_paths are not wired into the medallion job YAML.
 
 By default prints WARN + a proposed YAML patch (dry-run). With --apply, writes a
-safe patch: new silver/gold tasks inserted before reconcile, gold keys added to
-reconcile.depends_on, new tasks serialized so peak concurrency stays ≤ 5.
+safe patch: new silver/gold tasks inserted before reconcile. Parents come from
+Assess reads/writes plus bronze_land. Independent tasks are packed so peak
+concurrency stays ≤ 5.
 
-Exit 0 on WARN / successful propose or apply. Exit 1 on usage errors or when
---apply would violate the concurrency limit.
+Exit 0 on WARN / successful propose or apply. Exit 1 on usage errors, a cycle
+in reads/writes, or when --apply would violate the concurrency limit.
 
 Usage:
   python3 agents/tools/check_job_wiring.py --run-id UUID
@@ -23,8 +24,14 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from slugify import _clean, slugify_ident  # noqa: E402
+
 JOB_YAML = ROOT / "databricks" / "jobs" / "edw_migration_medallion.yml"
 MAX_CONCURRENCY = 5
+ENGINE_TASKS = frozenset(
+    {"federation_smoke", "bronze_land", "stage_fixtures", "reconcile", "lineage_check"}
+)
 PATH_RE = re.compile(
     r"(?:databricks|_rendered)/(?:silver|gold)/[A-Za-z0-9_.-]+\.sql"
 )
@@ -34,6 +41,10 @@ DEPENDS_ITEM_RE = re.compile(r"^[ \t]*- task_key:\s*(\S+)[ \t]*$", re.M)
 
 class ConcurrencyLimitError(ValueError):
     """Raised when a proposed patch would exceed Free Edition concurrency."""
+
+
+class CycleError(ValueError):
+    """Raised when Assess reads/writes form a cycle."""
 
 
 @dataclass
@@ -125,15 +136,32 @@ def backlog_targets(backlog: list[dict]) -> list[str]:
     return paths
 
 
+def table_tokens(raw: str) -> set[str]:
+    """Normalize Assess reads/writes into comparable landing-name tokens."""
+    out: set[str] = set()
+    for part in re.split(r"[,;]+", raw or ""):
+        part = part.strip().strip("`[]'\"")
+        if not part:
+            continue
+        bits = [b.strip().strip("`[]'\"") for b in re.split(r"\.", part) if b.strip()]
+        if not bits:
+            continue
+        if len(bits) >= 2:
+            schema, name = bits[-2], bits[-1]
+            out.add(slugify_ident(schema, name))
+            out.add(_clean(name))
+            out.add(_clean(f"{schema}_{name}"))
+        else:
+            out.add(_clean(bits[0]))
+    return {t for t in out if t}
+
+
 def _task_blocks(job_text: str) -> list[tuple[str, str, int, int]]:
     """Return (task_key, block_text, start, end) for each top-level task."""
     matches = list(TASK_KEY_LINE_RE.finditer(job_text))
-    # Only tasks indented as list items under tasks: (typically 8 spaces + "- ")
     task_matches = [m for m in matches if m.group(0).lstrip().startswith("- task_key:")]
-    # Filter to the job task list: indent of "- task_key" is usually 8 spaces
     if not task_matches:
         return []
-    # Prefer the shallowest indent among "- task_key" lines that look like job tasks
     indents = {len(m.group(1)) for m in task_matches}
     task_indent = min(indents)
     task_matches = [m for m in task_matches if len(m.group(1)) == task_indent]
@@ -142,8 +170,6 @@ def _task_blocks(job_text: str) -> list[tuple[str, str, int, int]]:
     for i, m in enumerate(task_matches):
         start = m.start()
         end = task_matches[i + 1].start() if i + 1 < len(task_matches) else len(job_text)
-        # Trim trailing permissions / blank separation at file level carefully:
-        # keep through end marker; strip only if we hit a less-indented key
         block = job_text[start:end]
         key = m.group(2)
         blocks.append((key, block, start, end))
@@ -171,27 +197,33 @@ def parse_tasks(job_text: str) -> list[dict]:
 
 def peak_concurrency(tasks: list[dict]) -> int:
     """Estimate peak parallel tasks assuming unit-time waves."""
+    waves = compute_ready_waves(tasks)
+    return max((len(w) for w in waves), default=0)
+
+
+def compute_ready_waves(tasks: list[dict]) -> list[list[str]]:
+    """Unit-time ready sets (same assumptions as peak_concurrency)."""
     if not tasks:
-        return 0
+        return []
     keys = {t["task_key"] for t in tasks}
     deps: dict[str, set[str]] = {
         t["task_key"]: {d for d in t.get("depends_on") or [] if d in keys}
         for t in tasks
     }
     remaining = set(keys)
-    peak = 0
+    waves: list[list[str]] = []
     while remaining:
-        ready = [k for k in remaining if not deps[k]]
+        ready = sorted(k for k in remaining if not deps[k])
         if not ready:
-            # Cycle or missing deps — treat remaining as one wave
-            peak = max(peak, len(remaining))
+            waves.append(sorted(remaining))
             break
-        peak = max(peak, len(ready))
+        waves.append(ready)
         for k in ready:
             remaining.remove(k)
+        done = set(ready)
         for k in remaining:
-            deps[k] -= set(ready)
-    return peak
+            deps[k] -= done
+    return waves
 
 
 def existing_task_keys(job_text: str) -> set[str]:
@@ -210,20 +242,82 @@ def reconcile_depends_on(job_text: str) -> list[str]:
     return []
 
 
-def format_task_yaml(task: ProposedTask) -> str:
-    lines = [f"        - task_key: {task.task_key}"]
-    if task.depends_on:
-        lines.append("          depends_on:")
-        for dep in task.depends_on:
-            lines.append(f"            - task_key: {dep}")
-    lines.append(f"          timeout_seconds: {task.timeout_seconds}")
-    lines.append("          sql_task:")
-    lines.append("            file:")
-    lines.append(f"              path: {task.job_path}")
-    lines.append("            warehouse_id: ${var.warehouse_id}")
-    lines.append("")
-    lines.append("")
-    return "\n".join(lines)
+def path_to_task_key(job_text: str, repo_path: str) -> str | None:
+    want = normalize_repo_path(repo_path)
+    for t in parse_tasks(job_text):
+        p = t.get("path")
+        if p and normalize_repo_path(p) == want:
+            return t["task_key"]
+    return None
+
+
+def convert_leaves(tasks: list[dict]) -> list[str]:
+    conv_keys = {t["task_key"] for t in tasks if t["task_key"] not in ENGINE_TASKS}
+    used_as_parent: set[str] = set()
+    for t in tasks:
+        if t["task_key"] in ENGINE_TASKS:
+            continue
+        for d in t.get("depends_on") or []:
+            if d in conv_keys:
+                used_as_parent.add(d)
+    return sorted(k for k in conv_keys if k not in used_as_parent)
+
+
+def _item_by_path(backlog: list[dict] | None) -> dict[str, dict]:
+    out: dict[str, dict] = {}
+    if not backlog:
+        return out
+    for item in backlog:
+        tp = item.get("target_path") or ""
+        if tp:
+            out[normalize_repo_path(str(tp))] = item
+    return out
+
+
+def _convert_parents_for_path(
+    path: str,
+    *,
+    job_text: str,
+    backlog: list[dict] | None,
+    path_keys: dict[str, str],
+) -> set[str]:
+    """Task keys this convert item must wait on (excluding bronze_land)."""
+    parents: set[str] = set()
+    by_path = _item_by_path(backlog)
+    item = by_path.get(normalize_repo_path(path))
+    if item is None or not backlog:
+        return parents
+    reads = table_tokens(str(item.get("reads") or ""))
+    if not reads:
+        return parents
+    for other in backlog:
+        otp = other.get("target_path") or ""
+        if not otp or normalize_repo_path(str(otp)) == normalize_repo_path(path):
+            continue
+        writes = table_tokens(str(other.get("writes") or ""))
+        if not (reads & writes):
+            continue
+        key = path_keys.get(normalize_repo_path(str(otp)))
+        if key is None:
+            key = path_to_task_key(job_text, str(otp))
+        if key:
+            parents.add(key)
+    return parents
+
+
+def _assert_no_cycle(nodes: dict[str, set[str]]) -> None:
+    remaining = {k: set(v) for k, v in nodes.items()}
+    while remaining:
+        ready = [k for k, deps in remaining.items() if not deps]
+        if not ready:
+            raise CycleError(
+                "reads/writes cycle among convert items: " + ", ".join(sorted(remaining))
+            )
+        done = set(ready)
+        for k in done:
+            del remaining[k]
+        for deps in remaining.values():
+            deps -= done
 
 
 def propose_patch(
@@ -231,6 +325,7 @@ def propose_patch(
     missing_paths: list[str],
     *,
     serialize: bool = True,
+    backlog: list[dict] | None = None,
 ) -> PatchProposal:
     wired = job_wired_paths(job_text)
     missing = [
@@ -246,65 +341,117 @@ def propose_patch(
         return PatchProposal(noop=True)
 
     keys = existing_task_keys(job_text)
-    old_recon_deps = reconcile_depends_on(job_text)
-    tasks: list[ProposedTask] = []
-    prev_key: str | None = None
-
+    path_keys: dict[str, str] = {}
+    for t in parse_tasks(job_text):
+        if t.get("path"):
+            path_keys[normalize_repo_path(t["path"])] = t["task_key"]
     for path in missing:
         key = task_key_for_path(path, keys)
         keys.add(key)
-        job_path = repo_path_to_job_path(path)
-        if serialize:
-            if prev_key is None:
-                if old_recon_deps:
-                    depends = list(old_recon_deps)
-                elif "bronze_land" in keys:
-                    depends = ["bronze_land"]
-                else:
-                    depends = []
-            else:
-                depends = [prev_key]
-        else:
-            # Unsafe parallel fan-out (used to test concurrency rejection)
-            if old_recon_deps:
-                # Depend on the same root parents as existing leaves when possible
-                depends = _fanout_parents(job_text, old_recon_deps)
-            elif "bronze_land" in keys:
-                depends = ["bronze_land"]
-            else:
-                depends = []
-        layer_timeout = 1800
-        tasks.append(
-            ProposedTask(
-                task_key=key,
-                repo_path=path,
-                job_path=job_path,
-                depends_on=depends,
-                timeout_seconds=layer_timeout,
-            )
-        )
-        prev_key = key
+        path_keys[path] = key
 
-    if serialize and tasks:
-        # Reconcile waits on the serial chain tip (covers prior deps transitively)
-        new_recon = [tasks[-1].task_key]
+    logical: dict[str, set[str]] = {}
+    for path in missing:
+        key = path_keys[path]
+        logical[key] = _convert_parents_for_path(
+            path, job_text=job_text, backlog=backlog, path_keys=path_keys
+        )
+        # Only keep deps that are other convert keys we know (new or already wired)
+        logical[key] = {d for d in logical[key] if d in keys or d in logical}
+
+    _assert_no_cycle(logical)
+
+    bronze = "bronze_land" if "bronze_land" in existing_task_keys(job_text) else None
+    tasks: list[ProposedTask] = []
+
+    if not serialize:
+        for path in missing:
+            key = path_keys[path]
+            depends = sorted(logical[key])
+            if bronze:
+                depends = [bronze] + [d for d in depends if d != bronze]
+            tasks.append(
+                ProposedTask(
+                    task_key=key,
+                    repo_path=path,
+                    job_path=repo_path_to_job_path(path),
+                    depends_on=depends,
+                    timeout_seconds=1800,
+                )
+            )
     else:
-        new_recon = list(old_recon_deps) + [t.task_key for t in tasks]
+        remaining = set(path_keys[p] for p in missing)
+        done: set[str] = {
+            t["task_key"]
+            for t in parse_tasks(job_text)
+            if t["task_key"] not in ENGINE_TASKS
+        }
+        prev_wave: list[str] = []
+        while remaining:
+            ready = sorted(
+                k for k in remaining if logical.get(k, set()) <= done
+            )
+            if not ready:
+                raise CycleError(
+                    "cannot schedule convert tasks (unresolved parents): "
+                    + ", ".join(sorted(remaining))
+                )
+            wave = ready[:MAX_CONCURRENCY]
+            key_to_path = {path_keys[p]: p for p in missing}
+            for key in wave:
+                path = key_to_path[key]
+                depends = set(logical.get(key, set()))
+                if bronze:
+                    depends.add(bronze)
+                if prev_wave:
+                    depends.update(prev_wave)
+                tasks.append(
+                    ProposedTask(
+                        task_key=key,
+                        repo_path=path,
+                        job_path=repo_path_to_job_path(path),
+                        depends_on=sorted(depends),
+                        timeout_seconds=1800,
+                    )
+                )
+            for key in wave:
+                remaining.remove(key)
+                done.add(key)
+            prev_wave = list(wave)
+
+    # Reconcile waits on convert leaves of the patched graph
+    proposed_as_tasks = [
+        {"task_key": t.task_key, "depends_on": t.depends_on, "path": t.job_path}
+        for t in tasks
+    ]
+    combined = [
+        t
+        for t in parse_tasks(job_text)
+        if t["task_key"] not in ENGINE_TASKS
+    ] + proposed_as_tasks
+    leaves = convert_leaves(combined)
+    if not leaves:
+        new_recon = [bronze] if bronze else list(reconcile_depends_on(job_text))
+    else:
+        new_recon = leaves
 
     return PatchProposal(tasks=tasks, reconcile_depends_on=new_recon, noop=False)
 
 
-def _fanout_parents(job_text: str, leaf_keys: list[str]) -> list[str]:
-    """Parents shared by leaf tasks — for serialize=False fan-out testing."""
-    by_key = {t["task_key"]: t for t in parse_tasks(job_text)}
-    parent_sets = [set(by_key[k]["depends_on"]) for k in leaf_keys if k in by_key]
-    if not parent_sets:
-        return []
-    shared = set.intersection(*parent_sets) if len(parent_sets) > 1 else parent_sets[0]
-    if shared:
-        return sorted(shared)
-    # Fall back to first leaf's deps
-    return list(parent_sets[0])
+def format_task_yaml(task: ProposedTask) -> str:
+    lines = [f"        - task_key: {task.task_key}"]
+    if task.depends_on:
+        lines.append("          depends_on:")
+        for dep in task.depends_on:
+            lines.append(f"            - task_key: {dep}")
+    lines.append(f"          timeout_seconds: {task.timeout_seconds}")
+    lines.append("          sql_task:")
+    lines.append("            file:")
+    lines.append(f"              path: {task.job_path}")
+    lines.append("            warehouse_id: ${var.warehouse_id}")
+    lines.append("")
+    lines.append("")
+    return "\n".join(lines)
 
 
 def _replace_reconcile_depends(job_text: str, new_deps: list[str]) -> str:
@@ -325,7 +472,6 @@ def _replace_reconcile_depends(job_text: str, new_deps: list[str]) -> str:
             count=1,
         )
     else:
-        # Insert depends_on after task_key line
         new_block = re.sub(
             r"(^\s*- task_key:\s*reconcile\s*\n)",
             r"\1" + dep_block,
@@ -341,13 +487,15 @@ def apply_patch(
     missing_paths: list[str],
     *,
     serialize: bool = True,
+    backlog: list[dict] | None = None,
 ) -> str:
     """Return job YAML with missing paths wired; raises ConcurrencyLimitError."""
-    proposal = propose_patch(job_text, missing_paths, serialize=serialize)
+    proposal = propose_patch(
+        job_text, missing_paths, serialize=serialize, backlog=backlog
+    )
     if proposal.noop or not proposal.tasks:
         return job_text
 
-    # Insert new tasks immediately before reconcile
     blocks = _task_blocks(job_text)
     recon = next((b for b in blocks if b[0] == "reconcile"), None)
     if recon is None:
@@ -355,7 +503,6 @@ def apply_patch(
     _key, _block, recon_start, _end = recon
 
     insertion = "".join(format_task_yaml(t) for t in proposal.tasks)
-    # Ensure a blank line before reconcile if insertion doesn't end with one
     if not insertion.endswith("\n\n"):
         insertion = insertion.rstrip() + "\n\n"
 
@@ -456,19 +603,19 @@ def main_with_args(argv: list[str] | None = None) -> int:
     )
 
     try:
-        proposal = propose_patch(job_text, missing)
-    except ValueError as exc:
+        proposal = propose_patch(job_text, missing, backlog=backlog)
+    except (ValueError, CycleError) as exc:
         print(f"[check_job_wiring] ERROR {exc}", file=sys.stderr)
         return 1
 
     if args.apply:
         try:
-            patched = apply_patch(job_text, missing)
+            patched = apply_patch(job_text, missing, backlog=backlog)
         except ConcurrencyLimitError as exc:
             print(f"[check_job_wiring] ERROR {exc}", file=sys.stderr)
             print_proposal(missing, proposal)
             return 1
-        except ValueError as exc:
+        except (ValueError, CycleError) as exc:
             print(f"[check_job_wiring] ERROR {exc}", file=sys.stderr)
             return 1
         tmp = job_path.with_suffix(job_path.suffix + ".tmp")

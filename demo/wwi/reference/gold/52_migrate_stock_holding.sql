@@ -2,10 +2,11 @@
 -- Source dialect: tsql
 -- Classification: migrate
 -- Target layer:   gold
--- Patterns:       snapshot, truncate_reload, key_lookup
+-- Patterns:       snapshot, truncate_reload, scd_key_lookup, lineage
 -- Notes:          Land-first truncate/reload of Fact.Stock Holding from
---                 bronze.integration_stockholding_staging. Resolves Stock Item Key
---                 via latest Valid To on bronze.dim_stock_item (COALESCE → 0).
+--                 bronze.integration_stockholding_staging. Staging Stock Item Key
+--                 UPDATE is inlined (no federated write): latest Valid To on
+--                 bronze.dim_stock_item per WWI Stock Item ID (COALESCE → 0).
 --                 Open Integration.Lineage row for 'Stock Holding' marked complete;
 --                 Integration.ETL Cutoff advanced from lineage Source System Cutoff.
 --                 Multi-table BEGIN TRAN expressed as sequential Delta statements
@@ -55,7 +56,7 @@ LEFT JOIN _stock_item_key_lookup lk
   ON s.`WWI Stock Item ID` = lk.wwi_stock_item_id
 LEFT JOIN _stock_holding_lineage l ON TRUE;
 
--- Mark Stock Holding lineage row complete (silver/gold side copy; bronze land stays as-landed).
+-- Mark Stock Holding lineage row complete (gold side copy; bronze land stays as-landed).
 CREATE OR REPLACE TABLE __UC_CATALOG__.gold.integration_lineage AS
 SELECT
   b.`Lineage Key` AS lineage_key,
@@ -66,7 +67,7 @@ SELECT
   END AS data_load_completed,
   CASE
     WHEN b.`Lineage Key` = l.lineage_key THEN TRUE
-    ELSE CAST(b.`Was Successful` AS BOOLEAN)
+    ELSE b.`Was Successful`
   END AS was_successful,
   b.`Source System Cutoff Time` AS source_system_cutoff_time
 FROM __UC_CATALOG__.bronze.integration_lineage b

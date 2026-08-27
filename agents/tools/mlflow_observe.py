@@ -188,6 +188,8 @@ class MemoryBackend:
         inputs: Any = None,
         attributes: dict[str, Any] | None = None,
     ) -> str:
+        if parent_id and parent_id not in self._spans:
+            raise RuntimeError(f"Parent span with ID '{parent_id}' not found.")
         sid = uuid.uuid4().hex[:16]
         self._spans[sid] = {"trace_id": trace_id, "name": name, "parent": parent_id}
         return sid
@@ -199,7 +201,12 @@ class MemoryBackend:
         outputs: Any = None,
         status: str = "OK",
     ) -> None:
-        return
+        self._spans[span_id] = {
+            **(self._spans.get(span_id) or {}),
+            "ended": True,
+            "status": status,
+            "outputs": outputs,
+        }
 
     def end_trace(
         self,
@@ -228,6 +235,7 @@ class MlflowBackend:
         mlflow.set_tracking_uri(tracking_uri)
         self.client = MlflowClient(tracking_uri)
         self.tracking_uri = tracking_uri
+        self._live: dict[str, Any] = {}
 
     def get_or_create_experiment(self, name: str) -> str:
         for candidate in (name, ctx.FALLBACK_EXPERIMENT if name == ctx.DEFAULT_EXPERIMENT else name):
@@ -267,6 +275,7 @@ class MlflowBackend:
             attributes={k: str(v) for k, v in (attributes or {}).items()},
             inputs=inputs,
         )
+        self._live[root.span_id] = root
         return root.trace_id, root.span_id
 
     def start_span(
@@ -278,6 +287,8 @@ class MlflowBackend:
         inputs: Any = None,
         attributes: dict[str, Any] | None = None,
     ) -> str:
+        if parent_id and parent_id not in self._live:
+            raise RuntimeError(f"Parent span with ID '{parent_id}' not found.")
         st = _span_type(span_type)
         span = self.client.start_span(
             name=name,
@@ -287,6 +298,7 @@ class MlflowBackend:
             inputs=inputs,
             attributes=attributes or {},
         )
+        self._live[span.span_id] = span
         return span.span_id
 
     def end_span(
@@ -302,6 +314,7 @@ class MlflowBackend:
             outputs=outputs,
             status=status,
         )
+        self._live.pop(span_id, None)
 
     def end_trace(
         self,
@@ -633,7 +646,8 @@ def drain_queue(run_id: str, root: Path | None = None) -> str | None:
     """Move pending spans.buf.jsonl records into the live trace.
 
     Returns 'shutdown' if an end-run/shutdown record was applied,
-    'drained' if any records were applied, or None if the queue was empty.
+    'drained' if any records were applied, 'blocked' if a span-start
+    failed (parent missing — records left in the buf), or None if empty.
     """
     root = root or ROOT
     buf = spans_buf_path(run_id, root)
@@ -664,15 +678,39 @@ def drain_queue(run_id: str, root: Path | None = None) -> str | None:
     if not records:
         return None
     shutdown = False
-    for rec in records:
+    applied = False
+    remaining: list[dict[str, Any]] = []
+    for i, rec in enumerate(records):
         result = apply_queue_record(run_id, rec, root)
+        after = ctx.load_context(run_id, root) or {}
+        err = str(after.get("last_error") or "")
+        if rec.get("op") == "span-start" and _parent_span_missing(err):
+            remaining = records[i:]
+            break
         with open(consumed, "a", encoding="utf-8") as fh:
             fh.write(json.dumps(rec, separators=(",", ":")) + "\n")
+        applied = True
         if result == "shutdown":
             shutdown = True
+            remaining = records[i + 1 :]
+            break
+    if remaining:
+        def _put_back() -> None:
+            existing = ""
+            try:
+                existing = buf.read_text(encoding="utf-8")
+            except OSError:
+                existing = ""
+            extra = "".join(json.dumps(r, separators=(",", ":")) + "\n" for r in remaining)
+            buf.write_text(existing + extra, encoding="utf-8")
+
+        ctx._with_lock(lock, _put_back)
+        return "blocked"
     if shutdown:
         return "shutdown"
-    return "drained"
+    if applied:
+        return "drained"
+    return None
 
 
 def serve_loop(
@@ -847,6 +885,21 @@ def span_start(
         attrs = dict(attributes or {})
         attrs.setdefault("edw.run_id", run_id)
         attrs.setdefault("edw.span_key", key)
+        detail = ""
+        if isinstance(inputs, dict):
+            detail = str(inputs.get("detail") or "")
+        elif inputs:
+            detail = str(inputs)
+        try:
+            from edw_handoff import parse_detail
+
+            parsed = parse_detail(detail)
+            if parsed:
+                for hk in ("from", "to", "item_id", "artifact", "outcome"):
+                    if parsed.get(hk):
+                        attrs.setdefault(f"edw.{hk}", str(parsed[hk]))
+        except Exception:
+            pass
 
         span_id = backend.start_span(
             name=name,
@@ -894,6 +947,26 @@ def span_end(
     backend = get_backend()
     if backend is None:
         return c
+
+    try:
+        from edw_handoff import mlflow_status_for_outcome, parse_detail
+
+        parsed = parse_detail(str(outputs) if outputs is not None else "")
+        if parsed and parsed.get("outcome"):
+            status = mlflow_status_for_outcome(str(parsed["outcome"]))
+        elif str(status).upper() in ("ERROR", "FAILED", "FAIL"):
+            blob = str(outputs or "").lower()
+            if "blocked" in blob and "fail" not in blob:
+                status = "OK"
+            else:
+                status = "ERROR"
+        else:
+            status = "OK"
+    except Exception:
+        if str(status).upper() in ("ERROR", "FAILED", "FAIL"):
+            status = "ERROR"
+        else:
+            status = "OK"
 
     try:
         backend.end_span(
@@ -962,8 +1035,9 @@ def stage(
         # Log gate_pass but do NOT end the run — retries must keep the daemon.
         # Coordinator calls end-run at Done.
         if agent == "gate" and event == "completed":
-            detail_l = (detail or "").strip().lower()
-            gate_pass = 0.0 if "fail" in detail_l else (1.0 if "pass" in detail_l else 0.0)
+            from edw_vocab import gate_pass_value
+
+            gate_pass = gate_pass_value(detail)
             try:
                 backend.log_metric(ctx_data["mlflow_run_id"], "gate_pass", gate_pass)
             except Exception:
@@ -1078,6 +1152,67 @@ def announce_observe_url(url: str, stream=None) -> None:
     out = stream if stream is not None else sys.stdout
     print(f"observe_url: {u}", file=out, flush=True)
     print(f"Observed by MLflow: {u}", file=out, flush=True)
+
+
+def nest_probe(run_id: str, root: Path | None = None) -> dict[str, Any]:
+    """In-process parent/child probe. FAIL if Parent span is missing.
+
+    Starts agent.probe under the live root span and tool.probe under that
+    agent using in-process span objects (not reconstructed JSON parent ids).
+    """
+    root = root or ROOT
+    data = ensure_init(run_id, root)
+    result: dict[str, Any] = {"ok": False, "run_id": run_id}
+    if not data.get("enabled") or not data.get("root_span_id"):
+        result["error"] = "observe not enabled or root span missing"
+        return result
+    backend = get_backend()
+    if backend is None:
+        result["error"] = "no mlflow backend"
+        return result
+    parent = str(data["root_span_id"])
+    try:
+        agent_id = backend.start_span(
+            name="agent.probe",
+            trace_id=str(data["trace_id"]),
+            parent_id=parent,
+            span_type="AGENT",
+            inputs={"probe": True},
+            attributes={"edw.run_id": run_id, "edw.outcome": "ok"},
+        )
+        tool_id = backend.start_span(
+            name="tool.probe",
+            trace_id=str(data["trace_id"]),
+            parent_id=agent_id,
+            span_type="TOOL",
+            inputs={"probe": True},
+            attributes={"edw.run_id": run_id},
+        )
+        backend.end_span(str(data["trace_id"]), tool_id, outputs={"probe": "ok"}, status="OK")
+        backend.end_span(str(data["trace_id"]), agent_id, outputs={"probe": "ok"}, status="OK")
+    except Exception as exc:
+        err = truncate_io(exc, 500)
+
+        def mut_err(d: dict[str, Any]) -> None:
+            d["last_error"] = err
+
+        ctx.update_context(run_id, mut_err, root)
+        result["error"] = err
+        return result
+
+    after = ctx.load_context(run_id, root) or {}
+    last = str(after.get("last_error") or "")
+    if _parent_span_missing(last):
+        result["error"] = last
+        return result
+    child = getattr(backend, "_spans", {}).get(tool_id) if hasattr(backend, "_spans") else None
+    if isinstance(child, dict) and child.get("parent") and child.get("parent") != agent_id:
+        result["error"] = "tool.probe not nested under agent.probe"
+        return result
+    result["ok"] = True
+    result["agent_span_id"] = agent_id
+    result["tool_span_id"] = tool_id
+    return result
 
 
 def _rest_headers(token: str) -> dict[str, str]:
@@ -1377,6 +1512,25 @@ def _cmd_end_run(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_nest_probe(args: argparse.Namespace) -> int:
+    load_env()
+    result = nest_probe(args.run_id)
+    if result.get("ok"):
+        print(
+            f"[mlflow_observe] nest-probe OK run_id={args.run_id} "
+            f"agent={result.get('agent_span_id')} tool={result.get('tool_span_id')}",
+            flush=True,
+        )
+        return 0
+    print(
+        f"[mlflow_observe] nest-probe FAIL run_id={args.run_id} "
+        f"error={result.get('error')}",
+        file=sys.stderr,
+        flush=True,
+    )
+    return 1
+
+
 def _cmd_trace_url(args: argparse.Namespace) -> int:
     load_env()
     url = trace_url(args.run_id)
@@ -1462,6 +1616,10 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--gate-pass", default=None)
     p.set_defaults(func=_cmd_end_run)
 
+    p = sub.add_parser("nest-probe")
+    p.add_argument("--run-id", required=True)
+    p.set_defaults(func=_cmd_nest_probe)
+
     p = sub.add_parser("trace-url")
     p.add_argument("--run-id", required=True)
     p.set_defaults(func=_cmd_trace_url)
@@ -1488,7 +1646,10 @@ def main(argv: list[str] | None = None) -> int:
     try:
         return int(args.func(args))
     except Exception as exc:
+        cmd = getattr(args, "cmd", "")
         print(f"[mlflow_observe] WARNING: {exc}", file=sys.stderr)
+        if cmd == "nest-probe":
+            return 1
         return 0
 
 

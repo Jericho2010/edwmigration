@@ -53,14 +53,13 @@ Gate Hero (gate counters on `migration_manifest_current`) stays empty until Gate
 
 Parent/coordinator may own Discover, Land, job wiring, `make deploy`/`make run`, and **all Track A provision**.
 
-**Forbidden:** opaque Task / `generalPurpose` for Assess/Convert/Test/Gate **unless** dual-write (Convert: **per item**):
+**Forbidden:** opaque Task / `generalPurpose` for Assess/Convert/Test/Gate. Required `subagent_type` in `{edw-assess,edw-convert,edw-test,edw-gate}`. Dual_write is **also** required per convert item via `launch_convert_wave.sh` (not a substitute for typed Tasks):
 
 ```bash
-./agents/tools/dual_write_agent_lifecycle.sh --run-id <id> --agent convert --phase start --item-id <item_id>
-./agents/tools/dual_write_agent_lifecycle.sh --run-id <id> --agent convert --phase stop --item-id <item_id>
+./agents/tools/launch_convert_wave.sh --run-id <id> --item-id <item_id>
 ```
 
-Prefer Task only with `subagent_type` in `{edw-assess,edw-convert,edw-test,edw-gate}` so hooks fire.
+Demo-guide after mint + nest-probe launches **only** `edw-coordinator`.
 
 ## MLflow mint
 
@@ -76,7 +75,7 @@ Prefer Task only with `subagent_type` in `{edw-assess,edw-convert,edw-test,edw-g
 "$(./agents/tools/resolve_python.sh)" agents/tools/mlflow_observe.py end-run --run-id <run_id>
 ```
 
-Paste `observe_url` **immediately** (part of the URL banner). Soft no-op if observe is not ready — still paste Control Plane + Genie + Catalog. Notebooks join at Land; Job after deploy.
+Paste `observe_url` **immediately** (part of the URL banner). Track A: observe-setup + nest-probe are **required**. Track B may soft no-op if observe is not ready — still paste Control Plane + Genie + Catalog. Notebooks join at Land; Job after deploy.
 
 Gate Hero stays empty until Gate — expected. Inventory / Events / Backlog should move as stages complete; tables-landed from `load_control` should move at Land.
 

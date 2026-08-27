@@ -73,6 +73,7 @@ class ImportPlanTests(unittest.TestCase):
             (root / "databricks" / "silver").mkdir()
             (root / "databricks" / "gold").mkdir()
             (root / "databricks" / "tests").mkdir()
+            (root / "databricks" / "jobs").mkdir(parents=True)
             (root / "databricks" / "_rendered" / "bronze").mkdir(parents=True)
             (root / "databricks" / "_rendered" / "silver").mkdir(parents=True)
             (root / "databricks" / "uc" / "01_federation_setup.sql").write_text("-- secret\n")
@@ -80,20 +81,53 @@ class ImportPlanTests(unittest.TestCase):
             (root / "databricks" / "bronze" / "10_land_all.sql").write_text("-- repo land\n")
             (root / "databricks" / "_rendered" / "bronze" / "10_land_all.sql").write_text("-- rendered land\n")
             (root / "databricks" / "silver" / "20_dims_scd1.sql").write_text("-- dims\n")
-            (root / "databricks" / "_rendered" / "silver" / "24_migrate_city.sql").write_text("-- migrate\n")
+            (root / "databricks" / "_rendered" / "silver" / "40_migrate_city.sql").write_text("-- migrate\n")
             (root / "databricks" / "gold" / "30_mart_daily_sales.sql").write_text("-- mart\n")
             (root / "databricks" / "tests" / "reconcile.sql").write_text("-- recon\n")
+            (root / "databricks" / "jobs" / "edw_migration_medallion.yml").write_text(
+                """\
+resources:
+  jobs:
+    edw_migration_medallion:
+      tasks:
+        - task_key: federation_smoke
+          sql_task:
+            file:
+              path: ../_rendered/uc/02_federation_smoke.sql
+        - task_key: bronze_land
+          sql_task:
+            file:
+              path: ../_rendered/bronze/10_land_all.sql
+        - task_key: silver_dims
+          sql_task:
+            file:
+              path: ../_rendered/silver/20_dims_scd1.sql
+        - task_key: silver_40_migrate_city
+          sql_task:
+            file:
+              path: ../_rendered/silver/40_migrate_city.sql
+        - task_key: gold_daily_sales
+          sql_task:
+            file:
+              path: ../_rendered/gold/30_mart_daily_sales.sql
+        - task_key: reconcile
+          sql_task:
+            file:
+              path: ../_rendered/tests/reconcile.sql
+"""
+            )
 
             plan = pub.build_import_plan(root)
-            names = {(i.layer, i.dest_name) for i in plan}
-            self.assertNotIn(("uc", "01_federation_setup"), names)
-            self.assertIn(("uc", "02_federation_smoke"), names)
-            self.assertIn(("bronze", "10_land_all"), names)
-            self.assertIn(("silver", "20_dims_scd1"), names)
-            self.assertIn(("silver", "24_migrate_city"), names)
-            self.assertIn(("gold", "30_mart_daily_sales"), names)
-            self.assertIn(("tests", "reconcile"), names)
-            land = next(i for i in plan if i.dest_name == "10_land_all")
+            dest = [i.dest_name for i in plan]
+            self.assertEqual(len(dest), len(set(dest)))
+            self.assertNotIn("01_federation_setup", dest)
+            self.assertIn("federation_smoke", dest)
+            self.assertIn("bronze_land", dest)
+            self.assertIn("silver_dims", dest)
+            self.assertIn("silver_40_migrate_city", dest)
+            self.assertIn("gold_daily_sales", dest)
+            self.assertIn("reconcile", dest)
+            land = next(i for i in plan if i.dest_name == "bronze_land")
             self.assertTrue(land.source.endswith("_rendered/bronze/10_land_all.sql"))
 
     def test_folder_date_stable(self) -> None:
@@ -147,7 +181,20 @@ class ImportPlanTests(unittest.TestCase):
             run_id = "11111111-2222-3333-4444-555555555555"
             (root / "agents" / "out" / run_id).mkdir(parents=True)
             (root / "databricks" / "silver").mkdir(parents=True)
+            (root / "databricks" / "jobs").mkdir(parents=True)
             (root / "databricks" / "silver" / "20_dims_scd1.sql").write_text("SELECT 1;\n")
+            (root / "databricks" / "jobs" / "edw_migration_medallion.yml").write_text(
+                """\
+resources:
+  jobs:
+    edw_migration_medallion:
+      tasks:
+        - task_key: silver_dims
+          sql_task:
+            file:
+              path: ../_rendered/silver/20_dims_scd1.sql
+"""
+            )
             with mock.patch.dict(
                 os.environ,
                 {
@@ -167,7 +214,7 @@ class ImportPlanTests(unittest.TestCase):
             self.assertIn("edwmigration_20260827", data["folder"])
             self.assertTrue(data["folder_url"].endswith("/edwmigration_20260827"))
             self.assertIn("edw_migration", data["catalog_url"])
-            self.assertTrue(any(p["dest_name"] == "20_dims_scd1" for p in data["plan"]))
+            self.assertTrue(any(p["dest_name"] == "silver_dims" for p in data["plan"]))
 
 
 if __name__ == "__main__":

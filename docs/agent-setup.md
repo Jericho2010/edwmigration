@@ -63,7 +63,7 @@ flowchart LR
 | Open repo + type `start` | Soft status + phrase menu |
 | Pick 1–6 (or paste kickoff) | Preflight (Track A on 1) → write `.env` → migrate |
 | Fix only what preflight/auth asks | Continue after you say continue |
-| Watch Control Plane + Genie | Federation → discover → land → **Convert fan-out** → job → Gate; print URLs |
+| Watch Control Plane + Genie | Federation → discover → land → **Convert fan-out** → wire job → Gate; print URLs |
 
 Shared memory across Convert workers is **disk only** under `agents/out/<run_id>/` (see [What you get — run artifacts](what-you-get.md#run-artifacts-map)).
 
@@ -81,7 +81,7 @@ Shared memory across Convert workers is **disk only** under `agents/out/<run_id>
 | `edw-test` | Reconcile report |
 | `edw-gate` | Ship / no-ship manifest |
 
-Convert protocol: `validate_backlog_paths.py` → launch up to **5** `edw-convert` agents per wave → `merge_convert_results.py`. Persist helpers: `persist_backlog.py` / `persist_reconcile_report.py` / `persist_manifest.py`. Job wiring: `check_job_wiring.py` (WARN + optional `--apply`). What you will see: [during the run](what-you-get.md#what-you-will-see-while-it-works).
+Convert protocol: `validate_backlog_paths.py` → launch up to **5** `edw-convert` agents per wave → `merge_convert_results.py`. Persist helpers: `persist_backlog.py` / `persist_reconcile_report.py` / `persist_manifest.py`. Job wiring: `check_job_wiring.py` builds the DAG from Assess `reads`/`writes` (WARN + `--apply`; peak ≤ 5). The committed job is a skeleton until `--apply`. What you will see: [during the run](what-you-get.md#what-you-will-see-while-it-works).
 
 Regenerate Cursor + Copilot files anytime:
 

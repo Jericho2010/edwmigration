@@ -4,7 +4,7 @@
 
 **Watch an agent migrate a warehouse into Databricks — while you watch a Control Plane, Catalog, Job, and Workspace notebooks, ask Genie if the run shipped, and follow live MLflow traces of every subagent.**
 
-You do not need to be a migration expert. You do not hand-write medallion SQL. Open this repo in Cursor, type **`start`**, pick a menu item, and follow along. Log in only when the agent asks.
+You do not need to be a migration expert. You do not hand-write medallion SQL — **Convert agents** write silver/gold from the source backlog. The committed job is a **skeleton** (land + reconcile), not a WideWorldImporters star schema. Open this repo in Cursor, type **`start`**, pick a menu item, and follow along. Log in only when the agent asks.
 
 **Demo-ready** on **Databricks Free Edition** + Azure SQL free offer (Track A). Your own Azure SQL / MySQL works too (Track B). Details and acceptance counts: [guided demo](docs/guided-demo.md).
 
@@ -47,8 +47,8 @@ This repo’s agents:
 1. **Connect** to your source (live read via Lakehouse Federation)  
 2. **Discover** every base table (and procedures/routines when tools allow)  
 3. **Land** tables into bronze and prove row counts match  
-4. **Convert** procedures into Spark SQL (`.sql` under `databricks/silver|gold`) when there is a backlog  
-5. **Wire** new SQL files into the medallion job when needed (`check_job_wiring.py --apply`; safe concurrency)  
+4. **Convert** procedures into Spark SQL (`.sql` under `databricks/silver|gold`) when there is a backlog — those files are run artifacts, not checked-in warehouse notebooks  
+5. **Wire** Convert outputs into the skeleton job from Assess `reads`/`writes` (`check_job_wiring.py --apply`; peak ≤ 5)  
 6. **Gate** the run — ship or no-ship, with reasons  
 7. **Show** progress on a Control Plane, Genie, Catalog, Job, Workspace notebooks (`edwmigration_YYYYMMDD`), and **[MLflow](docs/mlflow.md)** live agent/tool traces (`observe_url`)
 
@@ -78,7 +78,7 @@ sequenceDiagram
 
 5. If Track A preflight asks for a login or install, do **that one thing**, then say continue.
 
-**Track A** builds a free sample warehouse (WideWorldImporters on Azure SQL free offer), wires it into **your** Databricks Free Edition catalog, and walks the migration with you.
+**Track A** bootstraps WideWorldImporters on Azure SQL as the **source**, wires Federation into **your** Databricks Free Edition catalog, and walks Assess → Convert → job → Gate with you. Silver/gold exist only after Convert writes them.
 
 Full hand-holding: **[Guided demo](docs/guided-demo.md)** · Tool reference: **[Prerequisites](docs/prerequisites.md)**
 

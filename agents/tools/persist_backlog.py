@@ -77,15 +77,16 @@ def run_ops_sql(sql: str) -> None:
         raise RuntimeError(proc.stderr or proc.stdout or "run_sql failed")
 
 
-def upsert_ops(catalog: str, backlog: list[dict]) -> None:
+def upsert_ops(catalog: str, backlog: list[dict], run_id: str = "") -> None:
+    rid = esc_sql(run_id)
     statements: list[str] = [
-        f"DELETE FROM `{catalog}`.ops.migration_backlog WHERE true;"
+        f"DELETE FROM `{catalog}`.ops.migration_backlog WHERE run_id = '{rid}';"
     ]
     for item in backlog:
         statements.append(
             f"INSERT INTO `{catalog}`.ops.migration_backlog "
             f"(item_id, legacy_proc, classification, reads, writes, "
-            f"target_layer, target_path, priority, risk_flags, status, updated_at) VALUES "
+            f"target_layer, target_path, priority, risk_flags, status, updated_at, run_id) VALUES "
             f"('{esc_sql(str(item.get('item_id', '')))}', "
             f"'{esc_sql(str(item.get('legacy_proc', '')))}', "
             f"'{esc_sql(str(item.get('classification', '')))}', "
@@ -96,7 +97,7 @@ def upsert_ops(catalog: str, backlog: list[dict]) -> None:
             f"'{esc_sql(str(item.get('priority', '')))}', "
             f"'{esc_sql(str(item.get('risk_flags', '')))}', "
             f"'{esc_sql(str(item.get('status', 'pending')))}', "
-            f"current_timestamp());"
+            f"current_timestamp(), '{rid}');"
         )
     run_ops_sql("\n".join(statements))
 
@@ -135,7 +136,7 @@ def main() -> int:
     if not args.skip_ops:
         try:
             catalog = load_context_catalog(run_dir)
-            upsert_ops(catalog, backlog)
+            upsert_ops(catalog, backlog, run_id=args.run_id)
         except Exception as exc:  # noqa: BLE001
             print(f"[persist_backlog] ERROR ops upsert failed: {exc}", file=sys.stderr)
             return 1
@@ -143,6 +144,22 @@ def main() -> int:
     out_path.write_text(json.dumps(backlog, indent=2) + "\n")
     if summary:
         (run_dir / "assess_summary.md").write_text(summary.rstrip() + "\n")
+
+    try:
+        sys.path.insert(0, str(ROOT / "agents" / "tools"))
+        from edw_handoff import emit_handoff_quiet
+
+        emit_handoff_quiet(
+            args.run_id,
+            from_agent="assess",
+            to_agent="coordinator",
+            action="persist",
+            artifact=str(out_path.relative_to(ROOT)),
+            outcome="ok",
+            skip_ops=args.skip_ops,
+        )
+    except Exception:
+        pass
 
     print(
         f"[persist_backlog] run_id={args.run_id} items={len(backlog)} "

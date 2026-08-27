@@ -75,7 +75,7 @@ RECORD="${REPO_ROOT}/agents/tools/record_agent_event.sh"
 OBSERVE="${REPO_ROOT}/agents/tools/mlflow_observe.py"
 FLUSH="${REPO_ROOT}/.cursor/hooks/_flush_events.sh"
 PY="$("${REPO_ROOT}/agents/tools/resolve_python.sh" 2>/dev/null || command -v python3 || true)"
-KEY="dual:${AGENT}:${RUN_ID}:${WORKER}"
+KEY="subagent:${AGENT}:${WORKER}"
 
 EVENT="$PHASE"
 if [ "$PHASE" = "stop" ]; then
@@ -90,19 +90,53 @@ DETAIL_ARGS=()
 
 "$RECORD" --run-id "$RUN_ID" --agent "$AGENT" --event "$EVENT" "${DETAIL_ARGS[@]}"
 
+HANDOFF_FROM="coordinator"
+HANDOFF_TO="$AGENT"
+HANDOFF_ACTION="$PHASE"
+HANDOFF_OUTCOME="ok"
+if [ "$PHASE" = "stop" ]; then
+  HANDOFF_FROM="$AGENT"
+  HANDOFF_TO="coordinator"
+  case "${STATUS}" in
+    ERROR|error|failed|fail|1) HANDOFF_OUTCOME="fail" ;;
+  esac
+  case "${DETAIL}" in
+    *blocked*) HANDOFF_OUTCOME="blocked" ;;
+  esac
+fi
+if [ -n "${PY:-}" ]; then
+  "$PY" "${REPO_ROOT}/agents/tools/edw_handoff.py" \
+    --run-id "$RUN_ID" \
+    --from "$HANDOFF_FROM" \
+    --to "$HANDOFF_TO" \
+    --item-id "${ITEM_ID}" \
+    --action "$HANDOFF_ACTION" \
+    --outcome "$HANDOFF_OUTCOME" || true
+fi
+
 if [ -n "${PY:-}" ] && [ -f "$OBSERVE" ]; then
+  SPAN_NAME="agent.${AGENT}"
+  if [ "$AGENT" = "convert" ] && [ -n "${ITEM_ID:-}" ]; then
+    SPAN_NAME="agent.convert.${ITEM_ID}"
+  fi
   if [ "$PHASE" = "start" ]; then
-    "$PY" "$OBSERVE" span-start \
-      --run-id "$RUN_ID" --key "$KEY" --name "agent.${AGENT}" \
-      --kind agent --agent "$AGENT" --detail "$DETAIL" >/dev/null 2>&1 || true
+    if ! "$PY" "$OBSERVE" span-start \
+      --run-id "$RUN_ID" --key "$KEY" --name "$SPAN_NAME" \
+      --kind agent --agent "$AGENT" --detail "$DETAIL"; then
+      echo "[dual_write] MLflow span-start failed (see stderr)" >&2
+    fi
   else
     ML_STATUS="OK"
     case "${STATUS}" in
       ERROR|error|failed|fail|1) ML_STATUS="ERROR" ;;
     esac
-    "$PY" "$OBSERVE" span-end \
-      --run-id "$RUN_ID" --key "$KEY" --detail "$DETAIL" --status "$ML_STATUS" \
-      >/dev/null 2>&1 || true
+    case "${DETAIL}" in
+      *blocked*) ML_STATUS="OK" ;;
+    esac
+    if ! "$PY" "$OBSERVE" span-end \
+      --run-id "$RUN_ID" --key "$KEY" --detail "$DETAIL" --status "$ML_STATUS"; then
+      echo "[dual_write] MLflow span-end failed (see stderr)" >&2
+    fi
   fi
 fi
 

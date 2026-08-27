@@ -127,7 +127,7 @@ flowchart LR
 
 - Agent prints **Control Plane**, **Genie**, **Catalog**, **Job**, **Notebooks**, and (after a run is minted) **MLflow `observe_url`** (`make print-urls`).  
 - You can open the dashboard, Catalog, Job, and Notebooks folder, ask Genie: *Did the last run ship?*, and watch the live MLflow trace during Convert.  
-- Gate ship = empty blockers. For the **demo**, the guide also checks **counts** (≥10 tables / ≥5 procedures) — that is demo acceptance, not a Gate rule.  
+- Gate ship = empty blockers. For the **demo**, the guide also checks **counts** (≥10 tables / ≥5 procedures) — that is demo acceptance, not a Gate rule. Those procedures must be Convert outputs (not copies from `demo/wwi/reference/`). First-run Gate can fail on bad Spark SQL — fix Convert.  
 
 If something fails: **[troubleshooting.md](troubleshooting.md)**.
 

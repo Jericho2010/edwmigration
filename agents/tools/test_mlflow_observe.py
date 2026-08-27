@@ -179,6 +179,71 @@ class ObserveMemoryTests(unittest.TestCase):
             self.assertEqual(len(backend.runs), n_before)
             self.assertIn("Parent span", str(c.get("last_error") or ""))
 
+    def test_drain_queue_does_not_consume_on_start_span_fail(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            run_id = "drain-block-1"
+            (root / "agents" / "out" / run_id).mkdir(parents=True)
+            with mock.patch.object(mobs, "ROOT", root), mock.patch.object(mctx, "ROOT", root):
+                mobs.init_run(run_id, root=root)
+                backend = mobs.get_backend()
+                assert isinstance(backend, mobs.MemoryBackend)
+
+                def boom(*_a: object, **_k: object) -> str:
+                    raise RuntimeError("Parent span with ID 'dead' not found.")
+
+                backend.start_span = boom  # type: ignore[method-assign]
+                mobs.enqueue(
+                    run_id,
+                    {
+                        "op": "span-start",
+                        "key": "subagent:x",
+                        "name": "agent.x",
+                        "kind": "agent",
+                    },
+                    root=root,
+                )
+                result = mobs.drain_queue(run_id, root=root)
+                self.assertEqual(result, "blocked")
+                consumed = root / "agents" / "out" / run_id / "spans.consumed.jsonl"
+                self.assertFalse(consumed.is_file() and consumed.read_text().strip())
+                buf = root / "agents" / "out" / run_id / "spans.buf.jsonl"
+                self.assertIn("span-start", buf.read_text())
+
+    def test_nest_probe_ok_on_memory(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            run_id = "nest-1"
+            (root / "agents" / "out" / run_id).mkdir(parents=True)
+            mobs.init_run(run_id, root=root)
+            result = mobs.nest_probe(run_id, root=root)
+            self.assertTrue(result.get("ok"), result)
+
+    def test_blocked_outcome_span_status_ok(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            run_id = "blocked-ok-1"
+            (root / "agents" / "out" / run_id).mkdir(parents=True)
+            mobs.init_run(run_id, root=root)
+            c = mobs.span_start(
+                run_id,
+                key="subagent:convert:item-9",
+                name="agent.convert.item-9",
+                kind="agent",
+                root=root,
+            )
+            sid = c["open_spans"]["subagent:convert:item-9"]
+            mobs.span_end(
+                run_id,
+                key="subagent:convert:item-9",
+                outputs='{"from":"convert","to":"coordinator","outcome":"blocked"}',
+                status="ERROR",
+                root=root,
+            )
+            backend = mobs.get_backend()
+            assert isinstance(backend, mobs.MemoryBackend)
+            self.assertEqual(backend._spans[sid].get("status"), "OK")
+
     def test_enqueue_and_serve_once(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)

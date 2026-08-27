@@ -9,6 +9,10 @@ agents/out/*
 databricks/_rendered/
 databricks/generated/
 
+# Convert run artifacts (engine job is the skeleton; agents write these locally)
+databricks/silver/*.sql
+databricks/gold/*.sql
+
 # Python
 __pycache__/
 *.pyc

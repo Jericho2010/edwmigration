@@ -169,6 +169,17 @@ if [ "$DRY_RUN" -eq 0 ]; then
   done
   echo "  issuing SELECT 1 to wake the compute ..."
   sqlcmd -S "$SERVER_ARG" -U "$AZ_SQL_ADMIN" -P "$AZ_SQL_PASSWORD" -d "$AZ_SQL_DB" -C -l 60 -Q "SELECT 1" >/dev/null
+  echo "  creating space-free federation alias views (Payment Method -> PaymentMethod) ..."
+  sqlcmd -S "$SERVER_ARG" -U "$AZ_SQL_ADMIN" -P "$AZ_SQL_PASSWORD" -d "$AZ_SQL_DB" -C -l 60 -Q \
+    "CREATE OR ALTER VIEW Dimension.PaymentMethod AS SELECT * FROM Dimension.[Payment Method];"
+  sqlcmd -S "$SERVER_ARG" -U "$AZ_SQL_ADMIN" -P "$AZ_SQL_PASSWORD" -d "$AZ_SQL_DB" -C -l 60 -Q \
+    "CREATE OR ALTER VIEW Dimension.StockItem AS SELECT * FROM Dimension.[Stock Item];"
+  sqlcmd -S "$SERVER_ARG" -U "$AZ_SQL_ADMIN" -P "$AZ_SQL_PASSWORD" -d "$AZ_SQL_DB" -C -l 60 -Q \
+    "CREATE OR ALTER VIEW Dimension.TransactionType AS SELECT * FROM Dimension.[Transaction Type];"
+  sqlcmd -S "$SERVER_ARG" -U "$AZ_SQL_ADMIN" -P "$AZ_SQL_PASSWORD" -d "$AZ_SQL_DB" -C -l 60 -Q \
+    "CREATE OR ALTER VIEW Fact.StockHolding AS SELECT * FROM Fact.[Stock Holding];"
+  sqlcmd -S "$SERVER_ARG" -U "$AZ_SQL_ADMIN" -P "$AZ_SQL_PASSWORD" -d "$AZ_SQL_DB" -C -l 60 -Q \
+    "CREATE OR ALTER VIEW Integration.ETLCutoff AS SELECT * FROM Integration.[ETL Cutoff];"
 else
   echo "  (dry-run) sqlcmd -S ${SERVER_ARG} ... -Q 'SELECT 1'"
 fi

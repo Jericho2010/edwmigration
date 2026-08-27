@@ -87,9 +87,12 @@ PY
 )"
 rm -f "$TABLES_FILE"
 
+# API export proto: version/config/data_sources only; sample_question.id must be
+# lowercase 32-hex (no hyphens). Top-level "instructions" is rejected as VALUE_STRING.
 SERIALIZED="$(jq -c --argjson tables "$TABLES_JSON" '
   .serialized_space
-  | .data_sources.tables = ($tables | map({identifier: .}))
+  | del(.instructions)
+  | .data_sources.tables = ($tables | sort | map({identifier: .}))
 ' "$CONFIG")"
 
 SPACE_ID="$(
@@ -97,26 +100,24 @@ SPACE_ID="$(
     | jq -r --arg t "$TITLE" '.spaces // [] | map(select(.title == $t)) | .[0].space_id // empty'
 )"
 
-# serialized_space must be a JSON *string* whose contents are an object.
-# (Some workspace API builds disagree on object-vs-string; create/update can 400.)
-PAYLOAD="$(jq -n \
-  --arg wid "$DATABRICKS_WAREHOUSE_ID" \
-  --arg title "$TITLE" \
-  --arg desc "$DESCRIPTION" \
-  --argjson ser "$SERIALIZED" \
-  '{warehouse_id: $wid, title: $title, description: $desc, serialized_space: ($ser | tostring)}')"
-
 if [ -n "$SPACE_ID" ]; then
   echo "[genie] updating existing space ${SPACE_ID} ('${TITLE}') ..."
-  if ! databricks api patch "/api/2.0/genie/spaces/${SPACE_ID}" --json "$PAYLOAD" >/dev/null; then
-    fail_or_warn "update failed for space ${SPACE_ID} (serialized_space API quirk)."
+  if ! databricks genie update-space "$SPACE_ID" \
+      --serialized-space "$SERIALIZED" \
+      --title "$TITLE" \
+      --description "$DESCRIPTION" \
+      --warehouse-id "$DATABRICKS_WAREHOUSE_ID" >/dev/null; then
+    fail_or_warn "update failed for space ${SPACE_ID}"
   fi
 else
   echo "[genie] creating space '${TITLE}' ..."
-  if ! SPACE_ID="$(databricks api post /api/2.0/genie/spaces --json "$PAYLOAD" | jq -r '.space_id // .id // empty')"; then
+  if ! CREATE_OUT="$(databricks genie create-space "$DATABRICKS_WAREHOUSE_ID" "$SERIALIZED" \
+      --title "$TITLE" \
+      --description "$DESCRIPTION" -o json)"; then
     fail_or_warn "create failed"
-    SPACE_ID=""
+    CREATE_OUT=""
   fi
+  SPACE_ID="$(printf '%s' "$CREATE_OUT" | jq -r '.space_id // .id // empty')"
 fi
 
 if [ -z "$SPACE_ID" ]; then

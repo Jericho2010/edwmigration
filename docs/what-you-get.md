@@ -60,7 +60,8 @@ flowchart TB
 flowchart LR
   D[Discover] --> L[Land bronze]
   L --> C[Convert]
-  C --> J[Job run]
+  C --> W[Wire job]
+  W --> J[Job run]
   J --> T[Test]
   T --> G[Gate]
   G --> O[Dashboard + Genie + Catalog + Job + Notebooks]
@@ -68,7 +69,7 @@ flowchart LR
   classDef agent fill:#1B7A6E,stroke:#145A51,color:#fff
   classDef ops fill:#5B4B8A,stroke:#3F3460,color:#fff
   class D,L,J work
-  class C,T agent
+  class C,W,T agent
   class G,O ops
 ```
 
@@ -76,7 +77,8 @@ flowchart LR
 |---|---|
 | **Discover** | List base tables (+ export procs/routines if tools allow) |
 | **Land** | Copy each table into `bronze.*` and record counts |
-| **Convert** | Turn T-SQL / MySQL routines into Spark SQL (`.sql`) in **parallel waves (≤5)** via `edw-convert` *(skipped cleanly if none)* |
+| **Convert** | Turn T-SQL / MySQL routines into Spark SQL (`.sql`) in **parallel waves (≤5)** via `edw-convert` *(skipped cleanly if none)*. These files are run artifacts — not a checked-in warehouse. |
+| **Wire** | `check_job_wiring.py --apply` inserts Convert SQL into the **skeleton** job from Assess `reads`/`writes` (peak ≤ 5) |
 | **Test** | Bronze row counts vs source |
 | **Gate** | Ship / no-ship from inventory + reconcile + conversions |
 | **Observe** | Control Plane + Genie + Catalog + Job + Notebooks (`edwmigration_YYYYMMDD`) + MLflow live traces (`observe_url`) |
@@ -110,9 +112,9 @@ Also: [`img/agent_squad_roles.png`](img/agent_squad_roles.png) (README compariso
 You are not expected to stare at terminals the whole time. Typical pauses:
 
 1. **Inventory** — table (and proc) counts after Discover  
-2. **Convert wave** — up to five `edw-convert` agents writing notebooks in parallel  
-3. **Merge** — `convert_summary.json` with converted / blocked counts  
-4. **Job → Test → Gate** — medallion run, bronze reconcile, ship / no-ship  
+2. **Convert wave** — up to five `edw-convert` agents writing silver/gold SQL in parallel  
+3. **Merge + wire** — `convert_summary.json`, then `check_job_wiring.py --apply` so Convert files become job tasks  
+4. **Job → Test → Gate** — skeleton + assembled convert tasks, bronze reconcile, ship / no-ship  
 5. **URLs** — Control Plane + Genie + Catalog appear at **Provision** (best-effort) and **Setup**. MLflow `observe_url` joins at **Mint**. **Notebooks** (`edwmigration_YYYYMMDD`) after Land; **Job** after deploy. Open them when printed and leave them open — not only at Gate.
 
 ```mermaid
@@ -132,7 +134,7 @@ sequenceDiagram
   Coord->>DBX: Discover and land bronze
   Coord->>Wave: Fan-out edw-convert
   Wave-->>Coord: convert result JSON files
-  Coord->>DBX: Job then Test then Gate
+  Coord->>DBX: Wire job then Test then Gate
   Coord-->>You: observe_status Done snapshot
 ```
 
@@ -164,7 +166,7 @@ After setup: `make print-urls` (Control Plane + Genie + Catalog; Job after deplo
 - **Control Plane** — Gate, timeline, backlog, reconcile. Gate Hero stays empty until Gate; Inventory / Events / Backlog move earlier.  
 - **Genie** — *Did the last run ship?* / *Why did the gate fail?* (also useful mid-run on inventory/events)  
 - **Catalog** — Unity Catalog explorer for landed bronze/silver/gold  
-- **Job** — medallion job runs (`sql_task` on repo SQL)  
+- **Job** — skeleton plus Convert tasks the coordinator wired (`sql_task` on repo SQL)  
 - **Notebooks** — Workspace gallery of the same SQL (readable, not the job runtime)  
 - **MLflow** — live subagent/tool span tree while Convert runs (Cursor hooks dual-write every `edw-*` agent + shell/MCP/file tools). Soft no-op until `make observe-setup`.  
 - **Cursor chat** — `observe_status` after each stage (URLs pasted once at setup/mint).
@@ -175,6 +177,12 @@ Trust checklist: inventory → convert artifacts (when procs in scope) → bronz
 
 ---
 
+## Who writes silver and gold
+
+The committed DAB job is five tasks: federation smoke, bronze land, empty fixture stage, generated reconcile, lineage. **Convert** writes `databricks/silver|gold/<nn>_<slug>.sql` (gitignored). **`check_job_wiring.py --apply`** inserts those files as job tasks from Assess `reads`/`writes` (peak ≤ 5). Gold marts exist only if a backlog item produced them. Track A still bootstraps WideWorldImporters as the source; `demo/wwi/reference/` is not executed.
+
+---
+
 ## Track A vs Track B (same destination)
 
 | | Track A — Guided demo | Track B — Your DB |
@@ -182,6 +190,7 @@ Trust checklist: inventory → convert artifacts (when procs in scope) → bronz
 | Source | Sample WideWorldImporters on free Azure SQL | Your Azure SQL or Azure MySQL |
 | Entry | `start` → **1** (or `edw-demo-guide`) | `start` → **2** / **3** (or `edw-coordinator`) |
 | Agent | `edw-demo-guide` → coordinator | `edw-coordinator` |
+| Silver / gold | Convert writes them from WWI procs; `demo/wwi/reference/` is teaching-only | Convert writes them from your procs |
 | Cost (typical) | $0 with Free Edition + teardown | Your existing DB + Free Edition sink |
 | Outcome | Same catalog shape + dashboard + Genie + MLflow traces | Same |
 

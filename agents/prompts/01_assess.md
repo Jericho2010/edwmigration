@@ -33,13 +33,13 @@ Inventory the connected source (Azure SQL or MySQL) and produce a migration back
    - `migrate` — mutates/loads dimension or fact tables
    - `other` — helper
 4. **Helpers / not worth converting:** either **omit** from the backlog, **or** include with `status: "blocked"`, `target_layer: "n/a"`, and reason in `risk_flags` (e.g. `helper,cursor`). There is **no** `skip` field on backlog items — the schema forbids it.
-5. Propose `target_layer` (`silver`|`gold`|`n/a`) and `target_path` under `databricks/silver/` or `databricks/gold/` using numeric prefixes (20–29 silver, 30–39 gold).
-   - Every convertible item (`status` not `blocked`, layer not `n/a`) **must** have a **unique** `target_path`.
+5. Propose `target_layer` (`silver`|`gold`|`n/a`). Leave `target_path` empty or as a layer-only hint; the coordinator runs `allocate_target_paths.py` to assign unique `databricks/(silver|gold)/<NN>_<slug>.sql` paths (NN starts at 20).
+   - Do **not** invent gold marts or tables that are not in inventory/procs.
+   - Every convertible item (`status` not `blocked`, layer not `n/a`) will get a **unique** `target_path` after allocate.
    - Paths must match `databricks/(silver|gold)/<file>.sql` — never `databricks/converted/`.
-   - Do not collide with **existing** files under `databricks/silver/` or `databricks/gold/` unless intentionally overwriting that conversion.
    - Uniqueness enables parallel Convert fan-out (one worker per path).
 6. Fill reads/writes/priority/risk_flags from the source SQL (T-SQL or MySQL). Use inventory `landing_name`s when listing bronze reads.
-7. Do **not** invent procs or tables absent from inventory. Do **not** hardcode WWI names.
+7. Do **not** invent procs or tables absent from inventory. Do **not** hardcode demo warehouse names.
 
 ## Output JSON
 

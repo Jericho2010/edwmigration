@@ -43,7 +43,7 @@ if [ -f "${REPO_ROOT}/agents/tools/resolve_source_env.sh" ]; then
 fi
 
 : "${DATABRICKS_CATALOG:=edw_migration}"
-: "${FOREIGN_CATALOG:=wwi_dw_fed}"
+: "${FOREIGN_CATALOG:=sqlserver_fed}"
 : "${CONNECTION_NAME:=azure_sql_edw}"
 : "${DATABRICKS_SECRET_SCOPE:=edw-migration}"
 GENIE_TITLE="$(jq -r '.title // "EDW Migration Copilot"' "${REPO_ROOT}/databricks/genie/space_config.json" 2>/dev/null || echo "EDW Migration Copilot")"
