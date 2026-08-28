@@ -15,4 +15,4 @@ After they choose a number or phrase, route as `edw-start` specifies (demo-guide
 
 ## Live observability (after menu 1/2/3 only)
 
-Migration agents must follow `agents/prompts/_live_observability.md`: after menu **1** + catalog, paste `announce_observability.sh --stage Provision` **before** long makes; prefer `track_a_provision.sh` in the **visible parent session** (never one mute Task for bootstrap/setup); paste Control Plane + Genie + MLflow `observe_url` as soon as available; keep them updating **during** the run; run Assess/Convert/Test/Gate as Cursor **`edw-*`** subagents so hooks fire. Never invent a migration outside this menu path.
+Migration agents must follow `agents/prompts/_live_observability.md`: after menu **1** + catalog, start `track_a_provision.sh` in **that same turn** (visible parent session; never a mute Task for bootstrap/setup). Do **not** run a standalone `announce_observability` and stop. Paste Control Plane + Genie + MLflow `observe_url` as the wrapper prints them; keep them updating **during** the run; run Assess/Convert/Test/Gate as Cursor **`edw-*`** subagents so hooks fire. Never invent a migration outside this menu path.

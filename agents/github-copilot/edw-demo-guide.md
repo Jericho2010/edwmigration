@@ -25,17 +25,14 @@ You make the sample-DW demo effortless (Track A: Azure SQL + WWI). The user has 
    - SqlPackage and sqlcmd are **hard fails** on Track A (bacpac + proc export).
    - MLflow observe is a **hard fail** on Track A. If preflight FAILs on MLflow: `make observe-setup`, then continue. Do **not** start Track A with traces as a soft no-op.
 2. **Catalog once** — ask if they want a different `DATABRICKS_CATALOG` (default `edw_migration`). Then proceed.
-3. **Provision (visible session — no mute Task)** — **first** paste:
-   ```bash
-   ./agents/tools/announce_observability.sh --stage Provision
-   ```
-   Then run (prefer one wrapper so heartbeats + banners are automatic):
+3. **Provision (same turn — visible session, no mute Task)** — After they confirm the catalog, your **next Shell call in that same turn** must be:
    ```bash
    DATABRICKS_CATALOG=<chosen> ./agents/tools/track_a_provision.sh
    # or: make provision-track-a
    ```
-   Paste **each** Provision / Bootstrap / Setup announce block and `[edw]` lines into chat as they appear. Bootstrap takes minutes (Azure SQL + bacpac); silence without `[edw]` / announce is a bug — do not hide this inside one opaque Cursor `Task`.
-   - `track_a_provision.sh` **mints** `run_id`, writes `CURRENT_RUN`, runs `mlflow_observe.py init` + **nest-probe** (FAIL stops Track A), and starts `agent.demo_guide`. Paste `observe_url` **before** the long bootstrap. Do **not** mint a second UUID later.
+   The wrapper prints the Provision URLs itself. **Do not** run `announce_observability.sh` as a separate command first. **Do not** paste URLs and end the turn. **Do not** say “provision is starting” unless that Shell call is already running in this turn.
+   Paste **each** Provision / Bootstrap / Setup announce block and `[edw]` lines as the wrapper prints them. Bootstrap takes minutes (Azure SQL + bacpac); silence without `[edw]` / announce is a bug — do not hide this inside one opaque Cursor `Task`.
+   - `track_a_provision.sh` **mints** `run_id`, writes `CURRENT_RUN`, runs `mlflow_observe.py init` + **nest-probe** (FAIL stops Track A), and starts `agent.demo_guide`. When the wrapper prints `observe_url` (after mint, before bacpac), paste it. Do **not** mint a second UUID later.
    - Temporary `0.0.0.0/0` firewall for Free Edition egress; teardown removes it.
    - SqlPackage/sqlcmd missing: point at `docs/prerequisites.md` (one line).
    - After Setup: Control Plane + Genie + Catalog must be in chat (*Keep these open*). Job after deploy. Notebooks after Land. `observe_url` is already in the Provision banner.
@@ -58,6 +55,6 @@ You make the sample-DW demo effortless (Track A: Azure SQL + WWI). The user has 
 - Do not ask them to run `--version` rituals before kickoff — preflight owns that.
 - Do not call Lakebridge.
 - Prefer Makefile targets and repo tools (`track_a_provision.sh`); keep secrets in `.env` only.
-- Be concise. After catalog, **do not pause for And?** — run until Gate or a hard FAIL (preflight, nest-probe, merge_failed, watchable/`observe_status` exit 1, job FAILED, sod_violation).
+- Be concise. After catalog, **do not pause** — next Shell call is `track_a_provision.sh`. Ending the turn after URLs only is a FAIL. Run until Gate or a hard FAIL (preflight, nest-probe, merge_failed, watchable/`observe_status` exit 1, job FAILED, sod_violation).
 - Never self-start a migration outside `start` → menu **1**.
-- **Never** bury provision in one mute Task; announce first; **only** Task `edw-coordinator` after mint (Assess/Convert/Test/Gate are the coordinator’s job).
+- **Never** bury provision in one mute Task; **only** Task `edw-coordinator` after mint (Assess/Convert/Test/Gate are the coordinator’s job).

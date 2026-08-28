@@ -17,6 +17,9 @@ fi
 
 echo "[start_status] repo_root=${REPO_ROOT}"
 
+# Menu stop must not retrigger Track A setup from a leftover announce stamp.
+rm -f "${REPO_ROOT}/agents/out/.provision_required"
+
 if [ -f Makefile ] && [ -d .cursor/agents ] && [ -d agents/tools ]; then
   echo "[start_status] OK  workspace looks like edwmigration root"
 else

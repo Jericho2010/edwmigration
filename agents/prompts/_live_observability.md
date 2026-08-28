@@ -13,22 +13,20 @@ Shared by `edw-demo-guide`, `edw-coordinator`, and stage agents. Observability i
 | **Workspace notebooks** | `edwmigration_YYYYMMDD` gallery after Land (`publish_run_notebooks.py`) |
 | **Catalog / Job** | Explorer + medallion job URLs in the same banner |
 
-## Provision (before mint) — mandatory
+## Provision (after catalog) — mandatory
 
-**First action after menu 1 + catalog** (and before any long `make`):
-
-```bash
-./agents/tools/announce_observability.sh --stage Provision
-```
-
-Paste that output into chat immediately (*Keep these open during the run.*). Prefer the full Track A path:
+After menu **1** and catalog confirmation, the **first Shell call of that same turn** must be:
 
 ```bash
-./agents/tools/track_a_provision.sh
+DATABRICKS_CATALOG=<chosen> ./agents/tools/track_a_provision.sh
 # or: make provision-track-a
 ```
 
-That wrapper announces **Provision → Bootstrap → Setup**, runs materialize/bootstrap/setup, and prints `[edw]` heartbeats. **Paste each announce block** into the user-visible chat.
+The wrapper announces **Provision → Bootstrap → Setup**, mints the run, and prints `[edw]` heartbeats. Paste those blocks into chat as they appear (*Keep these open during the run.*).
+
+**Illegal:** run `announce_observability.sh --stage Provision` by itself, paste URLs, and end the turn. That is not setup. The wrapper already prints the URLs.
+
+**Illegal:** a user-facing “here are the URLs” / “provision is starting” message in the catalog-confirm turn unless `track_a_provision.sh` (or `make provision-track-a`) was **started in that same turn**.
 
 **Forbidden:** one opaque Cursor `Task` that owns materialize→bootstrap→setup with no intermediate paste. Mute Task handoffs look like “nothing is happening” and users interrupt. Run provision in the **parent/visible session**; use `edw-*` Tasks only from Assess onward (hooks).
 

@@ -36,6 +36,7 @@ observe-setup: ## Create .venv and install MLflow observe deps (requirements-obs
 test-planes: ## Plane-contract unit tests (no live Databricks)
 	python3 -m unittest discover -s agents/tools -p 'test_*.py' -v
 	python3 agents/tools/assert_edw_task_shape.py
+	./agents/tools/test_provision_guard.sh
 
 check-core:
 	@for t in $(TOOLS_CORE); do \

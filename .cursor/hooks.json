@@ -33,6 +33,19 @@
         "command": ".cursor/hooks/log_event.sh",
         "failClosed": false,
         "timeout": 15
+      },
+      {
+        "command": ".cursor/hooks/on_provision_guard.sh after-shell",
+        "failClosed": false,
+        "timeout": 15
+      }
+    ],
+    "stop": [
+      {
+        "command": ".cursor/hooks/on_provision_guard.sh stop",
+        "failClosed": false,
+        "timeout": 15,
+        "loop_limit": 2
       }
     ],
     "afterMCPExecution": [

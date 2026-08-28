@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # track_a_provision.sh — Track A materialize → bootstrap → setup with observability banners.
 # Run in the **visible parent chat session** (paste each announce block). Do NOT hide inside a mute Task.
+# After catalog: run THIS script as the next Shell call. Do not run announce_observability.sh first.
 #
 # Usage:
 #   ./agents/tools/track_a_provision.sh
