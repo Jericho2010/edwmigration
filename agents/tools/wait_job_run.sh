@@ -35,6 +35,19 @@ emit_job_handoff() {
     --from coordinator --to job --action run     --outcome "$oc" || true
 }
 
+record_job_success() {
+  local val="$1"
+  local rid
+  rid="$(edw_run_id)"
+  if [ -z "$rid" ] || [ "$rid" = "unknown" ]; then
+    return 0
+  fi
+  mkdir -p "${REPO_ROOT}/agents/out/${rid}"
+  printf '{"job_success": %s}\n' "$val" > "${REPO_ROOT}/agents/out/${rid}/job_success.json"
+  python3 "${REPO_ROOT}/agents/tools/mlflow_observe.py" metric \
+    --run-id "$rid" --key job_success --value "$val" || true
+}
+
 INTERVAL="${WAIT_JOB_HEARTBEAT_SEC:-60}"
 JOB_RUN_ID=""
 BUNDLE=0
@@ -123,10 +136,12 @@ print(runs[0].get("run_id","") if runs else "")
   trap - EXIT
   if [ "$RC" -ne 0 ]; then
     echo "[wait_job_run] bundle run FAILED exit=${RC}" >&2
+    record_job_success 0
     emit_job_handoff fail
     exit "$RC"
   fi
   echo "[wait_job_run] bundle run SUCCESS"
+  record_job_success 1
   emit_job_handoff ok
   exit 0
 fi
@@ -141,19 +156,23 @@ while true; do
         RES="$("$DBX" jobs get-run --run-id "$JOB_RUN_ID" -o json | python3 -c 'import json,sys; d=json.load(sys.stdin); print((d.get("state") or {}).get("result_state") or "")')"
         if [ "$RES" = "SUCCESS" ]; then
           echo "[wait_job_run] SUCCESS"
+          record_job_success 1
           emit_job_handoff ok
           exit 0
         fi
         echo "[wait_job_run] FAILED result=${RES}" >&2
+        record_job_success 0
         emit_job_handoff fail
         exit 1
       fi
       if [ -z "$ST" ]; then
         echo "[wait_job_run] could not read run state" >&2
+        record_job_success 0
         emit_job_handoff fail
         exit 1
       fi
       echo "[wait_job_run] ended state=${ST}" >&2
+      record_job_success 0
       emit_job_handoff fail
       exit 1
       ;;

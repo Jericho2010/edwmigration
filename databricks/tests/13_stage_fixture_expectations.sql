@@ -11,9 +11,6 @@ CREATE TABLE IF NOT EXISTS __UC_CATALOG__.ops.fixture_expectations (
   staged_at TIMESTAMP
 ) USING DELTA;
 
-ALTER TABLE __UC_CATALOG__.ops.fixture_expectations
-  ADD COLUMN IF NOT EXISTS staged_at TIMESTAMP;
-
 DELETE FROM __UC_CATALOG__.ops.fixture_expectations;
 
 SELECT * FROM __UC_CATALOG__.ops.fixture_expectations ORDER BY fixture_name;

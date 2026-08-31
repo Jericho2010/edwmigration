@@ -41,9 +41,188 @@ resources:
               path: ../_rendered/tests/13_stage_fixture_expectations.sql
             warehouse_id: ${var.warehouse_id}
 
-        - task_key: reconcile
+        - task_key: silver_20_migratestagedcitydata
           depends_on:
             - task_key: bronze_land
+          timeout_seconds: 1800
+          sql_task:
+            file:
+              path: ../_rendered/silver/20_migratestagedcitydata.sql
+            warehouse_id: ${var.warehouse_id}
+
+        - task_key: silver_21_migratestagedcustomerdata
+          depends_on:
+            - task_key: bronze_land
+          timeout_seconds: 1800
+          sql_task:
+            file:
+              path: ../_rendered/silver/21_migratestagedcustomerdata.sql
+            warehouse_id: ${var.warehouse_id}
+
+        - task_key: silver_22_migratestagedemployeedata
+          depends_on:
+            - task_key: bronze_land
+          timeout_seconds: 1800
+          sql_task:
+            file:
+              path: ../_rendered/silver/22_migratestagedemployeedata.sql
+            warehouse_id: ${var.warehouse_id}
+
+        - task_key: silver_25_migratestagedpaymentmethoddata
+          depends_on:
+            - task_key: bronze_land
+          timeout_seconds: 1800
+          sql_task:
+            file:
+              path: ../_rendered/silver/25_migratestagedpaymentmethoddata.sql
+            warehouse_id: ${var.warehouse_id}
+
+        - task_key: silver_29_migratestagedstockitemdata
+          depends_on:
+            - task_key: bronze_land
+          timeout_seconds: 1800
+          sql_task:
+            file:
+              path: ../_rendered/silver/29_migratestagedstockitemdata.sql
+            warehouse_id: ${var.warehouse_id}
+
+        - task_key: silver_24_migratestagedorderdata
+          depends_on:
+            - task_key: bronze_land
+            - task_key: silver_20_migratestagedcitydata
+            - task_key: silver_21_migratestagedcustomerdata
+            - task_key: silver_22_migratestagedemployeedata
+            - task_key: silver_25_migratestagedpaymentmethoddata
+            - task_key: silver_29_migratestagedstockitemdata
+          timeout_seconds: 1800
+          sql_task:
+            file:
+              path: ../_rendered/silver/24_migratestagedorderdata.sql
+            warehouse_id: ${var.warehouse_id}
+
+        - task_key: silver_27_migratestagedsaledata
+          depends_on:
+            - task_key: bronze_land
+            - task_key: silver_20_migratestagedcitydata
+            - task_key: silver_21_migratestagedcustomerdata
+            - task_key: silver_22_migratestagedemployeedata
+            - task_key: silver_25_migratestagedpaymentmethoddata
+            - task_key: silver_29_migratestagedstockitemdata
+          timeout_seconds: 1800
+          sql_task:
+            file:
+              path: ../_rendered/silver/27_migratestagedsaledata.sql
+            warehouse_id: ${var.warehouse_id}
+
+        - task_key: silver_28_migratestagedstockholdingdata
+          depends_on:
+            - task_key: bronze_land
+            - task_key: silver_20_migratestagedcitydata
+            - task_key: silver_21_migratestagedcustomerdata
+            - task_key: silver_22_migratestagedemployeedata
+            - task_key: silver_25_migratestagedpaymentmethoddata
+            - task_key: silver_29_migratestagedstockitemdata
+          timeout_seconds: 1800
+          sql_task:
+            file:
+              path: ../_rendered/silver/28_migratestagedstockholdingdata.sql
+            warehouse_id: ${var.warehouse_id}
+
+        - task_key: silver_30_migratestagedsupplierdata
+          depends_on:
+            - task_key: bronze_land
+            - task_key: silver_20_migratestagedcitydata
+            - task_key: silver_21_migratestagedcustomerdata
+            - task_key: silver_22_migratestagedemployeedata
+            - task_key: silver_25_migratestagedpaymentmethoddata
+            - task_key: silver_29_migratestagedstockitemdata
+          timeout_seconds: 1800
+          sql_task:
+            file:
+              path: ../_rendered/silver/30_migratestagedsupplierdata.sql
+            warehouse_id: ${var.warehouse_id}
+
+        - task_key: silver_32_migratestagedtransactiontypedata
+          depends_on:
+            - task_key: bronze_land
+            - task_key: silver_20_migratestagedcitydata
+            - task_key: silver_21_migratestagedcustomerdata
+            - task_key: silver_22_migratestagedemployeedata
+            - task_key: silver_25_migratestagedpaymentmethoddata
+            - task_key: silver_29_migratestagedstockitemdata
+          timeout_seconds: 1800
+          sql_task:
+            file:
+              path: ../_rendered/silver/32_migratestagedtransactiontypedata.sql
+            warehouse_id: ${var.warehouse_id}
+
+        - task_key: silver_23_migratestagedmovementdata
+          depends_on:
+            - task_key: bronze_land
+            - task_key: silver_21_migratestagedcustomerdata
+            - task_key: silver_24_migratestagedorderdata
+            - task_key: silver_27_migratestagedsaledata
+            - task_key: silver_28_migratestagedstockholdingdata
+            - task_key: silver_29_migratestagedstockitemdata
+            - task_key: silver_30_migratestagedsupplierdata
+            - task_key: silver_32_migratestagedtransactiontypedata
+          timeout_seconds: 1800
+          sql_task:
+            file:
+              path: ../_rendered/silver/23_migratestagedmovementdata.sql
+            warehouse_id: ${var.warehouse_id}
+
+        - task_key: silver_26_migratestagedpurchasedata
+          depends_on:
+            - task_key: bronze_land
+            - task_key: silver_24_migratestagedorderdata
+            - task_key: silver_27_migratestagedsaledata
+            - task_key: silver_28_migratestagedstockholdingdata
+            - task_key: silver_29_migratestagedstockitemdata
+            - task_key: silver_30_migratestagedsupplierdata
+            - task_key: silver_32_migratestagedtransactiontypedata
+          timeout_seconds: 1800
+          sql_task:
+            file:
+              path: ../_rendered/silver/26_migratestagedpurchasedata.sql
+            warehouse_id: ${var.warehouse_id}
+
+        - task_key: silver_31_migratestagedtransactiondata
+          depends_on:
+            - task_key: bronze_land
+            - task_key: silver_21_migratestagedcustomerdata
+            - task_key: silver_24_migratestagedorderdata
+            - task_key: silver_25_migratestagedpaymentmethoddata
+            - task_key: silver_27_migratestagedsaledata
+            - task_key: silver_28_migratestagedstockholdingdata
+            - task_key: silver_30_migratestagedsupplierdata
+            - task_key: silver_32_migratestagedtransactiontypedata
+          timeout_seconds: 1800
+          sql_task:
+            file:
+              path: ../_rendered/silver/31_migratestagedtransactiondata.sql
+            warehouse_id: ${var.warehouse_id}
+
+        - task_key: silver_33_populatedatedimensionforyear
+          depends_on:
+            - task_key: bronze_land
+            - task_key: silver_24_migratestagedorderdata
+            - task_key: silver_27_migratestagedsaledata
+            - task_key: silver_28_migratestagedstockholdingdata
+            - task_key: silver_30_migratestagedsupplierdata
+            - task_key: silver_32_migratestagedtransactiontypedata
+          timeout_seconds: 1800
+          sql_task:
+            file:
+              path: ../_rendered/silver/33_populatedatedimensionforyear.sql
+            warehouse_id: ${var.warehouse_id}
+
+        - task_key: reconcile
+          depends_on:
+            - task_key: silver_23_migratestagedmovementdata
+            - task_key: silver_26_migratestagedpurchasedata
+            - task_key: silver_31_migratestagedtransactiondata
+            - task_key: silver_33_populatedatedimensionforyear
           timeout_seconds: 900
           sql_task:
             file:

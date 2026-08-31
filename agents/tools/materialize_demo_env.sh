@@ -34,6 +34,12 @@ SQL_PASSWORD="${AZ_SQL_PASSWORD:-}"
 if [ -z "$SQL_PASSWORD" ]; then
   SQL_PASSWORD="Edw$(openssl rand -base64 18 | tr -dc 'A-Za-z0-9' | head -c 20)!"
 fi
+# Federation login (created by ensure_federation_login.sh) — not the SQL admin.
+FED_USER="${FEDERATION_SQL_USER:-edwfed}"
+FED_PASSWORD="${SOURCE_PASSWORD:-}"
+if [ -z "$FED_PASSWORD" ] || [ "$FED_PASSWORD" = "$SQL_PASSWORD" ]; then
+  FED_PASSWORD="Mig$(openssl rand -base64 18 | tr -dc 'A-Za-z0-9' | head -c 20)Aa1!"
+fi
 SQL_DB="${AZ_SQL_DB:-WideWorldImportersDW}"
 
 HOST="${DATABRICKS_HOST:-}"
@@ -89,8 +95,8 @@ SOURCE_TYPE=sqlserver
 SOURCE_HOST=${SQL_SERVER}.database.windows.net
 SOURCE_PORT=1433
 SOURCE_DATABASE=${SQL_DB}
-SOURCE_USER=${SQL_ADMIN}
-SOURCE_PASSWORD=${SQL_PASSWORD}
+SOURCE_USER=${FED_USER}
+SOURCE_PASSWORD=${FED_PASSWORD}
 AZ_SUBSCRIPTION_ID=${SUB}
 AZ_LOCATION=${LOC}
 AZ_RG=${RG}

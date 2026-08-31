@@ -79,6 +79,57 @@ def convertible_items(backlog: list[dict]) -> list[dict]:
     return items
 
 
+def full_run_summary_counts(backlog: list[dict]) -> dict[str, int]:
+    """Count every backlog row (including n/a helpers), not just the current wave."""
+    converted = 0
+    blocked = 0
+    for item in backlog:
+        st = (item.get("status") or "").lower()
+        if st == "converted":
+            converted += 1
+        elif st == "blocked":
+            blocked += 1
+    return {
+        "converted": converted,
+        "blocked": blocked,
+        "total": len(backlog),
+    }
+
+
+def details_for_all(
+    backlog: list[dict],
+    convert_dir: Path,
+    wave_details: list[dict],
+) -> list[dict]:
+    by_id = {str(d.get("item_id")): d for d in wave_details}
+    out: list[dict] = []
+    for item in backlog:
+        iid = str(item.get("item_id") or "")
+        if iid in by_id:
+            out.append(by_id[iid])
+            continue
+        result_path = convert_dir / f"{iid}.json"
+        entry: dict = {
+            "item_id": iid,
+            "legacy_proc": item.get("legacy_proc"),
+            "status": item.get("status"),
+            "target_path": item.get("target_path"),
+        }
+        if result_path.is_file():
+            try:
+                doc = json.loads(result_path.read_text())
+                entry["status"] = doc.get("status") or item.get("status")
+                entry["notes"] = doc.get("notes", "")
+                entry["target_path"] = doc.get("target_path") or item.get("target_path")
+                entry["patterns_used"] = doc.get("patterns_used", [])
+            except (OSError, json.JSONDecodeError):
+                entry["notes"] = "unreadable convert result"
+        else:
+            entry["notes"] = "prior status (no convert json in this wave)"
+        out.append(entry)
+    return out
+
+
 def run_ops_sql(sql: str) -> None:
     cmd = [str(ROOT / "agents" / "tools" / "run_sql.sh"), "--sql", sql]
     proc = subprocess.run(cmd, cwd=str(ROOT), capture_output=True, text=True, check=False)
@@ -320,12 +371,22 @@ def merge(run_id: str, skip_ops: bool = False) -> dict:
         )
         details.append(entry)
 
+    wave_converted, wave_blocked, wave_missing = converted, blocked, missing
+    counts = full_run_summary_counts(backlog)
+    converted = counts["converted"]
+    blocked = counts["blocked"]
+    details = details_for_all(backlog, convert_dir, details)
+    if wave_ids is not None:
+        missing = 0
+    else:
+        missing = wave_missing
+
     summary = {
         "run_id": run_id,
         "converted": converted,
         "blocked": blocked,
         "missing_results": missing,
-        "total": len(work_items),
+        "total": counts["total"],
         "merged_at": datetime.now(timezone.utc).isoformat(),
         "items": details,
     }
@@ -366,9 +427,16 @@ def merge(run_id: str, skip_ops: bool = False) -> dict:
     sys.path.insert(0, str(ROOT / "agents" / "tools"))
     from edw_handoff import emit_handoff_quiet
 
-    if missing:
+    if wave_ids is not None:
+        if wave_missing:
+            oc = "fail"
+        elif wave_blocked:
+            oc = "blocked"
+        else:
+            oc = "ok"
+    elif missing:
         oc = "fail"
-    elif blocked:
+    elif wave_blocked:
         oc = "blocked"
     else:
         oc = "ok"
@@ -385,7 +453,8 @@ def merge(run_id: str, skip_ops: bool = False) -> dict:
 
     print(
         f"[merge_convert_results] run_id={run_id} converted={converted} "
-        f"blocked={blocked} missing={missing} total={len(work_items)} "
+        f"blocked={blocked} missing={missing} total={counts['total']} "
+        f"wave_converted={wave_converted} wave_blocked={wave_blocked} "
         f"summary={summary_path}"
     )
     return summary

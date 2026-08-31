@@ -108,6 +108,10 @@ def mlflow_available() -> bool:
 # ---------------------------------------------------------------------------
 
 
+SPAN_TYPE_ATTR = "mlflow.spanType"
+TRACE_SESSION_TAG = "mlflow.trace.session"
+
+
 class MemoryBackend:
     """In-process fake backend for tests (EDW_MLFLOW_BACKEND=memory)."""
 
@@ -115,6 +119,7 @@ class MemoryBackend:
         self.metrics: list[tuple[str, float, int | None]] = []
         self.ended_runs: list[str] = []
         self.deleted_runs: list[str] = []
+        self.artifacts: list[tuple[str, str, str]] = []
         self.runs: list[dict[str, Any]] = []
         self._spans: dict[str, dict[str, Any]] = {}
         self.experiment_id = "mem-exp-1"
@@ -173,10 +178,21 @@ class MemoryBackend:
         run_id: str,
         attributes: dict[str, Any] | None = None,
         inputs: Any = None,
+        tags: dict[str, str] | None = None,
     ) -> tuple[str, str]:
         tid = f"tr-mem-{uuid.uuid4().hex[:16]}"
         sid = uuid.uuid4().hex[:16]
-        self._spans[sid] = {"trace_id": tid, "name": name, "parent": None}
+        attrs = dict(attributes or {})
+        attrs.setdefault(SPAN_TYPE_ATTR, span_type)
+        self._spans[sid] = {
+            "trace_id": tid,
+            "name": name,
+            "parent": None,
+            "span_type": span_type,
+            "attributes": attrs,
+            "tags": dict(tags or {}),
+            "run_id": run_id,
+        }
         return tid, sid
 
     def start_span(
@@ -191,7 +207,15 @@ class MemoryBackend:
         if parent_id and parent_id not in self._spans:
             raise RuntimeError(f"Parent span with ID '{parent_id}' not found.")
         sid = uuid.uuid4().hex[:16]
-        self._spans[sid] = {"trace_id": trace_id, "name": name, "parent": parent_id}
+        attrs = dict(attributes or {})
+        attrs.setdefault(SPAN_TYPE_ATTR, span_type)
+        self._spans[sid] = {
+            "trace_id": trace_id,
+            "name": name,
+            "parent": parent_id,
+            "span_type": span_type,
+            "attributes": attrs,
+        }
         return sid
 
     def end_span(
@@ -204,6 +228,7 @@ class MemoryBackend:
         self._spans[span_id] = {
             **(self._spans.get(span_id) or {}),
             "ended": True,
+            "ended_at": time.time(),
             "status": status,
             "outputs": outputs,
         }
@@ -218,6 +243,9 @@ class MemoryBackend:
 
     def log_metric(self, run_id: str, key: str, value: float, step: int | None = None) -> None:
         self.metrics.append((key, float(value), step))
+
+    def log_artifact(self, run_id: str, local_path: str, artifact_path: str = "edw") -> None:
+        self.artifacts.append((run_id, local_path, artifact_path))
 
     def set_terminated(self, run_id: str, status: str = "FINISHED") -> None:
         self.ended_runs.append(run_id)
@@ -284,16 +312,26 @@ class MlflowBackend:
         run_id: str,
         attributes: dict[str, Any] | None = None,
         inputs: Any = None,
+        tags: dict[str, str] | None = None,
     ) -> tuple[str, str]:
         st = _span_type(span_type)
-        root = self.client.start_trace(
-            name=name,
-            span_type=st,
-            experiment_id=experiment_id,
-            run_id=run_id,
-            attributes={k: str(v) for k, v in (attributes or {}).items()},
-            inputs=inputs,
-        )
+        attrs = {k: str(v) for k, v in (attributes or {}).items()}
+        attrs.setdefault(SPAN_TYPE_ATTR, str(st))
+        kwargs: dict[str, Any] = {
+            "name": name,
+            "span_type": st,
+            "experiment_id": experiment_id,
+            "run_id": run_id,
+            "attributes": attrs,
+            "inputs": inputs,
+        }
+        if tags:
+            kwargs["tags"] = tags
+        try:
+            root = self.client.start_trace(**kwargs)
+        except TypeError:
+            kwargs.pop("tags", None)
+            root = self.client.start_trace(**kwargs)
         self._live[root.span_id] = root
         return root.trace_id, root.span_id
 
@@ -309,13 +347,15 @@ class MlflowBackend:
         if parent_id and parent_id not in self._live:
             raise RuntimeError(f"Parent span with ID '{parent_id}' not found.")
         st = _span_type(span_type)
+        attrs = dict(attributes or {})
+        attrs.setdefault(SPAN_TYPE_ATTR, str(st))
         span = self.client.start_span(
             name=name,
             trace_id=trace_id,
             parent_id=parent_id,
             span_type=st,
             inputs=inputs,
-            attributes=attributes or {},
+            attributes=attrs,
         )
         self._live[span.span_id] = span
         return span.span_id
@@ -348,6 +388,9 @@ class MlflowBackend:
             self.client.log_metric(run_id, key, float(value))
         else:
             self.client.log_metric(run_id, key, float(value), step=step)
+
+    def log_artifact(self, run_id: str, local_path: str, artifact_path: str = "edw") -> None:
+        self.client.log_artifact(run_id, local_path, artifact_path)
 
     def get_experiment_by_name(self, name: str) -> str | None:
         try:
@@ -501,7 +544,7 @@ def _run_status_of(run_obj: Any) -> str:
     return str(getattr(run_obj, "status", "") or "")
 
 
-def _terminate_quietly(backend: Any, mlflow_run_id: str, status: str = "KILLED") -> None:
+def _terminate_quietly(backend: Any, mlflow_run_id: str, status: str = "FINISHED") -> None:
     if not mlflow_run_id:
         return
     try:
@@ -513,6 +556,59 @@ def _terminate_quietly(backend: Any, mlflow_run_id: str, status: str = "KILLED")
             pass
     except Exception:
         pass
+
+
+def _normalize_span_status(status: str) -> str:
+    s = str(status or "OK").upper()
+    if s in ("ERROR", "FAILED", "FAIL"):
+        return "ERROR"
+    return "OK"
+
+
+def process_owns_root(backend: Any, root_span_id: str) -> bool:
+    """True when this process holds the live root span (same serve)."""
+    if not backend or not root_span_id:
+        return False
+    live = getattr(backend, "_live", None)
+    if isinstance(live, dict) and root_span_id in live:
+        return True
+    spans = getattr(backend, "_spans", None)
+    if isinstance(spans, dict) and root_span_id in spans:
+        return True
+    return False
+
+
+def _need_new_chapter(run_id: str, root: Path | None, force: bool) -> bool:
+    existing = ctx.load_context(run_id, root)
+    backend = get_backend()
+    if existing and existing.get("enabled") and process_owns_root(
+        backend, str(existing.get("root_span_id") or "")
+    ):
+        return False
+    if force:
+        return True
+    if not existing or not existing.get("enabled") or not existing.get("trace_id"):
+        return False
+    return True
+
+
+def _close_open_spans(
+    backend: Any,
+    ctx_data: dict[str, Any],
+    status: str = "OK",
+) -> list[str]:
+    """End every open span before end_trace. Returns last_error strings."""
+    errors: list[str] = []
+    trace_id = str(ctx_data.get("trace_id") or "")
+    if not backend or not trace_id:
+        return errors
+    status = _normalize_span_status(status)
+    for key, span_id in list((ctx_data.get("open_spans") or {}).items()):
+        try:
+            backend.end_span(trace_id, str(span_id), status=status)
+        except Exception as exc:
+            errors.append(f"{key}:{truncate_io(exc, 200)}")
+    return errors
 
 
 # ---------------------------------------------------------------------------
@@ -750,18 +846,19 @@ def drain_queue(run_id: str, root: Path | None = None) -> str | None:
 def serve_loop(
     run_id: str,
     root: Path | None = None,
-    force: bool = True,
+    force: bool = False,
     once: bool = False,
     idle_timeout: float | None = None,
     poll_interval: float = 0.2,
 ) -> dict[str, Any]:
     """Own the MLflow trace for this run_id and apply queued span records.
 
-    Always force-init: InMemoryTraceManager is per-process, so a respawned
-    daemon cannot attach to a previous process's root span.
+    Same process (root span still in _live/_spans): reuse the existing tree.
+    New process cannot attach to a prior InMemoryTraceManager root — open a
+    session chapter (FINISHED previous run, new trace, same edw_run_id).
     """
     root = root or ROOT
-    data = init_run(run_id, root=root, force=True)
+    data = init_run(run_id, root=root, force=_need_new_chapter(run_id, root, force))
     idle = 0.0
     while True:
         result = drain_queue(run_id, root)
@@ -807,7 +904,11 @@ def init_run(run_id: str, root: Path | None = None, force: bool = False) -> dict
     try:
         exp_name = ctx.DEFAULT_EXPERIMENT
         experiment_id = backend.get_or_create_experiment(exp_name)
-        # Kill any leftover RUNNING runs tagged with this edw_run_id.
+        if force and existing:
+            close_errs = _close_open_spans(backend, existing, status="OK")
+            if close_errs:
+                existing["last_error"] = "; ".join(close_errs)
+        # Finish leftover RUNNING runs for this EDW id (chapters, not kills).
         try:
             for run_obj in backend.search_runs(
                 experiment_id, filter_string=f"tags.edw_run_id = '{run_id}'"
@@ -815,11 +916,11 @@ def init_run(run_id: str, root: Path | None = None, force: bool = False) -> dict
                 rid = _run_id_of(run_obj)
                 status = _run_status_of(run_obj).upper()
                 if rid and status in ("", "RUNNING"):
-                    _terminate_quietly(backend, rid, "KILLED")
+                    _terminate_quietly(backend, rid, "FINISHED")
         except Exception:
             pass
         if force and existing and existing.get("mlflow_run_id"):
-            _terminate_quietly(backend, str(existing["mlflow_run_id"]), "KILLED")
+            _terminate_quietly(backend, str(existing["mlflow_run_id"]), "FINISHED")
 
         mlflow_run_id = backend.create_run(
             experiment_id,
@@ -831,8 +932,9 @@ def init_run(run_id: str, root: Path | None = None, force: bool = False) -> dict
             span_type="CHAIN",
             experiment_id=experiment_id,
             run_id=mlflow_run_id,
-            attributes={"edw.run_id": run_id},
+            attributes={"edw.run_id": run_id, SPAN_TYPE_ATTR: "CHAIN"},
             inputs={"run_id": run_id},
+            tags={TRACE_SESSION_TAG: run_id},
         )
         host = (os.environ.get("DATABRICKS_HOST") or "").rstrip("/")
         observe_url = ctx.build_observe_url(host, experiment_id, trace_id)
@@ -849,6 +951,13 @@ def init_run(run_id: str, root: Path | None = None, force: bool = False) -> dict
             "updated_at": ctx.empty_context(run_id)["updated_at"],
         }
         ctx.save_context(run_id, data, root)
+        if force:
+            for key, value in replay_run_rollup(run_id, root).items():
+                try:
+                    backend.log_metric(mlflow_run_id, key, float(value))
+                except Exception:
+                    pass
+            log_run_artifacts(run_id, mlflow_run_id, root)
         return data
     except Exception as exc:
         data = ctx.empty_context(run_id)
@@ -919,6 +1028,7 @@ def span_start(
         attrs = dict(attributes or {})
         attrs.setdefault("edw.run_id", run_id)
         attrs.setdefault("edw.span_key", key)
+        attrs.setdefault(SPAN_TYPE_ATTR, span_type)
         detail = ""
         if isinstance(inputs, dict):
             detail = str(inputs.get("detail") or "")
@@ -1002,6 +1112,8 @@ def span_end(
         else:
             status = "OK"
 
+    status = _normalize_span_status(status)
+    end_err = ""
     try:
         backend.end_span(
             trace_id=c["trace_id"],
@@ -1009,13 +1121,17 @@ def span_end(
             outputs=truncate_io(outputs) if outputs is not None else None,
             status=status,
         )
-    except Exception:
-        pass
+    except Exception as exc:
+        end_err = truncate_io(exc, 500)
 
     def mut(data: dict[str, Any]) -> None:
         opens = dict(data.get("open_spans") or {})
         opens.pop(key, None)
         data["open_spans"] = opens
+        if end_err:
+            data["last_error"] = end_err
+        else:
+            data.pop("last_error", None)
 
     return ctx.update_context(run_id, mut, root)
 
@@ -1053,7 +1169,12 @@ def stage(
                 "tool": truncate_io(tool, 200),
                 "detail": truncate_io(detail, 1000),
             },
-            attributes={"edw.run_id": run_id, "edw.agent": agent, "edw.event": event},
+            attributes={
+                "edw.run_id": run_id,
+                "edw.agent": agent,
+                "edw.event": event,
+                SPAN_TYPE_ATTR: "CHAIN",
+            },
         )
         backend.end_span(
             trace_id=ctx_data["trace_id"],
@@ -1112,6 +1233,98 @@ def log_metric_value(
     return c
 
 
+def replay_run_rollup(run_id: str, root: Path | None = None) -> dict[str, float]:
+    """Read local artifacts and return roll-up metrics for the current chapter."""
+    root = root or ROOT
+    rundir = ctx.run_dir(run_id, root)
+    metrics: dict[str, float] = {}
+    man_path = rundir / "migration_manifest.json"
+    if man_path.is_file():
+        try:
+            doc = json.loads(man_path.read_text(encoding="utf-8"))
+            summary = doc.get("summary") or {}
+            tables_total = float(summary.get("tables_total") or 0)
+            tables_landed = float(summary.get("tables_landed") or 0)
+            procs_total = float(summary.get("procs_total") or 0)
+            procs_converted = float(summary.get("procs_converted") or 0)
+            metrics["tables_total"] = tables_total
+            metrics["tables_landed"] = tables_landed
+            metrics["procs_total"] = procs_total
+            metrics["procs_converted"] = procs_converted
+            blocked = summary.get("procs_blocked")
+            if blocked is None:
+                blocked = max(0.0, procs_total - procs_converted)
+            metrics["procs_blocked"] = float(blocked)
+            if summary.get("reconcile_passed") is not None:
+                metrics["reconcile_passed"] = float(summary.get("reconcile_passed") or 0)
+            if summary.get("reconcile_failed") is not None:
+                metrics["reconcile_failed"] = float(summary.get("reconcile_failed") or 0)
+            gate = str(doc.get("gate") or "")
+            try:
+                from edw_vocab import gate_pass_value
+
+                metrics["gate_pass"] = float(gate_pass_value(gate))
+            except Exception:
+                metrics["gate_pass"] = 1.0 if gate.lower() in ("pass", "ship") else 0.0
+        except (OSError, json.JSONDecodeError, TypeError, ValueError):
+            pass
+    rec_path = rundir / "reconcile_report.json"
+    if rec_path.is_file() and "reconcile_passed" not in metrics:
+        try:
+            rec = json.loads(rec_path.read_text(encoding="utf-8"))
+            summary = rec.get("summary") or {}
+            metrics["reconcile_passed"] = float(summary.get("passed") or 0)
+            metrics["reconcile_failed"] = float(summary.get("failed") or 0)
+        except (OSError, json.JSONDecodeError, TypeError, ValueError):
+            pass
+    backlog_path = rundir / "migration_backlog.json"
+    if backlog_path.is_file() and "procs_blocked" not in metrics:
+        try:
+            backlog = json.loads(backlog_path.read_text(encoding="utf-8"))
+            if isinstance(backlog, list):
+                converted = 0
+                blocked = 0
+                for item in backlog:
+                    st = str(item.get("status") or "").lower()
+                    if st == "converted":
+                        converted += 1
+                    elif st == "blocked":
+                        blocked += 1
+                metrics.setdefault("procs_converted", float(converted))
+                metrics.setdefault("procs_blocked", float(blocked))
+                metrics.setdefault("procs_total", float(converted + blocked))
+        except (OSError, json.JSONDecodeError, TypeError, ValueError):
+            pass
+    job_path = rundir / "job_success.json"
+    if job_path.is_file():
+        try:
+            job = json.loads(job_path.read_text(encoding="utf-8"))
+            metrics["job_success"] = float(job.get("job_success") or 0)
+        except (OSError, json.JSONDecodeError, TypeError, ValueError):
+            pass
+    return metrics
+
+
+def log_run_artifacts(run_id: str, mlflow_run_id: str, root: Path | None = None) -> None:
+    root = root or ROOT
+    backend = get_backend()
+    if backend is None or not hasattr(backend, "log_artifact") or not mlflow_run_id:
+        return
+    rundir = ctx.run_dir(run_id, root)
+    for name in (
+        "migration_manifest.json",
+        "migration_backlog.json",
+        "reconcile_report.json",
+    ):
+        path = rundir / name
+        if not path.is_file():
+            continue
+        try:
+            backend.log_artifact(mlflow_run_id, str(path), "edw")
+        except Exception:
+            pass
+
+
 def end_run(
     run_id: str,
     outputs: Any = None,
@@ -1126,18 +1339,19 @@ def end_run(
     if backend is None:
         return c
 
+    close_errs: list[str] = []
     try:
-        # Close any dangling open spans
-        for key, span_id in list((c.get("open_spans") or {}).items()):
-            try:
-                backend.end_span(c["trace_id"], span_id, status="OK")
-            except Exception:
-                pass
+        close_errs = _close_open_spans(backend, c, status="OK")
+        c["open_spans"] = {}
+        rollup = replay_run_rollup(run_id, root)
         if gate_pass is not None:
+            rollup["gate_pass"] = float(gate_pass)
+        for key, value in rollup.items():
             try:
-                backend.log_metric(c["mlflow_run_id"], "gate_pass", float(gate_pass))
+                backend.log_metric(c["mlflow_run_id"], key, float(value))
             except Exception:
                 pass
+        log_run_artifacts(run_id, str(c.get("mlflow_run_id") or ""), root)
         try:
             backend.end_trace(
                 c["trace_id"],
@@ -1164,6 +1378,8 @@ def end_run(
     def mut(data: dict[str, Any]) -> None:
         data["open_spans"] = {}
         data["ended"] = True
+        if close_errs:
+            data["last_error"] = "; ".join(close_errs)
 
     return ctx.update_context(run_id, mut, root)
 

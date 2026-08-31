@@ -26,6 +26,10 @@ Foreign catalogs are **read-only**. Window functions and many complex joins are 
 2. Convert **reads bronze Delta**, not the federated source, for windows/joins/MERGE.
 3. Prefer inventory `landing_name` when mapping source tables → bronze.
 
+## Shared bookkeeping tables
+
+Do **not** `CREATE` / `CREATE OR REPLACE` `__UC_CATALOG__.silver.integration_lineage` or `__UC_CATALOG__.silver.integration_etl_cutoff` in migrate SQL. Those tables are shared; parallel job tasks race (`TABLE_OR_VIEW_ALREADY_EXISTS`) even with `OR REPLACE`. Read `bronze.integration_lineage` / `bronze.integration_etl_cutoff` for keys and cutoffs. At most one convert file in the repo may create those silver snapshots.
+
 ## Patterns
 
 | Pattern | SQL |

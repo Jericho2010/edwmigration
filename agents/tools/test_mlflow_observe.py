@@ -85,6 +85,10 @@ class ObserveMemoryTests(unittest.TestCase):
             self.assertTrue(data["trace_id"])
             self.assertTrue(data["root_span_id"])
             self.assertIn("ml/experiments", data["observe_url"])
+            backend0 = mobs.get_backend()
+            assert isinstance(backend0, mobs.MemoryBackend)
+            root_rec = backend0._spans[data["root_span_id"]]
+            self.assertEqual((root_rec.get("tags") or {}).get("mlflow.trace.session"), run_id)
 
             c2 = mobs.span_start(
                 run_id,
@@ -306,7 +310,7 @@ class ObserveMemoryTests(unittest.TestCase):
                 mobs.serve_loop(run_id, root=root, once=True)
                 c = mctx.load_context(run_id, root=root)
                 assert c is not None
-                self.assertNotEqual(c.get("mlflow_run_id"), first_id)
+                self.assertEqual(c.get("mlflow_run_id"), first_id)
                 self.assertNotIn("subagent:convert-1", c.get("open_spans") or {})
                 consumed = root / "agents" / "out" / run_id / "spans.consumed.jsonl"
                 self.assertTrue(consumed.is_file())
@@ -314,6 +318,105 @@ class ObserveMemoryTests(unittest.TestCase):
                 backend = mobs.get_backend()
                 assert isinstance(backend, mobs.MemoryBackend)
                 self.assertTrue(any(k == "tables_landed" and v == 12.0 for k, v, _ in backend.metrics))
+
+    def test_serve_loop_new_process_opens_finished_chapter(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            run_id = "serve-chapter-1"
+            (root / "agents" / "out" / run_id).mkdir(parents=True)
+            first = mobs.init_run(run_id, root=root)
+            first_id = first["mlflow_run_id"]
+            first_root = first["root_span_id"]
+            backend = mobs.get_backend()
+            assert isinstance(backend, mobs.MemoryBackend)
+            backend._spans.pop(first_root, None)
+            with mock.patch.object(mobs, "ROOT", root), mock.patch.object(mctx, "ROOT", root):
+                mobs.serve_loop(run_id, root=root, once=True)
+            c = mctx.load_context(run_id, root=root)
+            assert c is not None
+            self.assertNotEqual(c.get("mlflow_run_id"), first_id)
+            finished = [r for r in backend.runs if r["id"] == first_id]
+            self.assertEqual(finished[0]["status"], "FINISHED")
+            self.assertNotEqual(finished[0]["status"], "KILLED")
+
+    def test_span_end_records_ok_and_type(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            run_id = "span-close-1"
+            (root / "agents" / "out" / run_id).mkdir(parents=True)
+            mobs.init_run(run_id, root=root)
+            c = mobs.span_start(
+                run_id, key="subagent:gate", name="agent.gate", kind="agent", root=root
+            )
+            sid = c["open_spans"]["subagent:gate"]
+            mobs.span_end(run_id, key="subagent:gate", status="OK", root=root)
+            backend = mobs.get_backend()
+            assert isinstance(backend, mobs.MemoryBackend)
+            rec = backend._spans[sid]
+            self.assertTrue(rec.get("ended"))
+            self.assertIsNotNone(rec.get("ended_at"))
+            self.assertEqual(rec.get("status"), "OK")
+            self.assertEqual(rec.get("span_type"), "AGENT")
+            self.assertEqual((rec.get("attributes") or {}).get("mlflow.spanType"), "AGENT")
+            after = mctx.load_context(run_id, root=root)
+            assert after is not None
+            self.assertNotIn("subagent:gate", after.get("open_spans") or {})
+
+    def test_span_end_writes_last_error(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            run_id = "span-err-1"
+            (root / "agents" / "out" / run_id).mkdir(parents=True)
+            mobs.init_run(run_id, root=root)
+            mobs.span_start(
+                run_id, key="subagent:gate", name="agent.gate", kind="agent", root=root
+            )
+            backend = mobs.get_backend()
+            assert isinstance(backend, mobs.MemoryBackend)
+            with mock.patch.object(backend, "end_span", side_effect=RuntimeError("end failed")):
+                mobs.span_end(run_id, key="subagent:gate", status="OK", root=root)
+            after = mctx.load_context(run_id, root=root)
+            assert after is not None
+            self.assertIn("end failed", after.get("last_error") or "")
+
+    def test_end_run_closes_open_spans_before_trace(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            run_id = "end-close-1"
+            (root / "agents" / "out" / run_id).mkdir(parents=True)
+            (root / "agents" / "out" / run_id / "migration_manifest.json").write_text(
+                json.dumps(
+                    {
+                        "run_id": "00000000-0000-0000-0000-000000000001",
+                        "gate": "pass",
+                        "blockers": [],
+                        "converted_artifacts": [],
+                        "attempt": 0,
+                        "summary": {
+                            "tables_total": 29,
+                            "tables_landed": 29,
+                            "procs_total": 22,
+                            "procs_converted": 14,
+                            "reconcile_passed": 29,
+                            "reconcile_failed": 0,
+                        },
+                    }
+                )
+            )
+            mobs.init_run(run_id, root=root)
+            started = mobs.span_start(
+                run_id, key="subagent:test", name="agent.test", kind="agent", root=root
+            )
+            sid = started["open_spans"]["subagent:test"]
+            mobs.end_run(run_id, root=root)
+            backend = mobs.get_backend()
+            assert isinstance(backend, mobs.MemoryBackend)
+            self.assertTrue(backend._spans[sid].get("ended"))
+            self.assertEqual(backend._spans[sid].get("status"), "OK")
+            self.assertTrue(
+                any(k == "procs_blocked" and v == 8.0 for k, v, _ in backend.metrics)
+            )
+            self.assertTrue(backend.artifacts)
 
     def test_force_init_terminates_previous(self) -> None:
         with tempfile.TemporaryDirectory() as td:
@@ -327,6 +430,9 @@ class ObserveMemoryTests(unittest.TestCase):
             backend = mobs.get_backend()
             assert isinstance(backend, mobs.MemoryBackend)
             self.assertIn(first, backend.ended_runs)
+            finished = [r for r in backend.runs if r["id"] == first]
+            self.assertEqual(finished[0]["status"], "FINISHED")
+            self.assertNotEqual(finished[0]["status"], "KILLED")
             live = [r for r in backend.runs if r["status"] == "RUNNING"]
             self.assertEqual(len(live), 1)
 
@@ -447,9 +553,11 @@ class _LiveCheckingBackend:
         self.runs.append({"id": rid, "tags": dict(tags)})
         return rid
 
-    def start_trace(self, name, span_type, experiment_id, run_id, attributes=None, inputs=None):
+    def start_trace(
+        self, name, span_type, experiment_id, run_id, attributes=None, inputs=None, tags=None
+    ):
         sid = "root-live-1"
-        self._live[sid] = {"name": name}
+        self._live[sid] = {"name": name, "tags": dict(tags or {})}
         return "tr-live-1", sid
 
     def start_span(self, name, trace_id, parent_id, span_type, inputs=None, attributes=None):

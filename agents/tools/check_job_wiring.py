@@ -136,6 +136,17 @@ def backlog_targets(backlog: list[dict]) -> list[str]:
     return paths
 
 
+# Incidental ETL bookkeeping — every migrate reads/writes these, which would
+# form a complete-graph cycle if used as DAG edges.
+BOOKKEEPING_TOKENS = {
+    "integration_lineage",
+    "integration_etl_cutoff",
+    "lineage",
+    "etl_cutoff",
+    "etlcutoff",
+}
+
+
 def table_tokens(raw: str) -> set[str]:
     """Normalize Assess reads/writes into comparable landing-name tokens."""
     out: set[str] = set()
@@ -153,7 +164,7 @@ def table_tokens(raw: str) -> set[str]:
             out.add(_clean(f"{schema}_{name}"))
         else:
             out.add(_clean(bits[0]))
-    return {t for t in out if t}
+    return {t for t in out if t and t not in BOOKKEEPING_TOKENS}
 
 
 def _task_blocks(job_text: str) -> list[tuple[str, str, int, int]]:

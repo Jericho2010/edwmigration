@@ -12,9 +12,6 @@ CREATE TABLE IF NOT EXISTS __UC_CATALOG__.ops.load_control (
 )
 COMMENT 'Per-table load audit for bronze landings';
 
-ALTER TABLE __UC_CATALOG__.ops.load_control
-  ADD COLUMN IF NOT EXISTS run_id STRING;
-
 CREATE TABLE IF NOT EXISTS __UC_CATALOG__.ops.migration_inventory (
   run_id            STRING,
   object_type       STRING       NOT NULL,  -- 'table' | 'proc'
@@ -39,12 +36,12 @@ CREATE TABLE IF NOT EXISTS __UC_CATALOG__.ops.migration_backlog (
   risk_flags      STRING,
   status          STRING       NOT NULL,
   updated_at      TIMESTAMP    NOT NULL,
-  run_id          STRING
+  run_id          STRING       NOT NULL
 )
 COMMENT 'Assess backlog of procs to convert';
 
 ALTER TABLE __UC_CATALOG__.ops.migration_backlog
-  ADD COLUMN IF NOT EXISTS run_id STRING;
+  ALTER COLUMN run_id SET NOT NULL;
 ALTER TABLE __UC_CATALOG__.ops.migration_backlog
   DROP CONSTRAINT IF EXISTS migration_backlog_pk;
 ALTER TABLE __UC_CATALOG__.ops.migration_backlog
@@ -58,9 +55,6 @@ CREATE TABLE IF NOT EXISTS __UC_CATALOG__.ops.proc_conversion_map (
   run_id          STRING
 )
 COMMENT 'Convert agent record of converted procs';
-
-ALTER TABLE __UC_CATALOG__.ops.proc_conversion_map
-  ADD COLUMN IF NOT EXISTS run_id STRING;
 
 CREATE TABLE IF NOT EXISTS __UC_CATALOG__.ops.reconcile_results (
   check_id        STRING       NOT NULL,
@@ -84,9 +78,6 @@ CREATE TABLE IF NOT EXISTS __UC_CATALOG__.ops.fixture_expectations (
   staged_at       TIMESTAMP
 )
 COMMENT 'Optional demo-pack fixture expectations';
-
-ALTER TABLE __UC_CATALOG__.ops.fixture_expectations
-  ADD COLUMN IF NOT EXISTS staged_at TIMESTAMP;
 
 CREATE TABLE IF NOT EXISTS __UC_CATALOG__.ops.migration_manifest_current (
   run_id          STRING       NOT NULL,

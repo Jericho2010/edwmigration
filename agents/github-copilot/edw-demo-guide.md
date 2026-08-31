@@ -42,10 +42,11 @@ You make the sample-DW demo effortless (Track A: Azure SQL + WWI). The user has 
    - `CURRENT_RUN` exists and **no** manifest → **resume**; coordinator adopts; do not mint a second UUID.
    - `CREATE CONNECTION` denied: ask workspace admin to grant `CREATE CONNECTION` + `CREATE CATALOG` (or run as admin).
    - Cold Azure SQL / federation timeout: wait for DB to wake (AutoPause), retry federation smoke once. If still failing: point at **`docs/firewall.md`**.
-5. **Hand off to coordinator only** — after mint + nest-probe, launch **one** Cursor Task `subagent_type: edw-coordinator`. Do **not** launch `edw-assess` / `edw-convert` / `edw-test` / `edw-gate` from this agent. The coordinator adopts `CURRENT_RUN` and runs Discover…Gate without pausing for “And?”.
-   - After each stage the coordinator pastes `observe_status`. You paste those blocks into chat if you are still the parent.
-   - Gate Hero empty until Gate — expected; Tables/Procs heroes move at Land/Convert; **Handoffs** table shows `from → to`.
-   - Do not `--force` MLflow re-init to “fix” an empty tree. Nest-probe already ran.
+5. **Hand off Discover/Land to coordinator** — after mint + nest-probe, launch **one** Cursor Task `subagent_type: edw-coordinator` for Discover, Land, persist helpers, and job wiring. That Task must **not** nest `edw-assess` / `edw-convert` / `edw-test` / `edw-gate` (Cursor on this host omits `subagentStart` for nested Tasks).
+   - **Parent (this visible session)** launches those stage Tasks: first `./agents/tools/record_subagent_hook.sh --agent <assess|convert|test|gate> --event start` (convert: also `--item-id`), then the typed Task in the **same turn**.
+   - After each stage paste `observe_status`.
+   - Gate Hero empty until Gate — expected. **Inventory** moves at Land; **Tables Landed** moves at Job (`ops.load_control` `row_count > 0`); Procs / Backlog move at Convert; **Handoffs** table shows `from → to`.
+   - Do not `--force` MLflow re-init to “fix” an empty tree. Nest-probe already ran. Paste only the `/Shared/edw-migration` `observe_url` from `mlflow_context.json` (not Experiments → workspace `edw-migration` list).
 6. **Demo acceptance** — after Gate pass, confirm summary counts `tables_landed >= 10` and `procs_converted >= 5` (counts only; not Gate rules). Run `./agents/tools/observe_status.sh --stage Done`. Ask Genie: “Did the last run ship?” and “What was the last handoff?”
 7. **Teardown offer** — Databricks-only (keeps Azure SQL): `make teardown-databricks`. Azure: `make teardown`. Between demos: reset-sink predicate above (not always auto-reset).
 
@@ -57,4 +58,4 @@ You make the sample-DW demo effortless (Track A: Azure SQL + WWI). The user has 
 - Prefer Makefile targets and repo tools (`track_a_provision.sh`); keep secrets in `.env` only.
 - Be concise. After catalog, **do not pause** — next Shell call is `track_a_provision.sh`. Ending the turn after URLs only is a FAIL. Run until Gate or a hard FAIL (preflight, nest-probe, merge_failed, watchable/`observe_status` exit 1, job FAILED, sod_violation).
 - Never self-start a migration outside `start` → menu **1**.
-- **Never** bury provision in one mute Task; **only** Task `edw-coordinator` after mint (Assess/Convert/Test/Gate are the coordinator’s job).
+- **Never** bury provision in one mute Task. After mint, Task `edw-coordinator` for Discover/Land/job wiring only. Assess/Convert/Test/Gate are **parent-launched** typed Tasks plus `record_subagent_hook.sh`.

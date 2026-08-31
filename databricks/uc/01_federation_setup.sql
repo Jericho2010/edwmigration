@@ -28,7 +28,9 @@ CREATE FOREIGN CATALOG IF NOT EXISTS __FOREIGN_CATALOG__
   USING CONNECTION __CONNECTION_NAME__
   OPTIONS (database '{{SOURCE_DATABASE}}');
 
-REFRESH FOREIGN CATALOG __FOREIGN_CATALOG__;
+-- Do not REFRESH: on SQL Server it re-enumerates sys.* and exceeds the
+-- Free Edition 100-tables-per-schema quota. CREATE already registers
+-- objects visible to the federation login (edwfed / least-privilege).
 
 GRANT USE CATALOG ON CATALOG __UC_CATALOG__ TO `account users`;
 GRANT USE SCHEMA ON SCHEMA __UC_CATALOG__.source_fed TO `account users`;

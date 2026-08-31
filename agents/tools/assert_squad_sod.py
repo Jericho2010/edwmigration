@@ -32,22 +32,28 @@ def check(agent: str, file_path: str, run_id: str, root: Path | None = None) -> 
     if not is_layer_sql(rel):
         return None
     ag = (agent or "").lower()
-    if ag in {"coordinator", "demo-guide", "demo_guide", "start", "assess", "test", "gate"}:
-        return f"{ag} must not write {rel}"
-    if ag == "convert":
-        wave_path = root / "agents" / "out" / run_id / "convert_wave.json"
-        if not wave_path.is_file():
-            return f"convert write {rel} without convert_wave.json"
+    wave_path = root / "agents" / "out" / run_id / "convert_wave.json"
+    wave_paths: set[str] = set()
+    if wave_path.is_file():
         try:
             wave = json.loads(wave_path.read_text())
         except json.JSONDecodeError:
-            return "convert_wave.json is not JSON"
-        paths = {str(p).replace("\\", "/") for p in (wave.get("target_paths") or [])}
-        for it in wave.get("items") or []:
-            if it.get("target_path"):
-                paths.add(str(it["target_path"]).replace("\\", "/"))
-        if rel not in paths:
-            return f"convert write {rel} not in convert_wave.json"
+            wave = None
+        else:
+            wave_paths = {str(p).replace("\\", "/") for p in (wave.get("target_paths") or [])}
+            for it in wave.get("items") or []:
+                if it.get("target_path"):
+                    wave_paths.add(str(it["target_path"]).replace("\\", "/"))
+    # Cursor afterFileEdit often fires in the parent and maps as coordinator even
+    # when an edw-convert Task wrote the file. Wave lock is the SoD evidence.
+    if rel in wave_paths:
+        return None
+    if ag in {"coordinator", "demo-guide", "demo_guide", "start", "assess", "test", "gate"}:
+        return f"{ag} must not write {rel}"
+    if ag == "convert":
+        if not wave_path.is_file():
+            return f"convert write {rel} without convert_wave.json"
+        return f"convert write {rel} not in convert_wave.json"
     return None
 
 

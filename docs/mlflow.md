@@ -15,7 +15,27 @@ MLflow is the **live execution trace** plane for a migration run. It does not re
 
 MLflow is **additive**. Track B: missing `.venv` / `mlflow`, tracking errors, or `EDW_MLFLOW_BACKEND=off` → no-op (exit 0); migration continues. **Track A:** `make observe-setup` and nest-probe are **required** — do not continue a guided demo with a lying empty tree.
 
-Traces land in Databricks experiment **`/Shared/edw-migration`** (fallback name `edw-migration` if Shared create fails). Per-run state is `agents/out/<run_id>/mlflow_context.json` (experiment id, trace id, open spans, `observe_url`).
+Traces land in Databricks experiment **`/Shared/edw-migration`** (fallback name `edw-migration` if Shared create fails). Per-run state is `agents/out/<run_id>/mlflow_context.json` (experiment id, trace id, open spans, `observe_url`). Open that `observe_url` (Shared experiment id + `selectedTraceId`). The workspace Experiments list named `edw-migration` (no `/Shared`, no `selectedTraceId`) is the **wrong page** and looks empty (“0 of 0” / “Instrument your GenAI Agent”) even when this run’s tree is live.
+
+---
+
+## Analyze vs Copilot vs Control Plane
+
+Three UIs can disagree if you treat them as one source of truth.
+
+| Surface | Reads | What it can honestly say |
+|---|---|---|
+| **Control Plane** | Unity Catalog `ops.*` | Gate, backlog, reconcile, job handoff, agent timeline for this `run_id` |
+| **Genie Copilot** | Same `ops.*` (plus Genie room instructions) | Same ship/block story as the dashboard, in chat |
+| **Databricks “Analyze this run”** | **Only the last MLflow experiment run** (metrics, artifacts, that chapter’s trace) | Agent/tool tree for the **current serve chapter**. It never queries `ops.*` |
+
+Paste **`observe_url`** for `/Shared/edw-migration` only (experiment id + `selectedTraceId`). Do not paste the untitled workspace experiment.
+
+**Serve chapters.** MLflow can nest spans only while the serve process still holds the in-memory root span. If that process dies, the next `serve` opens a **new** trace (unavoidable). Chapters share `edw_run_id` and trace tag `mlflow.trace.session`. The previous MLflow run is marked **FINISHED**, not KILLED — KILLED/FINISHED on the experiment list means serve lifecycle, not “the EDW run retried three times.”
+
+**UNKNOWN / N/A duration.** Databricks shows UNKNOWN (`TRACE_STATUS_UNSPECIFIED`) when a child span was still open at `end_trace`. We end every id in `open_spans` with OK or ERROR before closing the root. If you still see UNKNOWN, that chapter’s serve died mid-span.
+
+**Last-chapter roll-up.** Analyze of the latest chapter should still show `procs_converted`, `procs_blocked`, `reconcile_passed` / `reconcile_failed`, `job_success`, `gate_pass`, plus artifacts `migration_manifest.json`, `migration_backlog.json`, and `reconcile_report.json` when those files exist under `agents/out/<run_id>/`. Eight blocked helpers is expected (`procs_blocked=8`); that is not a convert-quality gap.
 
 ```mermaid
 %%{init: {"theme":"base","themeVariables":{"primaryColor":"#E8F1F8","primaryTextColor":"#0B3D5C","primaryBorderColor":"#0B3D5C","lineColor":"#5B7A8C","secondaryColor":"#E6F4F1","tertiaryColor":"#F7F3EA","background":"#FFFFFF","mainBkg":"#E8F1F8","clusterBkg":"#F7FAFC","clusterBorder":"#5B7A8C","titleColor":"#0B3D5C","edgeLabelBackground":"#FFFFFF"}}}%%
@@ -159,6 +179,7 @@ Soft status / preflight **WARN** if observe is not ready; they do **not** block 
 | `.cursor/hooks.json` + `.cursor/hooks/log_event.sh` | Cursor lifecycle → UC buffer + span queue |
 | `agents/tools/record_agent_event.sh` | UC row + MLflow stage enqueue + force flush |
 | `agents/tools/assert_watchable.py` | Fail closed: hook `subagentStart` required (Track A / `EDW_OBSERVE_STRICT`) |
+| `agents/tools/record_subagent_hook.sh` | Parent launch-time `subagentStart`/`Stop` when Cursor omits the hook — **not** persist-time fake |
 | `agents/tools/dual_write_agent_lifecycle.sh` | Handoff/UC spans per convert item — **not** a substitute for `edw-*` Tasks |
 | `agents/tools/ensure_run_events.py` | Milestone rows + idempotent MLflow init (starts serve) |
 | `agents/tools/check_mlflow_observe.sh` | venv + `mlflow≥3.8` + host readiness |

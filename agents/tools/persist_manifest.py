@@ -166,11 +166,23 @@ def main() -> int:
 
     summary = doc.get("summary") or {}
     gate = str(doc.get("gate") or "")
-    _enqueue_metric(args.run_id, "tables_landed", float(summary.get("tables_landed") or 0))
-    _enqueue_metric(args.run_id, "tables_total", float(summary.get("tables_total") or 0))
-    _enqueue_metric(args.run_id, "procs_converted", float(summary.get("procs_converted") or 0))
-    _enqueue_metric(args.run_id, "procs_total", float(summary.get("procs_total") or 0))
+    tables_landed = float(summary.get("tables_landed") or 0)
+    tables_total = float(summary.get("tables_total") or 0)
+    procs_converted = float(summary.get("procs_converted") or 0)
+    procs_total = float(summary.get("procs_total") or 0)
+    procs_blocked = summary.get("procs_blocked")
+    if procs_blocked is None:
+        procs_blocked = max(0.0, procs_total - procs_converted)
+    _enqueue_metric(args.run_id, "tables_landed", tables_landed)
+    _enqueue_metric(args.run_id, "tables_total", tables_total)
+    _enqueue_metric(args.run_id, "procs_converted", procs_converted)
+    _enqueue_metric(args.run_id, "procs_total", procs_total)
+    _enqueue_metric(args.run_id, "procs_blocked", float(procs_blocked))
     _enqueue_metric(args.run_id, "gate_pass", gate_pass_value(gate))
+    if summary.get("reconcile_passed") is not None:
+        _enqueue_metric(args.run_id, "reconcile_passed", float(summary.get("reconcile_passed") or 0))
+    if summary.get("reconcile_failed") is not None:
+        _enqueue_metric(args.run_id, "reconcile_failed", float(summary.get("reconcile_failed") or 0))
 
     try:
         from edw_handoff import emit_handoff_quiet

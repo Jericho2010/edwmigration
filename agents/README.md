@@ -61,6 +61,7 @@ Portable prompts + contracts. Cursor and GitHub Copilot adapters are generated.
 | `ensure_source_alias_views.sh` | SQL Server spaced-name views from `INFORMATION_SCHEMA` (one `sqlcmd` per view) |
 | `validate_converted_sql.py` | Convert SQL must read bronze, not the federated catalog |
 | `assert_watchable.py` | Fail closed: hook `subagentStart` required (not dual_write); Track A / `EDW_OBSERVE_STRICT` |
+| `record_subagent_hook.sh` | Parent launch-time `subagentStart`/`Stop` (same JSONL as Cursor hooks) when the host omits the hook |
 | `check_job_wiring.py` | DAG from Assess `reads`/`writes`; WARN + `--apply` (peak ≤ 5); restore via skeleton YAML |
 | `run_sql.sh` | Statement Execution API |
 | `sync_prompts.sh` | Cursor + Copilot |

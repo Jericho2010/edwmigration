@@ -193,7 +193,7 @@ PY
 fi
 
 echo "Note: Gate Hero (gate counters) stays empty until Gate writes migration_manifest_current."
-echo "Note: Tables-landed (load_control) should move at Land. Latest-run widgets prefer agent_events then manifest."
+echo "Note: Tables-landed (load_control) moves at Job. Latest-run widgets prefer agent_events then manifest."
 echo "Note: Inventory/Events/Backlog should move as stages complete — empty during a run means hooks/edw-* missing or need make reset-sink."
 echo "===================="
 echo

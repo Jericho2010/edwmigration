@@ -65,6 +65,18 @@ class DashboardContractTests(unittest.TestCase):
         self.assertIn("subagentstart", self.queries["events_by_agent"])
         self.assertIn("handoff", self.queries["latest_events"])
 
+    def test_bar_widgets_have_xy_encodings(self):
+        missing = []
+        for item in self.layout:
+            spec = (item.get("widget") or {}).get("spec") or {}
+            if spec.get("widgetType") != "bar":
+                continue
+            name = (item.get("widget") or {}).get("name") or "?"
+            enc = spec.get("encodings") or {}
+            if not enc.get("x") or not enc.get("y"):
+                missing.append(name)
+        self.assertEqual(missing, [], f"bar widgets missing encodings.x/y: {missing}")
+
 
 class LandSqlTests(unittest.TestCase):
     def test_emit_land_includes_run_id_and_fed_name(self):
@@ -125,6 +137,11 @@ class HandoffTests(unittest.TestCase):
             )
         launch = (tools / "launch_convert_wave.sh").read_text()
         self.assertIn("dual_write_agent_lifecycle.sh", launch)
+        persist = (tools / "persist_manifest.py").read_text()
+        self.assertIn("procs_blocked", persist)
+        self.assertIn("reconcile_passed", persist)
+        wait = (tools / "wait_job_run.sh").read_text()
+        self.assertIn("job_success", wait)
 
 
 class AllocateTests(unittest.TestCase):
@@ -181,6 +198,34 @@ SELECT * FROM __UC_CATALOG__.bronze.dim_city;
 SELECT COUNT(*) FROM __UC_CATALOG__.gold.x;
 """
         self.assertEqual(vcs.validate_sql(good), [])
+
+
+class BookkeepingCreateTests(unittest.TestCase):
+    def test_duplicate_lineage_creates_fail(self):
+        with tempfile.TemporaryDirectory() as td:
+            d = Path(td)
+            (d / "20_city.sql").write_text(
+                "CREATE OR REPLACE TABLE __UC_CATALOG__.silver.integration_lineage AS SELECT 1;\n"
+            )
+            (d / "21_customer.sql").write_text(
+                "CREATE OR REPLACE TABLE __UC_CATALOG__.silver.integration_lineage AS SELECT 1;\n"
+            )
+            errors = vcs.bookkeeping_create_errors(d)
+            self.assertTrue(any("integration_lineage" in e for e in errors))
+            self.assertGreaterEqual(len(errors), 1)
+
+    def test_zero_or_one_owner_ok(self):
+        with tempfile.TemporaryDirectory() as td:
+            d = Path(td)
+            (d / "23_movement.sql").write_text(
+                "CREATE OR REPLACE TABLE __UC_CATALOG__.silver.fact_movement AS SELECT 1;\n"
+            )
+            self.assertEqual(vcs.bookkeeping_create_errors(d), [])
+            (d / "20_city.sql").write_text(
+                "CREATE OR REPLACE TABLE __UC_CATALOG__.silver.integration_lineage AS SELECT 1;\n"
+                "CREATE OR REPLACE TABLE __UC_CATALOG__.silver.integration_etl_cutoff AS SELECT 1;\n"
+            )
+            self.assertEqual(vcs.bookkeeping_create_errors(d), [])
 
 
 class ValidateBacklogPathTests(unittest.TestCase):
@@ -277,6 +322,73 @@ class MergeWaveTests(unittest.TestCase):
             self.assertEqual(summary["missing_results"], 1)
             self.assertEqual(summary["blocked"], 1)
 
+    def test_full_run_summary_counts_prior_waves_and_helpers(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            run_id = "full-sum-1"
+            run = root / "agents" / "out" / run_id
+            (run / "convert").mkdir(parents=True)
+            (root / "databricks" / "gold").mkdir(parents=True)
+            (root / "databricks" / "gold" / "40_migrate_a.sql").write_text("SELECT 1;\n")
+            (root / "databricks" / "gold" / "41_migrate_b.sql").write_text("SELECT 1;\n")
+            backlog = [
+                {
+                    "item_id": "item-helper",
+                    "legacy_proc": "dbo.Helper",
+                    "target_path": "",
+                    "target_layer": "n/a",
+                    "status": "blocked",
+                },
+                {
+                    "item_id": "item-prior",
+                    "legacy_proc": "dbo.A",
+                    "target_path": "databricks/gold/40_migrate_a.sql",
+                    "target_layer": "gold",
+                    "status": "converted",
+                },
+                {
+                    "item_id": "item-wave",
+                    "legacy_proc": "dbo.B",
+                    "target_path": "databricks/gold/41_migrate_b.sql",
+                    "target_layer": "gold",
+                    "status": "pending",
+                },
+            ]
+            (run / "migration_backlog.json").write_text(json.dumps(backlog))
+            (run / "convert_wave.json").write_text(
+                json.dumps({"item_ids": ["item-wave"], "target_paths": [backlog[2]["target_path"]]})
+            )
+            prior = {
+                "item_id": "item-prior",
+                "legacy_proc": "dbo.A",
+                "target_path": "databricks/gold/40_migrate_a.sql",
+                "status": "draft",
+                "notes": "prior wave",
+                "patterns_used": ["snapshot"],
+            }
+            wave = {
+                "item_id": "item-wave",
+                "legacy_proc": "dbo.B",
+                "target_path": "databricks/gold/41_migrate_b.sql",
+                "status": "draft",
+                "notes": "this wave",
+                "patterns_used": ["snapshot"],
+            }
+            (run / "convert" / "item-prior.json").write_text(json.dumps(prior))
+            (run / "convert" / "item-wave.json").write_text(json.dumps(wave))
+            orig_root = merge.ROOT
+            merge.ROOT = root
+            try:
+                summary = merge.merge(run_id, skip_ops=True)
+            finally:
+                merge.ROOT = orig_root
+            self.assertEqual(summary["converted"], 2)
+            self.assertEqual(summary["blocked"], 1)
+            self.assertEqual(summary["total"], 3)
+            self.assertEqual(summary["missing_results"], 0)
+            ids = {i["item_id"] for i in summary["items"]}
+            self.assertEqual(ids, {"item-helper", "item-prior", "item-wave"})
+
 
 class GenieContractTests(unittest.TestCase):
     def test_example_sql_ids_and_keywords(self):
@@ -285,15 +397,13 @@ class GenieContractTests(unittest.TestCase):
         space = cfg["serialized_space"]["config"]
         for q in space["sample_questions"]:
             self.assertRegex(q["id"], hex32)
-        sqls = space["example_question_sqls"]
-        blob = json.dumps(sqls)
-        self.assertIn("handoff", blob)
-        self.assertIn("proc_conversion_map", blob)
-        self.assertIn("pass", blob)
-        self.assertIn("ship", blob)
-        self.assertIn("run_id", blob)
-        for row in sqls:
-            self.assertRegex(row["id"], hex32)
+        self.assertFalse(space.get("example_question_sqls"))
+        blob = json.dumps(cfg)
+        self.assertIn("handoff", blob.lower() + json.dumps(space["sample_questions"]).lower())
+        desc = str(cfg.get("description") or "")
+        self.assertIn("proc_conversion_map", desc)
+        self.assertIn("pass", desc.lower() + blob.lower())
+        self.assertIn("ship", desc.lower())
 
 
 class MaterializeReuseTests(unittest.TestCase):

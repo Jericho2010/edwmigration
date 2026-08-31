@@ -38,7 +38,7 @@ Stages for announce / observe_status: `Provision`, `Bootstrap`, `Setup`, `PreMin
 ./agents/tools/observe_status.sh --stage <Name>
 ```
 
-Gate Hero (gate counters on `migration_manifest_current`) stays empty until Gate — expected. Inventory / Events / Backlog should move as stages complete. **Tables-landed** (`ops.load_control`) should move at Land. Latest-run widgets prefer `ops.agent_events` then the manifest, so mid-demo screens follow the live run rather than a prior Gate row.
+Gate Hero (gate counters on `migration_manifest_current`) stays empty until Gate — expected. **Inventory** moves at Land. **Tables-landed** (`ops.load_control` with `row_count > 0`) moves at **Job**, not Land. Events / Backlog move as those stages complete. Latest-run widgets prefer `ops.agent_events` then the manifest, so mid-demo screens follow the live run rather than a prior Gate row.
 
 ## Subagent policy (mandatory)
 
@@ -51,9 +51,10 @@ Gate Hero (gate counters on `migration_manifest_current`) stays empty until Gate
 
 Parent/coordinator may own Discover, Land, job wiring, `make deploy`/`make run`, and **all Track A provision**.
 
-**Forbidden:** opaque Task / `generalPurpose` for Assess/Convert/Test/Gate. Required `subagent_type` in `{edw-assess,edw-convert,edw-test,edw-gate}`. Dual_write is **also** required per convert item via `launch_convert_wave.sh` (not a substitute for typed Tasks). Track A persist/merge/`observe_status` **exit 1** without hook `subagentStart` — stop and re-launch the `edw-*` Task.
+**Forbidden:** nested `edw-assess` / `edw-convert` / `edw-test` / `edw-gate` from an `edw-coordinator` Task. Forbidden: opaque Task / `generalPurpose` for those stages. Required `subagent_type` in `{edw-assess,edw-convert,edw-test,edw-gate}` launched from the **parent**. This Cursor host often omits `subagentStart` — the parent **must** run `record_subagent_hook.sh` in the **same turn** as the Task (convert: `--item-id`). Dual_write is **also** required per convert item via `launch_convert_wave.sh` (not a substitute). Track A persist/merge/`observe_status` **exit 1** without hook `subagentStart` — re-record and re-launch from the parent.
 
 ```bash
+./agents/tools/record_subagent_hook.sh --run-id <id> --agent convert --event start --item-id <item_id>
 ./agents/tools/launch_convert_wave.sh --run-id <id> --item-id <item_id>
 ```
 
@@ -75,7 +76,7 @@ Demo-guide after mint + nest-probe launches **only** `edw-coordinator`.
 
 Paste `observe_url` **immediately** (part of the URL banner). Track A: observe-setup + nest-probe are **required**. Track B may soft no-op if observe is not ready — still paste Control Plane + Genie + Catalog. Notebooks join at Land; Job after deploy.
 
-Gate Hero stays empty until Gate — expected. Inventory / Events / Backlog should move as stages complete; tables-landed from `load_control` should move at Land.
+Gate Hero stays empty until Gate — expected. Inventory / Events / Backlog should move as stages complete; tables-landed from `load_control` moves at **Job**.
 
 ## Dirty catalog (one chat choice)
 

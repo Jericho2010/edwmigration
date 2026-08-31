@@ -85,6 +85,7 @@ render: check-core ## Render SQL templates into databricks/_rendered
 	./agents/tools/render_sql.sh
 
 secrets: check-core ## Upsert source password into Databricks secret scope
+	./agents/tools/ensure_federation_login.sh
 	./agents/tools/upsert_source_secret.sh
 
 bootstrap: check-azure ## Provision free Azure SQL + WWI bacpac (demo pack)

@@ -180,6 +180,13 @@ if [ "$DRY_RUN" -eq 0 ]; then
     "CREATE OR ALTER VIEW Fact.StockHolding AS SELECT * FROM Fact.[Stock Holding];"
   sqlcmd -S "$SERVER_ARG" -U "$AZ_SQL_ADMIN" -P "$AZ_SQL_PASSWORD" -d "$AZ_SQL_DB" -C -l 60 -Q \
     "CREATE OR ALTER VIEW Integration.ETLCutoff AS SELECT * FROM Integration.[ETL Cutoff];"
+  echo "  ensuring least-privilege federation login (edwfed) ..."
+  "${REPO_ROOT}/agents/tools/ensure_federation_login.sh"
+  # Re-load .env — ensure_federation_login writes SOURCE_USER / SOURCE_PASSWORD.
+  set -a
+  # shellcheck disable=SC1091
+  . "${REPO_ROOT}/.env" || true
+  set +a
 else
   echo "  (dry-run) sqlcmd -S ${SERVER_ARG} ... -Q 'SELECT 1'"
 fi
@@ -214,8 +221,10 @@ if [ "$DRY_RUN" -eq 0 ]; then
     || echo "  scope already exists; continuing."
   # Store the SQL password for the federation connection (unified + legacy alias).
   # Databricks CLI v0.2xx+: --string-value (stdin flag removed)
-  databricks secrets put-secret "$DATABRICKS_SECRET_SCOPE" source-password --string-value "$AZ_SQL_PASSWORD"
-  databricks secrets put-secret "$DATABRICKS_SECRET_SCOPE" azure-sql-password --string-value "$AZ_SQL_PASSWORD"
+  # Federation uses SOURCE_PASSWORD (edwfed). Admin password stays in .env only.
+  FED_SECRET="${SOURCE_PASSWORD:-$AZ_SQL_PASSWORD}"
+  databricks secrets put-secret "$DATABRICKS_SECRET_SCOPE" source-password --string-value "$FED_SECRET"
+  databricks secrets put-secret "$DATABRICKS_SECRET_SCOPE" azure-sql-password --string-value "$FED_SECRET"
   echo "  stored secrets 'source-password' + 'azure-sql-password' in scope '${DATABRICKS_SECRET_SCOPE}'."
 else
   echo "  (dry-run) databricks secrets create-scope + put-secret"

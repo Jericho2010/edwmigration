@@ -37,6 +37,14 @@ BRONZE = re.compile(r"\b(bronze\.|__UC_CATALOG__\.bronze\.)", re.I)
 SMOKE_SELECT = re.compile(r"\bSELECT\b", re.I)
 FOUR_PART = re.compile(r"\[[^\]]+\]\s*\.\s*\[[^\]]+\]\s*\.\s*\[[^\]]+\]\s*\.\s*\[[^\]]+\]")
 FROM_FED = re.compile(rf"\bFROM\s+({FED_ALT})\b", re.I) if FED_ALT else re.compile(r"(?!)")
+# Parallel job tasks racing CREATE of these shared tables fail with
+# TABLE_OR_VIEW_ALREADY_EXISTS even when OR REPLACE is present.
+BOOKKEEPING_CREATE_RE = re.compile(
+    r"CREATE\s+(?:OR\s+REPLACE\s+)?TABLE\s+[^\s;]*silver\."
+    r"(integration_lineage|integration_etl_cutoff)\b",
+    re.I,
+)
+BOOKKEEPING_TABLES = ("integration_lineage", "integration_etl_cutoff")
 
 
 def validate_sql(text: str, *, expect_path: str = "") -> list[str]:
@@ -62,6 +70,29 @@ def validate_sql(text: str, *, expect_path: str = "") -> list[str]:
     if expect_path:
         # caller already chose the file; this is a documentation check
         pass
+    return errors
+
+
+def bookkeeping_create_files(sql_dir: Path) -> dict[str, list[str]]:
+    """Map shared silver bookkeeping tables to convert files that CREATE them."""
+    found: dict[str, list[str]] = {name: [] for name in BOOKKEEPING_TABLES}
+    if not sql_dir.is_dir():
+        return found
+    for path in sorted(sql_dir.glob("*.sql")):
+        text = path.read_text()
+        for match in BOOKKEEPING_CREATE_RE.finditer(text):
+            found[match.group(1).lower()].append(path.name)
+    return found
+
+
+def bookkeeping_create_errors(sql_dir: Path) -> list[str]:
+    """At most one convert file may CREATE each shared silver bookkeeping table."""
+    errors: list[str] = []
+    for table, files in bookkeeping_create_files(sql_dir).items():
+        if len(files) > 1:
+            errors.append(
+                f"{table} CREATE appears in {len(files)} files (need ≤1): {', '.join(files)}"
+            )
     return errors
 
 
