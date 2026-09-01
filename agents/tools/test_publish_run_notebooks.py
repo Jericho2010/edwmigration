@@ -156,7 +156,7 @@ resources:
                 {"job_id": 1, "settings": {"name": "other"}},
                 {
                     "job_id": 123456789012345,
-                    "settings": {"name": "[dev shaun] [dev] edw_migration_medallion"},
+                    "settings": {"name": "[dev demo] [dev] edw_migration_medallion"},
                 },
             ]
         }
